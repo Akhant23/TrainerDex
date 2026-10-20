@@ -815,6 +815,16 @@ body {
     translate: 0 calc(-2 * var(--px));
   }
 }
+/* creatures breathe like BW sprites: a 4-frame strip stepped through on the background */
+.creature-idle {
+  animation: creature-idle 1.3s steps(4) infinite;
+}
+@keyframes creature-idle {
+  to {
+    background-position-x: calc(-4 * var(--cw));
+  }
+}
+
 /* the battle-intro nod: two quick dips of the head */
 .bw-nod {
   animation: bw-nod 0.56s steps(1) 0.7s 2;

@@ -56,13 +56,13 @@ const dots = (g: Grid, pts: Array<[number, number]>, ch: string) => (pts.forEach
 
 /* ---------------- ground ---------------- */
 
-const grass = () => dots(fill('g'), [[2, 3], [3, 2], [10, 5], [11, 4], [6, 11], [7, 10], [13, 13], [14, 12], [1, 14], [8, 1]], 'G')
+const grass = () => dots(fill('g'), [[3, 3], [11, 5], [6, 11], [13, 13]], 'G')
 const sand = () => dots(fill('s'), [[3, 4], [11, 2], [7, 9], [13, 12], [2, 13], [9, 14]], 'S')
 /** City paving: large light slabs with darker joints, like BW's plazas. */
 const paving = () => {
+  // one clean slab per tile with a soft joint, like BW's city squares
   const g = fill('p')
-  g.rect(0, 15, 15, 15, 'P').rect(15, 0, 15, 15, 'P').rect(0, 7, 15, 7, '1').rect(7, 0, 7, 7, '1')
-  return dots(g, [[3, 3], [11, 11], [12, 4]], '1')
+  return g.rect(0, 15, 15, 15, '1').rect(15, 0, 15, 15, '1')
 }
 const floor = () => {
   const g = grid()

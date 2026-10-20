@@ -166,6 +166,31 @@ class AudioEngine {
     src.start(start)
   }
 
+  /**
+   * A creature's cry: a short chirpy phrase whose pitch, shape and rhythm come from the creature's
+   * id, so every species always sounds the same (and different from the others).
+   */
+  cry(id: string) {
+    if (!this.sfxOn) return
+    const ctx = this.ensure()
+    if (!ctx) return
+    if (ctx.state === 'suspended') void ctx.resume()
+    let h = 2166136261
+    for (const c of id) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0
+    const r = (n: number) => ((h >>> (n * 3)) % 1000) / 1000
+    const base = 300 + r(0) * 500
+    const types: OscillatorType[] = ['square', 'sawtooth', 'triangle']
+    const type = types[h % 3]
+    let t = ctx.currentTime + 0.01
+    const notes = 2 + (h % 3)
+    for (let i = 0; i < notes; i++) {
+      const f = base * (1 + (r(i + 1) - 0.4) * 0.9)
+      const dur = 0.07 + r(i + 4) * 0.09
+      this.tone(f, t, dur, type, 0.08, f * (r(i + 7) > 0.5 ? 1.5 : 0.7))
+      t += dur * 0.85
+    }
+  }
+
   play(name: Sfx) {
     if (!this.sfxOn) return
     const ctx = this.ensure()

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { overworldFor, WALK_CYCLE, type Facing } from '../sprites/overworld'
+import { overworldFor, OW_H, OW_W, OW_WORLD, WALK_CYCLE, type Facing } from '../sprites/overworld'
 import { paletteFor, type Appearance } from '../sprites/character'
 import { pixelsToDataUrl } from '../sprites/render'
 import { signature } from '../content/aaryan'
@@ -22,7 +22,7 @@ export function overworldUrls(a: Appearance): Record<Facing, string[]> {
   return hit
 }
 
-/** A walking overworld character. Cycles the walk frames while `walking`. */
+/** A walking overworld character. Cycles the walk frames while `walking`. `scale` is in world pixels (the art is drawn at twice that resolution). */
 export function OverworldSprite({ facing, walking, scale, appearance = signature }: { facing: Facing; walking: boolean; scale: number; appearance?: Appearance }) {
   const [tick, setTick] = useState(0)
   useEffect(() => {
@@ -32,5 +32,5 @@ export function OverworldSprite({ facing, walking, scale, appearance = signature
   }, [walking])
   const urls = useMemo(() => overworldUrls(appearance), [appearance])
   const frame = walking ? WALK_CYCLE[tick % WALK_CYCLE.length] : 0
-  return <img src={urls[facing][frame]} width={20 * scale} height={28 * scale} alt="" draggable={false} className="pixelated block" />
+  return <img src={urls[facing][frame]} width={OW_W * OW_WORLD * scale} height={OW_H * OW_WORLD * scale} alt="" draggable={false} className="pixelated block" />
 }

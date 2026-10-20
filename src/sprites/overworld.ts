@@ -1,188 +1,250 @@
 /**
- * Overworld ("walking") sprites in the Black/White style: 24×32 chibi figures with a big head,
- * three-tone shading and a dark outline, generated from any Appearance (same palette keys as
- * character.ts). Directions: down / up / left (right = left mirrored); frames: stand, step A, step B.
+ * Overworld ("walking") sprites in the Black/White style, generated from any Appearance (same
+ * palette keys as character.ts).
+ *
+ * The art is 48×64 — twice the size it's shown at in the world (OW_WORLD = 0.5) — so the
+ * walkers have the same fine detail as the battle sprites: a big chibi head, a small body, arms
+ * flared out from the shoulders, three-tone shading and a dark outline.
+ * Directions: down / up / left (right = left mirrored); frames: stand, step A, step B.
  */
 import { Grid, flipX } from './raster.ts'
 import type { Pixels } from './pixels.ts'
-import type { Appearance } from './character.ts'
+import { capsule, oval, HAT_BRIM, type Appearance, type Pt } from './character.ts'
 
 export type Facing = 'down' | 'up' | 'left' | 'right'
-export const OW_W = 24
-export const OW_H = 32
+export const OW_W = 48
+export const OW_H = 64
+/** World pixels per art pixel. */
+export const OW_WORLD = 0.5
 type Step = 0 | 1 | 2
 
-const BLAZER = new Set<Appearance['top']>(['blazer', 'suit', 'school'])
-const longSleeves = (a: Appearance) => !['tee', 'jersey', 'tank'].includes(a.top)
-const sleeve = (a: Appearance) => (a.top === 'tank' ? 'S' : 'A')
-const forearm = (a: Appearance) => (longSleeves(a) ? 'A' : 'S')
+const TEES = new Set<Appearance['top']>(['tee', 'splash', 'jersey'])
+const BLAZERS = new Set<Appearance['top']>(['blazer', 'suit', 'school'])
 const bareLegs = (a: Appearance) => a.bottom === 'shorts' || a.bottom === 'skirt'
+const has = (a: Appearance, x: Appearance['accessories'][number]) => a.accessories.includes(x)
 
-/* ---------------- shared parts ---------------- */
+/* ---------------- shared pieces ---------------- */
 
-function hairBackRound(g: Grid, a: Appearance, cx: number) {
-  const big = a.hair === 'wavy' || a.hair === 'curly' || a.hair === 'curtains'
-  g.ellipse(cx, 9, big ? 9 : 8.5, big ? 8.5 : 8, a.hair === 'buzz' ? 'j' : 'H', 'j')
-  if (a.hair === 'long') g.rect(cx - 8, 10, cx + 8, 20, 'H').rect(cx + 4, 10, cx + 8, 20, 'j')
-  if (a.hair === 'bun') g.ellipse(cx, 1.5, 3, 2, 'H', 'j')
-  if (a.hair === 'curly') for (const dx of [-8, 8]) g.ellipse(cx + dx, 12, 2.5, 3, 'H', 'j')
+/** Clip any hair that would poke out above a hat's brim (scaled for the walker's head). */
+function clipHair(g: Grid, a: Appearance, brimY: number) {
+  if (HAT_BRIM[a.hat] === undefined) return
+  for (let y = 0; y < brimY; y++) for (let x = 0; x < OW_W; x++) if ('Hjh'.includes(g.get(x, y))) g.set(x, y, '.')
 }
 
-function hatTop(g: Grid, a: Appearance, cx: number, facing: 'down' | 'up' | 'left') {
+function hat(g: Grid, a: Appearance, cx: number, facing: 'down' | 'up' | 'left') {
   switch (a.hat) {
-    case 'none':
-      return
-    case 'headband':
-      g.rect(cx - 8, 6, cx + 8, 7, 'Y')
-      return
     case 'cap':
-      g.ellipse(cx, 5, 8.5, 4.5, 'Y', 'y')
-      if (facing === 'down') g.rect(cx - 7, 7, cx + 7, 8, 'y')
-      if (facing === 'left') g.rect(cx - 11, 7, cx - 2, 8, 'y')
-      return
+      oval(g, cx, 10, 14, 8.5, 'Y', 'y')
+      if (facing === 'down') g.poly([[cx - 13, 14], [cx + 13, 14], [cx + 12, 18], [cx - 12, 18]], 'y')
+      if (facing === 'left') g.poly([[cx - 4, 13], [cx - 21, 15], [cx - 20, 18], [cx - 4, 17]], 'y')
+      break
     case 'beanie':
-      g.ellipse(cx, 5, 8.5, 5, 'Y', 'y')
-      g.rect(cx - 8, 7, cx + 8, 9, 'y')
-      return
+      oval(g, cx, 10, 14.5, 9.5, 'Y', 'y')
+      g.rect(cx - 14, 13, cx + 14, 17, 'y')
+      for (let x = cx - 12; x < cx + 14; x += 4) g.line(x, 13, x, 17, 'Y')
+      break
     case 'bucket':
-      g.rect(cx - 6, 0, cx + 6, 6, 'Y').rect(cx + 3, 0, cx + 6, 6, 'y')
-      g.ellipse(cx, 7, 11, 2, 'y')
-  }
-}
-
-/** Front hair for the down-facing head: crown + fringe, styled per hair type. */
-function fringeFront(g: Grid, a: Appearance) {
-  const cx = 12
-  g.ellipse(cx, 5.5, 8.5, 4, a.hair === 'buzz' ? 'j' : 'H', 'j', a.hair === 'buzz' ? undefined : 'h')
-  switch (a.hair) {
-    case 'wavy':
-      g.poly([[4, 6], [20, 6], [17.5, 9], [13, 8], [10, 9.4], [6.5, 8.6], [4, 10]], 'H')
-      g.set(9, 3, 'h').set(10, 3, 'h').set(15, 5, 'j').set(14, 7, 'j')
+      g.poly([[cx - 9, 1], [cx + 9, 1], [cx + 11, 12], [cx - 11, 12]], 'Y')
+      g.poly([[cx + 4, 1], [cx + 9, 1], [cx + 11, 12], [cx + 6, 12]], 'y')
+      oval(g, cx, 14, 18, 3.6, 'y')
       break
-    case 'curtains':
-      g.poly([[12, 4], [4, 5], [3.5, 15], [5.5, 16], [7, 9], [11.5, 6]], 'H')
-      g.poly([[12, 4], [20, 5], [20.5, 15], [18.5, 16], [17, 9], [12.5, 6]], 'j')
-      break
-    case 'spiky':
-      for (const x of [6, 12, 18]) g.poly([[x - 3, 4], [x + 3, 4], [x, -1]], 'H')
-      g.poly([[4, 6], [20, 6], [18, 9], [6, 9]], 'H')
-      break
-    case 'curly':
-      for (const x of [5, 9, 13, 17, 20]) g.ellipse(x, 7, 2, 2, 'H', 'j')
-      break
-    case 'long':
-      g.poly([[4, 6], [20, 6], [18, 9], [6, 9]], 'H')
-      g.rect(3, 8, 5, 19, 'H').rect(19, 8, 21, 19, 'j')
-      break
-    case 'short':
-      g.poly([[4, 6], [20, 6], [18, 9], [6, 9]], 'H')
+    case 'headband':
+      g.rect(cx - 13, 13, cx + 13, 15, 'Y')
       break
   }
 }
 
-function body(g: Grid, a: Appearance, back: boolean, x0: number, x1: number) {
-  const hem = BLAZER.has(a.top) ? 25 : 24
-  g.rect(x0, 17, x1, hem, 'A').rect(x1 - 2, 17, x1, hem, 'a').rect(x0, 18, x0, hem - 1, 'Q')
-  if (back) return
-  const mid = Math.floor((x0 + x1) / 2)
-  switch (a.top) {
-    case 'jersey':
-      g.rect(x0, 17, x1, 17, 'R').set(mid, 18, 'R').set(mid + 1, 18, 'R')
-      g.rect(mid - 2, 20, mid - 1, 21, 'R')
-      break
-    case 'tee':
-      g.rect(mid - 2, 19, mid - 1, 20, 'R')
-      break
-    case 'hoodie':
-      g.rect(mid - 2, 21, mid + 3, 23, 'a').set(mid, 18, 'G').set(mid + 1, 18, 'G')
-      break
-    case 'jacket':
-      g.rect(mid, 17, mid + 1, 19, 'G').rect(mid, 20, mid, hem, 'K')
-      break
-    case 'shirt':
-      g.rect(mid, 17, mid + 1, 22, 'R').set(mid - 1, 17, 'Q').set(mid + 2, 17, 'Q')
-      break
-    case 'blazer':
-    case 'suit':
-    case 'school':
-      g.rect(mid - 1, 17, mid + 2, 20, a.top === 'suit' ? 'V' : 'G').rect(mid, 17, mid + 1, 21, 'R')
-      if (a.top === 'school') g.rect(x0, hem, x1, hem, 'G').set(mid - 2, 18, 'G').set(mid + 3, 18, 'G')
-      break
-    case 'tank':
-      g.rect(x0, 17, x0 + 1, 18, 'S').rect(x1 - 1, 17, x1, 18, 'S')
-      break
+/** Torso, arms and legs for the front and back views. */
+function bodyFrontBack(g: Grid, a: Appearance, step: Step, back: boolean) {
+  const cx = 24
+  const lift = (left: boolean) => (step === 1 && left) || (step === 2 && !left)
+  // legs + shoes
+  for (const left of [true, false]) {
+    const x = left ? cx - 4.5 : cx + 4.5
+    const up = lift(left) ? 2 : 0
+    const top: Pt = [x, 46]
+    const knee: Pt = [x, 55 - up]
+    if (bareLegs(a)) {
+      capsule(g, top, [x, 50], 3.6, 3.4, 'B', 'b')
+      capsule(g, [x, 51], knee, 2.8, 2.6, 'S', 's')
+    } else capsule(g, top, knee, 3.8, 3.4, 'B', 'b', 'P')
+    oval(g, x + (left ? -0.6 : 0.6), 58 - up, 4.4, 2.8, 'F', 'f', 'e')
+    if (a.shoes === 'sneakers') g.rect(Math.floor(x - 4), 60 - up, Math.ceil(x + 3.5), 60 - up, 'G')
   }
+  if (a.bottom === 'skirt') g.poly([[cx - 9, 44], [cx + 9, 44], [cx + 11, 51], [cx - 11, 51]], 'B')
+  g.poly([[cx - 9, 43], [cx + 9, 43], [cx + 9.5, 48], [cx - 9.5, 48]], 'B')
+
+  // arms flare out from the shoulders and swing with the step
+  const swing = step === 0 ? 0 : step === 1 ? 2 : -2
+  const sleeveCol = a.top === 'tank' ? 'S' : 'A'
+  const forearmCol = TEES.has(a.top) || a.top === 'tank' ? 'S' : 'A'
+  for (const side of [-1, 1]) {
+    const d = side === -1 ? swing : -swing
+    const sh: Pt = [cx + side * 9.5, 35]
+    const el: Pt = [cx + side * 13.5, 40.5 + d * 0.4]
+    const hand: Pt = [cx + side * 15, 45.5 + d]
+    capsule(g, sh, el, 3, 2.6, sleeveCol, sleeveCol === 'A' ? 'a' : 's')
+    capsule(g, el, [hand[0], hand[1] - 1.5], 2.6, 2.2, forearmCol, forearmCol === 'A' ? 'a' : 's')
+    if (TEES.has(a.top)) capsule(g, sh, [cx + side * 11.5, 38.5], 3.4, 3, 'A', 'a', 'Q')
+    oval(g, hand[0], hand[1], 2.6, 2.6, 'S', 's')
+  }
+
+  // torso
+  const hem = BLAZERS.has(a.top) ? 46 : 45
+  g.poly([[cx - 8.5, 32], [cx + 8.5, 32], [cx + 10, 36], [cx + 9.5, hem], [cx - 9.5, hem], [cx - 10, 36]], 'A')
+  g.poly([[cx + 4, 32], [cx + 8.5, 32], [cx + 10, 36], [cx + 9.5, hem], [cx + 5, hem]], 'a')
+  if (!back) {
+    switch (a.top) {
+      case 'jersey':
+        g.rect(cx - 9, 42, cx - 8, hem, 'R').rect(cx + 8, 42, cx + 9, hem, 'r')
+        g.poly([[cx - 6, 37], [cx - 2, 36], [cx - 3, 42], [cx - 5, 41]], 'R')
+        break
+      case 'tee':
+        g.rect(cx - 2, 37, cx + 1, 40, 'R').set(cx - 1, 38, 'D').set(cx, 38, 'D')
+        break
+      case 'splash':
+        for (const [x, y, c] of [[cx - 6, 36, 'N'], [cx + 3, 35, 'J'], [cx - 2, 40, 'I'], [cx + 5, 42, 'C'], [cx - 7, 43, 'J']] as const) g.rect(x, y, x + 1, y + 1, c)
+        break
+      case 'hoodie':
+        g.rect(cx - 5, 40, cx + 5, 44, 'a').set(cx - 2, 33, 'G').set(cx - 2, 34, 'G').set(cx + 2, 33, 'G').set(cx + 2, 34, 'G')
+        break
+      case 'jacket':
+        g.poly([[cx - 3, 32], [cx + 3, 32], [cx, 37]], 'G')
+        break
+      case 'shirt':
+        g.poly([[cx - 3, 32], [cx + 3, 32], [cx, 35]], 'Q').rect(cx - 1, 33, cx, 41, 'R')
+        break
+      case 'blazer':
+      case 'suit':
+      case 'school':
+        g.poly([[cx - 4, 32], [cx + 4, 32], [cx, 40]], a.top === 'suit' ? 'V' : 'G')
+        g.rect(cx - 1, 33, cx, 39, 'R')
+        break
+      case 'tank':
+        g.rect(cx - 9, 32, cx - 6, 34, 'S').rect(cx + 6, 32, cx + 9, 34, 'S')
+        break
+    }
+    if (has(a, 'scarf')) capsule(g, [cx - 6, 32], [cx + 6, 32], 2.4, 2.4, 'R', 'r')
+    if (has(a, 'bag')) g.rect(cx + 6, 41, cx + 12, 46, 'Z').rect(cx + 10, 41, cx + 12, 46, 'z')
+  }
+}
+
+function bodyDetails(g: Grid, a: Appearance, back: boolean) {
+  const cx = 24
+  if (back) {
+    if (a.top === 'jersey') g.stamp(cx - 2, 35, ['KKKK', '...K', '..K.', '..K.', '.K..'])
+    if (has(a, 'bag')) g.line(cx + 9, 33, cx - 8, 43, 'Z')
+    return
+  }
+  if (a.top === 'school') g.line(cx - 4, 32, cx, 40, 'U').line(cx + 4, 32, cx, 40, 'U').line(cx - 9, 45, cx + 9, 45, 'U')
+  if (a.top === 'blazer' || a.top === 'suit') g.line(cx - 4, 32, cx, 40, 'K').line(cx + 4, 32, cx, 40, 'K')
+  if (a.top === 'jacket') g.line(cx, 37, cx, 44, 'K')
+  if (has(a, 'chain')) g.set(cx - 3, 33, 'X').set(cx - 2, 35, 'X').set(cx, 36, 'X').set(cx + 2, 35, 'X').set(cx + 3, 33, 'X')
+  if (has(a, 'bag')) g.line(cx - 8, 33, cx + 8, 42, 'Z')
+  if (has(a, 'headphones')) g.rect(cx - 7, 31, cx + 7, 31, 'Z').rect(cx - 8, 31, cx - 6, 33, 'Z').rect(cx + 6, 31, cx + 8, 33, 'Z')
+  if (has(a, 'watch')) g.rect(cx + 13, 43, cx + 16, 43, 'Z')
+  if (has(a, 'bracelet')) g.rect(cx - 16, 43, cx - 13, 43, 'X')
+  if (has(a, 'beltchain')) g.set(cx + 6, 47, 'X').set(cx + 7, 48, 'X').set(cx + 8, 47, 'X')
 }
 
 /* ---------------- facing down ---------------- */
 
 function down(a: Appearance, step: Step): Pixels {
   const g = new Grid(OW_W, OW_H)
-  const bob = step === 0 ? 0 : 1
-  // legs: one leg lifts on each step
-  const lift = (left: boolean) => (step === 1 && left) || (step === 2 && !left)
-  for (const left of [true, false]) {
-    const x = left ? 8 : 13
-    const up = lift(left) ? 1 : 0
-    if (bareLegs(a)) g.rect(x, 25, x + 2, 26, 'B').rect(x, 27, x + 2, 28 - up, 'S')
-    else g.rect(x, 25, x + 2, 28 - up, 'B').rect(x + 2, 25, x + 2, 28 - up, 'b')
-    g.rect(x - (left ? 1 : 0), 29 - up, x + 2 + (left ? 0 : 1), 30 - up, 'F').rect(x - (left ? 1 : 0), 30 - up, x + 2 + (left ? 0 : 1), 30 - up, 'f')
-  }
-  if (a.bottom === 'skirt') g.rect(7, 24, 16, 26, 'B')
-  // arms swing opposite to the legs
-  for (const [x, d] of [[5, step === 1 ? -1 : step === 2 ? 1 : 0], [17, step === 1 ? 1 : step === 2 ? -1 : 0]] as const) {
-    g.rect(x, 18 + d, x + 1, 20 + d, sleeve(a)).rect(x, 21 + d, x + 1, 22 + d, forearm(a)).rect(x, 23 + d, x + 1, 23 + d, 'S')
-  }
-  body(g, a, false, 7, 16)
-  if (a.accessories.includes('bag')) g.rect(15, 21, 18, 24, 'Z')
+  const cx = 24
+  // hair behind the head (and the mullet at the nape)
+  const big = a.hair === 'wavy' || a.hair === 'mullet' || a.hair === 'curly' || a.hair === 'curtains'
+  oval(g, cx, 17, big ? 15.5 : 14.5, big ? 14.5 : 13.5, a.hair === 'buzz' ? 'j' : 'H', 'j')
+  if (a.hair === 'long') g.poly([[cx - 14, 18], [cx + 14, 18], [cx + 15, 38], [cx - 15, 38]], 'H')
+  if (a.hair === 'mullet') g.poly([[cx - 10, 24], [cx + 10, 24], [cx + 11, 34], [cx - 11, 34]], 'H')
+  if (a.hair === 'bun') oval(g, cx, 3.5, 5, 3.5, 'H', 'j', 'h')
+  clipHair(g, a, HAT_BRIM[a.hat] ?? 0)
+  bodyFrontBack(g, a, step, false)
   // head
-  hairBackRound(g, a, 12)
-  g.ellipse(4, 11.5, 1.2, 1.8, 'S', 's').ellipse(19, 11.5, 1.2, 1.8, 's')
-  g.ellipse(11.5, 11, 7, 6, 'S', undefined, 'T')
-  g.rect(16, 8, 18, 15, 's')
-  fringeFront(g, a)
-  hatTop(g, a, 12, 'down')
+  oval(g, cx - 12.5, 23, 2.2, 3, 'S', 's')
+  oval(g, cx + 12.5, 23, 2.2, 3, 's')
+  oval(g, cx, 21.5, 12, 11, 'S', undefined, 'T')
+  for (let y = 12; y < 33; y++) for (let x = cx + 7; x <= cx + 12; x++) if (g.get(x, y) === 'S') g.set(x, y, 's')
+  fringeFront(g, a, cx)
+  clipHair(g, a, (HAT_BRIM[a.hat] ?? 0) + 2)
+  hat(g, a, cx, 'down')
   g.outline()
-  // face
-  if (a.accessories.includes('sunglasses')) g.stamp(6, 11, ['KKKK..KKKK', 'KKKK..KKKK']).set(7, 11, 'l').set(14, 11, 'l')
-  else {
-    g.rect(8, 11, 8, 12, 'K').rect(15, 11, 15, 12, 'K')
-    if (a.accessories.includes('glasses')) g.stamp(6, 10, ['KKKK..KKKK']).set(6, 11, 'K').set(15, 11, 'K').set(10, 11, 'K').set(13, 11, 'K').set(10, 10, 'W').set(17, 10, 'W')
+  // face: tall BW eyes with a highlight, a small mouth
+  if (has(a, 'sunglasses')) {
+    g.rect(cx - 10, 20, cx - 2, 25, 'K').rect(cx + 2, 20, cx + 10, 25, 'K').rect(cx - 2, 21, cx + 2, 21, 'K')
+    g.set(cx - 8, 21, 'l').set(cx + 4, 21, 'l')
+  } else {
+    for (const ex of [cx - 7, cx + 4]) g.stamp(ex, 21, ['.KK', 'KWE', 'KEE', 'KEE', '.K.'])
+    if (has(a, 'glasses')) {
+      for (const x0 of [cx - 10, cx + 2]) {
+        g.rect(x0, 19, x0 + 8, 19, 'K').rect(x0, 26, x0 + 8, 26, 'K').rect(x0, 20, x0, 25, 'K').rect(x0 + 8, 20, x0 + 8, 25, 'K')
+        g.set(x0 + 7, 20, 'W')
+      }
+      g.rect(cx - 2, 21, cx + 2, 21, 'K')
+    }
   }
-  g.set(11, 14, 'M').set(12, 14, 'M')
-  if (a.accessories.includes('earring')) g.set(4, 13, 'X').set(19, 13, 'X')
-  if (a.accessories.includes('chain')) g.set(10, 18, 'X').set(11, 19, 'X').set(12, 19, 'X').set(13, 18, 'X')
-  if (a.accessories.includes('bag')) g.line(7, 17, 15, 22, 'Z')
-  if (a.accessories.includes('scarf')) g.rect(8, 16, 15, 17, 'R')
-  return bob ? shiftDown(g.toPixels(), 1) : g.toPixels()
+  g.rect(cx - 1, 29, cx + 1, 29, 'M').set(cx - 2, 28, 'M').set(cx + 2, 28, 'M')
+  if (has(a, 'earring')) g.set(cx - 13, 25, 'X').set(cx + 13, 25, 'X')
+  bodyDetails(g, a, false)
+  return step === 0 ? g.toPixels() : shiftDown(g.toPixels(), 1)
+}
+
+function fringeFront(g: Grid, a: Appearance, cx: number) {
+  const hairC = a.hair === 'buzz' ? 'j' : 'H'
+  oval(g, cx, 12.5, 14, 8, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
+  switch (a.hair) {
+    case 'wavy':
+    case 'mullet':
+      g.poly([[cx - 13, 12], [cx + 13, 12], [cx + 11, 19], [cx + 6, 16], [cx + 1, 19], [cx - 4, 16], [cx - 9, 18], [cx - 13, 17]], 'H')
+      for (const [x, y, r] of [[cx - 8, 5, 4.5], [cx, 3.5, 5], [cx + 8, 5, 4.5]] as const) oval(g, x, y, r, r, 'H', 'j', 'h')
+      g.line(cx + 4, 8, cx + 1, 17, 'j').line(cx - 6, 9, cx - 8, 16, 'j').line(cx - 4, 6, cx + 2, 4, 'h')
+      break
+    case 'curtains':
+      g.poly([[cx, 6], [cx - 14, 9], [cx - 14.5, 27], [cx - 11, 29], [cx - 9, 17], [cx - 3, 11]], 'H')
+      g.poly([[cx, 6], [cx + 14, 9], [cx + 14.5, 27], [cx + 11, 29], [cx + 9, 17], [cx + 3, 11]], 'j')
+      g.line(cx, 5, cx, 10, 'K').line(cx - 5, 8, cx - 11, 16, 'h')
+      break
+    case 'spiky':
+      for (const x of [cx - 10, cx - 4, cx + 2, cx + 8]) g.poly([[x - 4, 10], [x + 4, 10], [x + (x < cx ? -2 : 2), -1]], 'H')
+      g.poly([[cx - 13, 12], [cx + 13, 12], [cx + 11, 18], [cx - 11, 18]], 'H')
+      break
+    case 'curly':
+      for (let x = cx - 12; x <= cx + 12; x += 4) oval(g, x, 15, 2.8, 2.8, 'H', 'j', 'h')
+      break
+    case 'long':
+      g.poly([[cx - 13, 12], [cx + 13, 12], [cx + 11, 18], [cx - 11, 18]], 'H')
+      g.rect(cx - 15, 14, cx - 12, 36, 'H').rect(cx + 12, 14, cx + 15, 36, 'j')
+      break
+    case 'short':
+      g.poly([[cx - 13, 12], [cx + 13, 12], [cx + 11, 17], [cx - 11, 17]], 'H')
+      break
+    case 'bun':
+      g.line(cx, 7, cx, 13, 'j')
+      break
+  }
 }
 
 /* ---------------- facing up ---------------- */
 
 function up(a: Appearance, step: Step): Pixels {
   const g = new Grid(OW_W, OW_H)
-  const lift = (left: boolean) => (step === 1 && left) || (step === 2 && !left)
-  for (const left of [true, false]) {
-    const x = left ? 8 : 13
-    const up = lift(left) ? 1 : 0
-    if (bareLegs(a)) g.rect(x, 25, x + 2, 26, 'B').rect(x, 27, x + 2, 28 - up, 'S')
-    else g.rect(x, 25, x + 2, 28 - up, 'B')
-    g.rect(x, 29 - up, x + 2, 30 - up, 'F')
-  }
-  if (a.bottom === 'skirt') g.rect(7, 24, 16, 26, 'B')
-  for (const [x, d] of [[5, step === 1 ? 1 : step === 2 ? -1 : 0], [17, step === 1 ? -1 : step === 2 ? 1 : 0]] as const) {
-    g.rect(x, 18 + d, x + 1, 20 + d, sleeve(a)).rect(x, 21 + d, x + 1, 22 + d, forearm(a)).rect(x, 23 + d, x + 1, 23 + d, 'S')
-  }
-  body(g, a, true, 7, 16)
-  if (a.top === 'hoodie') g.rect(9, 17, 14, 18, 'a')
-  hairBackRound(g, a, 12)
-  g.ellipse(4, 11.5, 1.2, 1.8, 'S', 's').ellipse(19, 11.5, 1.2, 1.8, 's')
-  g.ellipse(12, 10, 8.5, 7, a.hair === 'buzz' ? 'j' : 'H', 'j', a.hair === 'buzz' ? undefined : 'h')
-  if (a.hair !== 'long') g.rect(10, 16, 13, 16, 's')
-  hatTop(g, a, 12, 'up')
+  const cx = 24
+  bodyFrontBack(g, a, step, true)
+  if (a.top === 'hoodie') oval(g, cx, 33, 7, 3, 'a')
+  oval(g, cx - 12.5, 23, 2.2, 3, 'S', 's')
+  oval(g, cx + 12.5, 23, 2.2, 3, 's')
+  const hairC = a.hair === 'buzz' ? 'j' : 'H'
+  oval(g, cx, 18, 15, 14.5, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
+  if (a.hair === 'mullet') g.poly([[cx - 11, 22], [cx + 11, 22], [cx + 11, 35], [cx + 6, 33], [cx, 36], [cx - 6, 33], [cx - 11, 35]], 'H')
+  if (a.hair === 'long') g.poly([[cx - 14, 18], [cx + 14, 18], [cx + 15, 38], [cx - 15, 38]], 'H')
+  if (a.hair === 'bun') oval(g, cx, 5, 5, 4, 'H', 'j', 'h')
+  if (a.hair === 'curly') for (let x = cx - 12; x <= cx + 12; x += 6) oval(g, x, 6, 3, 3, 'H', 'j')
+  if (a.hair !== 'long' && a.hair !== 'mullet') g.rect(cx - 4, 32, cx + 3, 32, 's')
+  clipHair(g, a, (HAT_BRIM[a.hat] ?? 0) + 2)
+  hat(g, a, cx, 'up')
   g.outline()
-  if (a.top === 'jersey') g.stamp(10, 19, ['KKK', '..K', '.K.', '.K.'])
-  if (a.accessories.includes('bag')) g.line(16, 17, 8, 22, 'Z')
+  if (a.hair !== 'buzz') g.line(cx - 6, 8, cx - 4, 22, 'j').line(cx + 5, 9, cx + 6, 22, 'j')
+  bodyDetails(g, a, true)
   return step === 0 ? g.toPixels() : shiftDown(g.toPixels(), 1)
 }
 
@@ -190,49 +252,59 @@ function up(a: Appearance, step: Step): Pixels {
 
 function left(a: Appearance, step: Step): Pixels {
   const g = new Grid(OW_W, OW_H)
-  const leg = (x: number, foot: number) => {
-    if (bareLegs(a)) g.rect(x, 25, x + 2, 26, 'B').rect(x, 27, x + 2, 28, 'S')
-    else g.rect(x, 25, x + 2, 28, 'B')
-    g.rect(foot, 29, foot + 3, 30, 'F').rect(foot, 30, foot + 3, 30, 'f')
+  const cx = 23
+  // legs in stride
+  const legs: Array<[number, number]> = step === 0 ? [[cx + 1, cx]] : step === 1 ? [[cx - 3, cx - 5], [cx + 5, cx + 6]] : [[cx - 1, cx - 2], [cx + 3, cx + 3]]
+  for (const [kx, fx] of legs) {
+    if (bareLegs(a)) {
+      capsule(g, [cx + 1, 46], [kx, 50], 3.6, 3.4, 'B', 'b')
+      capsule(g, [kx, 51], [fx, 55], 2.8, 2.6, 'S', 's')
+    } else capsule(g, [cx + 1, 46], [fx, 55], 3.8, 3.4, 'B', 'b', 'P')
+    oval(g, fx - 1.5, 58, 4.6, 2.8, 'F', 'f', 'e')
+    if (a.shoes === 'sneakers') g.rect(Math.floor(fx - 6), 60, Math.ceil(fx + 2.5), 60, 'G')
   }
-  if (step === 0) leg(10, 9)
-  if (step === 1) {
-    leg(13, 13)
-    leg(8, 6)
-  }
-  if (step === 2) {
-    leg(11, 10)
-    leg(9, 8)
-  }
-  if (a.bottom === 'skirt') g.rect(8, 24, 15, 26, 'B')
-  body(g, a, true, 8, 15)
-  if (a.top === 'jersey') g.rect(8, 17, 15, 17, 'R')
-  if (BLAZER.has(a.top)) g.rect(8, 17, 9, 20, a.top === 'suit' ? 'V' : 'G')
+  if (a.bottom === 'skirt') g.poly([[cx - 6, 44], [cx + 8, 44], [cx + 10, 51], [cx - 8, 51]], 'B')
+  g.poly([[cx - 6, 43], [cx + 8, 43], [cx + 8, 48], [cx - 6, 48]], 'B')
+  // torso in profile
+  const hem = BLAZERS.has(a.top) ? 46 : 45
+  g.poly([[cx - 5, 32], [cx + 7, 32], [cx + 8, hem], [cx - 6, hem]], 'A')
+  g.poly([[cx + 3, 32], [cx + 7, 32], [cx + 8, hem], [cx + 4, hem]], 'a')
+  if (a.top === 'jersey') g.rect(cx - 5, 32, cx + 7, 33, 'R')
+  if (BLAZERS.has(a.top)) g.poly([[cx - 5, 32], [cx - 1, 32], [cx - 5, 38]], a.top === 'suit' ? 'V' : 'G')
+  if (has(a, 'bag')) g.rect(cx + 5, 41, cx + 10, 46, 'Z')
   // head in profile: hair behind, face toward the left
-  g.ellipse(14, 10, 7.5, 7.5, a.hair === 'buzz' ? 'j' : 'H', 'j')
-  if (a.hair === 'long') g.rect(12, 10, 19, 20, 'H').rect(16, 10, 19, 20, 'j')
-  if (a.hair === 'bun') g.ellipse(17, 3, 2.5, 2, 'H', 'j')
-  g.ellipse(9.5, 11, 6, 6, 'S', undefined, 'T')
-  g.rect(11, 15, 13, 16, 's')
-  g.ellipse(14, 6, 7.5, 4, a.hair === 'buzz' ? 'j' : 'H', 'j', a.hair === 'buzz' ? undefined : 'h')
-  if (a.hair !== 'buzz' && a.hair !== 'bun') g.poly([[4, 5], [13, 5], [10, 9], [7, 8], [4, 10]], 'H')
-  if (a.hair === 'curtains') g.poly([[5, 6], [9, 6], [7, 14], [5, 13]], 'H')
-  g.ellipse(14, 11.5, 1.3, 1.8, 'S', 's')
-  hatTop(g, a, 12, 'left')
+  const hairC = a.hair === 'buzz' ? 'j' : 'H'
+  oval(g, cx + 4, 18, 13.5, 14, hairC, 'j')
+  if (a.hair === 'mullet') g.poly([[cx + 2, 22], [cx + 15, 22], [cx + 15, 34], [cx + 9, 33], [cx + 3, 35]], 'H')
+  if (a.hair === 'long') g.rect(cx, 18, cx + 15, 38, 'H').rect(cx + 10, 18, cx + 15, 38, 'j')
+  if (a.hair === 'bun') oval(g, cx + 12, 5, 4, 3.5, 'H', 'j')
+  oval(g, cx - 3, 22, 10.5, 10.5, 'S', undefined, 'T')
+  g.rect(cx + 1, 29, cx + 5, 32, 's')
+  oval(g, cx + 4, 12.5, 12.5, 7.5, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
+  if (a.hair !== 'buzz' && a.hair !== 'bun') g.poly([[cx - 14, 12], [cx + 3, 10], [cx - 2, 17], [cx - 8, 16], [cx - 14, 19]], 'H')
+  if (a.hair === 'curtains') g.poly([[cx - 13, 12], [cx - 7, 12], [cx - 9, 26], [cx - 13, 24]], 'H')
+  if (a.hair === 'spiky') for (const x of [cx - 6, cx + 2, cx + 10]) g.poly([[x - 4, 9], [x + 4, 9], [x + 3, -1]], 'H')
+  oval(g, cx + 6, 23, 2.2, 3, 'S', 's')
+  clipHair(g, a, (HAT_BRIM[a.hat] ?? 0) + 2)
+  hat(g, a, cx + 2, 'left')
   g.outline()
-  g.set(3, 12, 'S')
-  if (a.accessories.includes('sunglasses')) g.rect(4, 11, 7, 12, 'K').rect(8, 11, 13, 11, 'K')
+  g.set(cx - 14, 24, 'S').set(cx - 14, 25, 's')
+  // eye, glasses, mouth
+  if (has(a, 'sunglasses')) g.rect(cx - 13, 20, cx - 7, 25, 'K').rect(cx - 7, 21, cx + 4, 21, 'K')
   else {
-    g.rect(6, 11, 6, 12, 'K')
-    if (a.accessories.includes('glasses')) g.rect(4, 10, 8, 10, 'K').set(8, 11, 'K').rect(9, 10, 13, 10, 'K')
+    g.stamp(cx - 10, 21, ['KK', 'WE', 'EE', 'EE', 'K.'])
+    if (has(a, 'glasses')) g.rect(cx - 13, 19, cx - 6, 19, 'K').rect(cx - 13, 26, cx - 6, 26, 'K').rect(cx - 13, 20, cx - 13, 25, 'K').rect(cx - 6, 20, cx - 6, 25, 'K').rect(cx - 6, 21, cx + 4, 21, 'K')
   }
-  g.set(5, 14, 'M')
-  if (a.accessories.includes('earring')) g.set(14, 13, 'X')
-  if (a.accessories.includes('bag')) g.rect(13, 21, 16, 24, 'Z').line(9, 17, 14, 21, 'Z')
+  g.rect(cx - 12, 29, cx - 10, 29, 'M')
+  if (has(a, 'earring')) g.set(cx + 6, 26, 'X')
   // one visible arm swinging, outlined so it reads over the body
   const arm = new Grid(OW_W, OW_H)
-  const ax = step === 1 ? 8 : step === 2 ? 13 : 11
-  arm.rect(ax, 18, ax + 1, 20, sleeve(a)).rect(ax, 21, ax + 1, 22, forearm(a)).rect(ax, 23, ax + 1, 23, 'S').set(ax + 1, 19, sleeve(a) === 'A' ? 'a' : 's')
+  const swing = step === 1 ? -4 : step === 2 ? 4 : 0
+  const sleeveCol = a.top === 'tank' ? 'S' : 'A'
+  const forearmCol = TEES.has(a.top) || a.top === 'tank' ? 'S' : 'A'
+  capsule(arm, [cx + 1, 35], [cx + 1 + swing * 0.5, 40], 2.8, 2.5, sleeveCol, sleeveCol === 'A' ? 'a' : 's')
+  capsule(arm, [cx + 1 + swing * 0.5, 40], [cx + 1 + swing, 44], 2.5, 2.2, forearmCol, forearmCol === 'A' ? 'a' : 's')
+  oval(arm, cx + 1 + swing, 45.5, 2.4, 2.4, 'S', 's')
   arm.outline()
   return overlay(g.toPixels(), arm.toPixels())
 }

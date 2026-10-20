@@ -9,7 +9,7 @@ keep it consistent with those.
 | File | What it controls |
 |---|---|
 | `profile.ts` | Name, Trainer ID, region, class, university, degree, interests, resume file |
-| `dialogue.ts` | Intro script, main-menu sprite reactions, the secret click line |
+| `dialogue.csv` | Every line of dialogue (intro, menu, tower, staff, signs, creatures) — see below |
 | `menu.ts` | Main-menu tiles: label, colour, icon, one-line blurb, build phase, what's planned |
 | `sprites.ts` | Which sprite art is used (built-in prototype or your PNGs), shiny odds |
 | `experience.ts` | Every job, leadership and volunteer role (PC → Experience, resume text view) |
@@ -21,10 +21,21 @@ keep it consistent with those.
 
 Every fact carries `sources` (resume, LinkedIn, LinkedIn volunteering, or "provided by Aaryan").
 
-## Common edits
+## Dialogue: `src/content/dialogue.csv`
 
-**Change the intro lines** — edit `introPart1` / `introPart2` in `dialogue.ts`. `{name}` becomes the
-visitor's chosen name.
+Every line anyone says — your intro and menu lines, each tower floor, the resort staff, signs,
+system messages, and your following creature's reactions and cries — is in one spreadsheet.
+
+- Open it in Excel, Numbers or Google Sheets. Columns: **key** (don't change), **speaker**,
+  **where** (when it's said, for your reference) and **text** (edit freely).
+- Several rows with the same key are said in order, one dialogue box each. Add or delete rows to
+  make a speech longer or shorter. For `follower.react`, one row is picked at random.
+- `{name}` = the visitor's name, `{creature}` = their creature, `{place}` = where they are,
+  `{cleared}` / `{next}` = tower floors. Lines starting with ▸ show as bullet points.
+- Save as CSV (UTF-8) and either replace the file or send it back to me. `npm test` checks that
+  no key the game needs has gone missing.
+
+## Common edits
 
 **Replace the resume** — overwrite `public/resume/resume.pdf`. The PC shows it inline, with download,
 new-tab and full-screen buttons; phones default to the text version built from `experience.ts`.
@@ -58,7 +69,7 @@ sprites:export` writes PNG previews to `sprites-export/`.
 ## Battle Resort and the tower
 
 - **Aaryan's looks per floor** — `src/content/aaryan.ts`: `signature` (everyday / Champion), `shinySignature`, and `towerStages` (floor, title, years, look, intro line, defeat line). Each look uses the same options visitors pick from.
-- **The five floors** (from your photos): 1 SBHS student (maroon piped blazer) · 2 first-year (black shirt, teal tie) · 3 Marketing Director (black suit, Law Ball 2024) · 4 Yellow Shirts tours (O-Week tee, bucket hat, crossbody bag) · 5 Champion (today's look).
+- **The five floors** (from your photos): 1 SBHS student (brown blazer, blue piping, dark red tie) · 2 first-year (colour-run paint tee, March 2023) · 3 Marketing Director (black suit, Law Ball 2024) · 4 Yellow Shirts tours (O-Week tee, bucket hat, crossbody bag) · 5 Champion (today's look).
 - **Floor teams and difficulty** — `src/battle/tower.ts` (`floors`: AI tier, Aaryan's team and levels, your level, potions, which creatures each floor unlocks). Each floor introduces creatures from that stage of the story. `npm test` simulates every floor and checks the climb stays beatable and gets harder (current starter-party win rates: 100%, 100%, 90%, 65%, 32%).
 - **Creatures** — `src/battle/data.ts` (stats, moves, types) and `src/sprites/creatures.ts` (art). The six introduced in the tower, all drawn from real parts of the story: WICKETOAD (school cricket coaching), CAMPFLY (First Year Camp leader), MEGAPHAWK (marketing campaigns), STITCHICK (the merch he designed), DIPLOMOTH (DiscoverMUN mentoring) and DATADILLO (data & risk work at Clayton Utz).
 - **Suggestion box** — in the tower reception. Ideas arrive in `#/admin → SUGGESTIONS` and are never shown publicly.
@@ -71,7 +82,7 @@ sprites:export` writes PNG previews to `sprites-export/`.
 `src/content/medals.ts` lists the 19 medals (name, description, tier, hidden + hint). The rules that
 award them live in `src/systems/progress.ts` (collections, battles, polishing) and in the screens that
 trigger them (shiny/secret on the main menu, resume in the PC, rare encounter in the Pokédex, the
-Konami code in `src/systems/konami.ts`). Rare-encounter odds and lines are in `dialogue.ts`; shiny
+Konami code in `src/systems/konami.ts`). Rare-encounter odds are in `dialogue.ts` and its lines in `dialogue.csv`; shiny
 odds in `sprites.ts`.
 
 The walking sprite is generated in `src/sprites/overworld.ts` (4 directions × 3 frames) and appears

@@ -7,7 +7,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
-import { creatureArt, trainerdexBadge } from '../src/sprites/creatures.ts'
+import { creatureArt, creatureArtHi, trainerdexBadge } from '../src/sprites/creatures.ts'
 import { overworldFor } from '../src/sprites/overworld.ts'
 import { renderFlat, paletteFor } from '../src/sprites/character.ts'
 import { signature, shinySignature, towerStages } from '../src/content/aaryan.ts'
@@ -92,11 +92,12 @@ function lineup(items: Array<[Pixels, Palette]>, scale: number): Buffer {
 
 mkdirSync('sprites-export', { recursive: true })
 for (const [id, art] of Object.entries(creatureArt)) writeFileSync(`sprites-export/creature-${id}@4x.png`, sheet([art.pixels], art.palette, 4))
-{ const o = overworldFor(signature); writeFileSync('sprites-export/overworld@6x.png', sheet([...o.down, ...o.up, ...o.left, ...o.right], paletteFor(signature), 6)) }
+{ const o = overworldFor(signature); writeFileSync('sprites-export/overworld@3x.png', sheet([...o.down, ...o.up, ...o.left, ...o.right], paletteFor(signature), 3)) }
 for (const st of towerStages) writeFileSync(`sprites-export/bw-${st.floor}-${st.id}@4x.png`, sheet([renderFlat(st.look), renderFlat(st.look, 'raised')], paletteFor(st.look), 4))
 writeFileSync('sprites-export/bw-lineup@3x.png', lineup(towerStages.map((st) => [renderFlat(st.look), paletteFor(st.look)]), 3))
-writeFileSync('sprites-export/ow-lineup@6x.png', lineup(towerStages.flatMap((st) => { const o = overworldFor(st.look); return [o.down[0], o.left[1], o.up[0]].map((f) => [f, paletteFor(st.look)] as [Pixels, Palette]) }), 6))
-writeFileSync('sprites-export/creatures-new@4x.png', lineup(['wicketoad', 'campfly', 'megaphawk', 'stitchick', 'diplomoth', 'datadillo'].map((id) => [creatureArt[id].pixels, creatureArt[id].palette]), 4))
+writeFileSync('sprites-export/ow-lineup@3x.png', lineup(towerStages.flatMap((st) => { const o = overworldFor(st.look); return [o.down[0], o.left[1], o.up[0]].map((f) => [f, paletteFor(st.look)] as [Pixels, Palette]) }), 3))
+writeFileSync('sprites-export/creatures-hi@2x.png', lineup(Object.values(creatureArtHi).slice(0, 8).map((c) => [c.pixels, c.palette]), 2))
+writeFileSync('sprites-export/creatures-hi-2@2x.png', lineup(Object.values(creatureArtHi).slice(8).map((c) => [c.pixels, c.palette]), 2))
 writeFileSync('sprites-export/bw-shiny@4x.png', sheet([renderFlat(shinySignature)], paletteFor(shinySignature), 4))
 writeFileSync('sprites-export/trainerdex-badge@6x.png', sheet([trainerdexBadge.pixels], trainerdexBadge.palette, 6))
 // all creatures in one strip, sharing one palette per sprite is not possible, so stitch per creature

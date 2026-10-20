@@ -2,7 +2,7 @@
  * Original battle creatures (40×40), built from shapes in raster.ts and auto-outlined.
  * Six belong to Aaryan's team; three are the visitor's starters.
  */
-import { Grid } from './raster.ts'
+import { Grid, HiGrid } from './raster.ts'
 import type { Palette, Pixels } from './pixels.ts'
 
 export const CREATURE_SIZE = 40
@@ -13,8 +13,10 @@ export interface CreatureArt {
   pixels: Pixels
 }
 
+/** Resolution the builders below draw at (1 = 40×40, 2 = 80×80 hi-res). */
+let RES = 1
 function grid() {
-  return new Grid(CREATURE_SIZE, CREATURE_SIZE)
+  return new HiGrid(CREATURE_SIZE, CREATURE_SIZE, RES)
 }
 
 /* ---------------- Aaryan's team ---------------- */
@@ -378,23 +380,19 @@ function datadillo(): CreatureArt {
   }
 }
 
-export const creatureArt: Record<string, CreatureArt> = {
-  gavelion: gavelion(),
-  helixor: helixor(),
-  brushfox: brushfox(),
-  subwoof: subwoof(),
-  strikaroo: strikaroo(),
-  hootour: hootour(),
-  byterat: byterat(),
-  beakerbun: beakerbun(),
-  riffin: riffin(),
-  wicketoad: wicketoad(),
-  campfly: campfly(),
-  megaphawk: megaphawk(),
-  stitchick: stitchick(),
-  diplomoth: diplomoth(),
-  datadillo: datadillo(),
+const builders = { gavelion, helixor, brushfox, subwoof, strikaroo, hootour, byterat, beakerbun, riffin, wicketoad, campfly, megaphawk, stitchick, diplomoth, datadillo }
+function build(k: number): Record<string, CreatureArt> {
+  RES = k
+  const out = Object.fromEntries(Object.entries(builders).map(([id, f]) => [id, f()]))
+  RES = 1
+  return out
 }
+
+/** 40×40 art for small icons. */
+export const creatureArt: Record<string, CreatureArt> = build(1)
+/** The same creatures at 80×80 with finer outlines, for battles and the party screen. */
+export const creatureArtHi: Record<string, CreatureArt> = build(2)
+export const CREATURE_HI = CREATURE_SIZE * 2
 
 /** The TRAINERDEX BADGE — earned by beating Aaryan. */
 export const trainerdexBadge: CreatureArt = (() => {

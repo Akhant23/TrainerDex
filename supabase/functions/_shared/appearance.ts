@@ -4,13 +4,13 @@
  */
 export const SKIN_IDS = ['porcelain', 'light', 'tan', 'brown', 'deep', 'dark'] as const
 export const HAIR_COLOUR_IDS = ['black', 'darkBrown', 'brown', 'auburn', 'blonde', 'platinum', 'blue', 'pink'] as const
-export const CLOTH_COLOUR_IDS = ['white', 'black', 'grey', 'red', 'maroon', 'navy', 'blue', 'teal', 'green', 'yellow', 'lavender', 'pink', 'orange', 'tan'] as const
+export const CLOTH_COLOUR_IDS = ['white', 'black', 'grey', 'red', 'maroon', 'brown', 'navy', 'blue', 'teal', 'green', 'yellow', 'lavender', 'pink', 'orange', 'tan'] as const
 export const EYE_COLOUR_IDS = ['brown', 'dark', 'blue', 'green'] as const
-export const HAIR_STYLES = ['wavy', 'curtains', 'short', 'spiky', 'curly', 'long', 'bun', 'buzz'] as const
+export const HAIR_STYLES = ['wavy', 'mullet', 'curtains', 'short', 'spiky', 'curly', 'long', 'bun', 'buzz'] as const
 export const EYE_STYLES = ['soft', 'round', 'sharp', 'wide'] as const
 export const FACES = ['smile', 'grin', 'smirk', 'calm'] as const
-/** shirt = collared shirt + tie; suit = blazer over a dark shirt + tie; school = piped blazer + tie. */
-export const TOPS = ['tee', 'jersey', 'hoodie', 'jacket', 'shirt', 'blazer', 'suit', 'school', 'tank'] as const
+/** splash = tee with paint-powder splashes; shirt = collared shirt + tie; suit = blazer over a dark shirt + tie; school = piped blazer + tie. */
+export const TOPS = ['tee', 'splash', 'jersey', 'hoodie', 'jacket', 'shirt', 'blazer', 'suit', 'school', 'tank'] as const
 export const HATS = ['none', 'cap', 'beanie', 'bucket', 'headband'] as const
 export const BOTTOMS = ['joggers', 'jeans', 'shorts', 'skirt', 'slacks'] as const
 export const SHOES = ['sneakers', 'boots', 'formal'] as const

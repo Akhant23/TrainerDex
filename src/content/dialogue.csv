@@ -1,0 +1,78 @@
+﻿key,speaker,where,text
+intro.part1,AARYAN,"Opening speech, before the visitor types their name",Welcome to the world of AARYAN!
+intro.part1,AARYAN,"Opening speech, before the visitor types their name","This world is inhabited by people with all kinds of stories, experiences and ambitions."
+intro.part1,AARYAN,"Opening speech, before the visitor types their name","Today, you're about to discover one of them."
+intro.part1,AARYAN,"Opening speech, before the visitor types their name",But first — what should I call you?
+intro.part2,AARYAN,"Opening speech, after the name ({name} = the visitor)",{name}! Nice to meet you.
+intro.part2,AARYAN,"Opening speech, after the name ({name} = the visitor)",Your adventure begins now!
+menu.welcome,SYSTEM,Main menu greeting,"Welcome back, {name}! Where to next?"
+menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)","Oh! Hey there, {name}!"
+menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Careful — I bruise easily. I'm a law student.
+menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Have you checked the PC yet? My resume lives there.
+menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Fun fact: this jersey has a +10 boost to confidence.
+menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Fancy a battle? Head to the BATTLE RESORT and climb the tower.
+menu.secret,AARYAN,Main menu: after 10 clicks in a row,"...OK, you found it. There is no secret. Or IS there?"
+pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),A wild AARYAN appeared!
+pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),…He seems to be looking for his phone charger.
+pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),He checked his watch. Something about a deadline.
+pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),Wild AARYAN fled!
+tower.school.intro,AARYAN (SBHS),"Floor 1, before the battle",I’m fresh out of GPS football training — let’s see what you’ve got!
+tower.school.defeat,AARYAN (SBHS),"Floor 1, after you win","Not bad! Go on, the lift’s that way."
+tower.first-year.intro,AARYAN (FIRST-YEAR),"Floor 2, before the battle","First year, first semester, and I’m already covered in paint. Let’s battle!"
+tower.first-year.defeat,AARYAN (FIRST-YEAR),"Floor 2, after you win","Okay, uni’s harder than it looks. Up you go!"
+tower.marketing.intro,AARYAN (MARKETING),"Floor 3, before the battle",Law Ball’s tonight and the merch sold out. Twice. The Dean wore one. Ready?
+tower.marketing.defeat,AARYAN (MARKETING),"Floor 3, after you win","Okay, that was a strong campaign. Next floor."
+tower.tours.intro,AARYAN (TOURS),"Floor 4, before the battle","Need help? Follow the sign! 3,500 first-years did. Now it’s your turn."
+tower.tours.defeat,AARYAN (TOURS),"Floor 4, after you win",Tour’s over — the Champion’s waiting upstairs.
+tower.champion.intro,AARYAN (CHAMPION),"Floor 5, before the battle",So you made it to the top. Welcome to the Champion’s floor.
+tower.champion.defeat,AARYAN (CHAMPION),"Floor 5, after you win",You beat every version of me. You’re the real Champion.
+tower.lose,AARYAN,"Any floor, after you lose",Come back when you’re ready. The tower isn’t going anywhere.
+staff.guide,RESORT GUIDE,"Plaza, in front of the tower",Welcome to the TrainerDex Battle Resort!
+staff.guide,RESORT GUIDE,"Plaza, in front of the tower","▸ The Battle Tower is just behind me — five floors, five versions of Aaryan."
+staff.guide,RESORT GUIDE,"Plaza, in front of the tower",▸ Visit the Avatar Studio to the west to change your look.
+staff.guide,RESORT GUIDE,"Plaza, in front of the tower",▸ Everyone else you see here is a real visitor. Say hi!
+staff.lifeguard,LIFEGUARD,"Plaza, by the pool",No running by the pool!
+staff.lifeguard,LIFEGUARD,"Plaza, by the pool",…Unless you’re running from the Champion. Then fair enough.
+staff.receptionist.welcome,RECEPTIONIST,"Tower reception, first line",Welcome to the Battle Tower!
+staff.receptionist.progress,RECEPTIONIST,Tower reception ({cleared} = floors cleared),▸ You’ve cleared {cleared} of 5 floors.
+staff.receptionist.next,RECEPTIONIST,Tower reception ({next} = next floor),Floor {next} is open.
+staff.receptionist.champion,RECEPTIONIST,"Tower reception, after clearing all 5",You’re the Champion!
+staff.receptionist.tips,RECEPTIONIST,"Tower reception, after the progress line",▸ Use the PC on the left to set your party of up to three.
+staff.receptionist.tips,RECEPTIONIST,"Tower reception, after the progress line",▸ Got an idea for a new creature or type? Drop it in the red suggestion box.
+staff.receptionist.tips,RECEPTIONIST,"Tower reception, after the progress line",▸ The lift on the right takes you up. Fancy a quick exhibition match instead?
+sign.resort,SIGN,"Plaza sign, west",BATTLE RESORT
+sign.resort,SIGN,"Plaza sign, west","▸ North: the Battle Tower — five floors, five versions of Aaryan."
+sign.resort,SIGN,"Plaza sign, west",▸ West: the Avatar Studio — change your look any time.
+sign.guestboard,SIGN,"Plaza sign, east",GUEST BOARD
+sign.guestboard,SIGN,"Plaza sign, east",▸ Everyone you see here made an avatar on the TrainerDex.
+sign.guestboard,SIGN,"Plaza sign, east",▸ Walk up to them to see their party and say hi.
+resort.welcome,SYSTEM,After saving your first avatar ({name}),"Looking sharp, {name}!"
+resort.welcome,SYSTEM,After saving your first avatar ({name}),"▸ Walk with the arrow keys or WASD (hold Shift to run), or use the pad below."
+resort.welcome,SYSTEM,After saving your first avatar ({name}),▸ Press A / Enter to talk. Your lead creature follows you — talk to it too!
+resort.liftLocked,SYSTEM,"Tower lift, floor not cleared yet",The lift is locked. Beat Aaryan on this floor to go up.
+resort.topFloor,SYSTEM,"Tower lift, on the top floor",This is the top of the tower. The view’s pretty good from here.
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is pleased to see you!
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is staring off into the distance…
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is sniffing around {place}.
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} gave a happy little hop!
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is looking at you expectantly.
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} seems a little sleepy.
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is humming to itself.
+follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is keeping a close eye on the other trainers.
+follower.wantsBattle,SYSTEM,"Talking to the creature following you, sometimes ({creature})",{creature} wants a battle!
+follower.battleAsk,SYSTEM,After it says it wants a battle,Fancy a quick battle?
+cry.byterat,BYTERAT,This creature’s signature noise,Skree-bit!
+cry.beakerbun,BEAKERBUN,This creature’s signature noise,Bloop-bun!
+cry.riffin,RIFFIN,This creature’s signature noise,Riff-riff!
+cry.gavelion,GAVELION,This creature’s signature noise,Raa-order!
+cry.helixor,HELIXOR,This creature’s signature noise,Hsss-helix!
+cry.brushfox,BRUSHFOX,This creature’s signature noise,Swish-fox!
+cry.subwoof,SUBWOOF,This creature’s signature noise,WOOF-woof-wub!
+cry.strikaroo,STRIKAROO,This creature’s signature noise,Roo-GOAL!
+cry.hootour,HOOTOUR,This creature’s signature noise,Hoo-hoo-this-way!
+cry.wicketoad,WICKETOAD,This creature’s signature noise,Howzat-croak!
+cry.campfly,CAMPFLY,This creature’s signature noise,Bzz-glow!
+cry.megaphawk,MEGAPHAWK,This creature’s signature noise,KREE-ee-ee!
+cry.stitchick,STITCHICK,This creature’s signature noise,Cheep-stitch!
+cry.diplomoth,DIPLOMOTH,This creature’s signature noise,Flutter-motion!
+cry.datadillo,DATADILLO,This creature’s signature noise,Bleep-roll!

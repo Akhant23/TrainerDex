@@ -44,6 +44,7 @@ export const CLOTH_COLOURS = {
   grey: ['#8a90a0', '#646a78', '#b0b6c4'],
   red: ['#d12f3c', '#8e1f2b', '#f05a64'],
   maroon: ['#6a2430', '#46141e', '#8e3a46'],
+  brown: ['#4a3024', '#2e1c14', '#6a4636'],
   navy: ['#26345e', '#161f3c', '#3e4e84'],
   blue: ['#3a7fe0', '#24529a', '#70a8f8'],
   teal: ['#1f8a8a', '#11585a', '#4ab4b0'],
@@ -103,15 +104,17 @@ export function paletteFor(a: Appearance): Palette {
     Z: '#2a2a33', // dark accessory
     z: '#46465a',
     M: '#8a4a40', // mouth
+    U: '#8cb8e8', u: '#5a88c0', // school blazer piping
+    N: '#f070b0', J: '#4aa0f0', I: '#58c870', C: '#f8d040', // paint-powder splashes
   }
 }
 
 /* ---------------- Drawing helpers (continuous coordinates) ---------------- */
 
-type Pt = [number, number]
+export type Pt = [number, number]
 
 /** Filled ellipse; `shade` on the right/bottom-right, `light` on the upper-left rim. */
-function oval(g: Grid, cx: number, cy: number, rx: number, ry: number, ch: string, shade?: string, light?: string, shadeAt = 0.45) {
+export function oval(g: Grid, cx: number, cy: number, rx: number, ry: number, ch: string, shade?: string, light?: string, shadeAt = 0.45) {
   for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
     for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
       const dx = (x + 0.5 - cx) / rx
@@ -125,7 +128,7 @@ function oval(g: Grid, cx: number, cy: number, rx: number, ry: number, ch: strin
 }
 
 /** A tapered capsule from p0 (radius r0) to p1 (radius r1), shaded on its right side. */
-function capsule(g: Grid, p0: Pt, p1: Pt, r0: number, r1: number, ch: string, shade?: string, light?: string) {
+export function capsule(g: Grid, p0: Pt, p1: Pt, r0: number, r1: number, ch: string, shade?: string, light?: string) {
   const [x0, y0] = p0
   const [x1, y1] = p1
   const vx = x1 - x0
@@ -151,7 +154,7 @@ function capsule(g: Grid, p0: Pt, p1: Pt, r0: number, r1: number, ch: string, sh
     }
 }
 
-function chain(g: Grid, pts: Pt[], a = 'X', b = 'x') {
+export function chain(g: Grid, pts: Pt[], a = 'X', b = 'x') {
   let i = 0
   for (let k = 0; k < pts.length - 1; k++) {
     const [x0, y0] = pts[k]
@@ -177,7 +180,8 @@ export interface CharacterLayers {
   headBlink: Pixels
 }
 
-const UNTUCKED = new Set<Appearance['top']>(['tee', 'jersey', 'hoodie', 'jacket', 'tank'])
+const UNTUCKED = new Set<Appearance['top']>(['tee', 'splash', 'jersey', 'hoodie', 'jacket', 'tank'])
+const TEES = new Set<Appearance['top']>(['tee', 'splash', 'jersey'])
 const BLAZERS = new Set<Appearance['top']>(['blazer', 'suit', 'school'])
 
 function hairBack(a: Appearance): Pixels {
@@ -187,6 +191,13 @@ function hairBack(a: Appearance): Pixels {
       oval(g, 40, 14, 13, 11.5, 'H', 'j', 'h')
       oval(g, 29, 19, 3.5, 5, 'H', 'j')
       oval(g, 51, 19, 3.5, 5, 'j')
+      break
+    case 'mullet':
+      // the wavy top, plus a modern mullet: longer, layered hair at the nape
+      oval(g, 40, 14, 13, 11.5, 'H', 'j', 'h')
+      g.poly([[33, 22], [47, 22], [48.6, 30], [48, 38], [45.5, 35.5], [43, 39], [40, 36.5], [37, 39], [34.5, 35.5], [32, 38], [31.4, 30]], 'H')
+      g.poly([[44, 22], [47, 22], [48.6, 30], [48, 38], [45.5, 35.5], [44.5, 30]], 'j')
+      g.line(33, 30, 33.5, 36, 'h').line(36, 32, 36.5, 37, 'j')
       break
     case 'curtains':
       oval(g, 40, 14, 12.5, 11, 'H', 'j', 'h')
@@ -209,7 +220,16 @@ function hairBack(a: Appearance): Pixels {
     default:
       oval(g, 40, 15, 11.5, 11, 'H', 'j')
   }
+  clipUnderHat(g, a)
   return g.outline().toPixels()
+}
+
+/** Hats sit on top of the hair: nothing of the hair pokes out above the brim. */
+export const HAT_BRIM: Partial<Record<Appearance['hat'], number>> = { cap: 12, beanie: 12, bucket: 11 }
+function clipUnderHat(g: Grid, a: Appearance) {
+  const brim = HAT_BRIM[a.hat]
+  if (brim === undefined) return
+  for (let y = 0; y < brim; y++) for (let x = 0; x < CHAR_W; x++) if ('Hjh'.includes(g.get(x, y))) g.set(x, y, '.')
 }
 
 function legs(a: Appearance): Pixels {
@@ -302,7 +322,7 @@ function tie(g: Grid, school: boolean) {
   g.rect(39, 37, 40, 39, 'R').set(38, 38, 'R').set(41, 38, 'r')
   g.poly([[38.6, 40], [41.4, 40], [42.4, 55], [40, 58], [37.6, 55]], 'R')
   g.poly([[40, 40], [41.4, 40], [42.4, 55], [40, 58]], 'r')
-  if (school) for (let y = 42; y < 56; y += 4) g.set(39, y, 'D').set(40, y + 2, 'D')
+  void school
 }
 
 function torso(a: Appearance): Pixels {
@@ -356,6 +376,7 @@ function torso(a: Appearance): Pixels {
   // ---- details over the outline ----
   switch (a.top) {
     case 'tee':
+    case 'splash':
     case 'jersey':
       // crew neck
       g.stamp(34, 36, ['K..........K', '.K........K.', '..KKKKKKKK..'])
@@ -364,6 +385,10 @@ function torso(a: Appearance): Pixels {
         g.line(28, 50, 28, hem - 1, 'R').line(52, 50, 52, hem - 1, 'r')
         // flame print, as on the reference jersey
         g.stamp(31, 46, ['R......', 'rR.....', '.RR..R.', '.rRRrR.', '..RRRR.', '..rRRR.', '...RRr.', '...rR..', '....R..'])
+      } else if (a.top === 'splash') {
+        // paint-powder splashes, as at a colour run
+        const spots: Array<[number, number, string]> = [[32, 44, 'N'], [44, 41, 'J'], [37, 52, 'I'], [47, 55, 'N'], [31, 60, 'C'], [42, 62, 'J'], [49, 47, 'C'], [35, 40, 'I']]
+        for (const [x, y, c] of spots) g.rect(x, y, x + 1, y + 1, c).set(x + 2, y + 1, c).set(x, y + 2, c)
       } else {
         // small crest print in the accent colour (plain if accent = top colour)
         g.stamp(36, 44, ['.RRRRRR.', 'RRqRRqRR', 'RRRDDRRR', 'RRRDDRRR', '.RRRRRR.', '..rRRr..', '...rr...'])
@@ -387,7 +412,7 @@ function torso(a: Appearance): Pixels {
     case 'blazer':
     case 'suit':
     case 'school': {
-      const edge = a.top === 'school' ? 'G' : 'K'
+      const edge = a.top === 'school' ? 'U' : 'K'
       // lapels
       g.line(35, 37, 39, 55, edge).line(45, 37, 41, 55, edge)
       g.line(34, 38, 36, 46, 'a').line(46, 38, 44, 46, 'a')
@@ -395,10 +420,13 @@ function torso(a: Appearance): Pixels {
       // buttons + hem
       g.set(40, 60, 'K').set(40, 65, 'K')
       if (a.top === 'school') {
-        g.line(28, hem - 1, 52, hem - 1, 'G')
-        g.line(40, 56, 40, hem - 1, 'G')
+        // blue piping round the hem, cut away below the button so the shirt and black belt show
+        g.line(28, hem - 1, 52, hem - 1, 'U')
+        g.poly([[40, 61], [44.5, hem], [35.5, hem]], 'G')
+        for (let y = 64; y < hem; y++) for (let x = 30; x < 50; x++) if (g.get(x, y) === 'G') g.set(x, y, '.')
+        g.line(40, 61, 35, hem - 1, 'U').line(40, 61, 45, hem - 1, 'U')
         // crest pocket
-        g.stamp(30, 46, ['GGGGGG', 'G.DD.G', 'G.DX.G', 'G.DD.G', '.G..G.', '..GG..'])
+        g.stamp(30, 46, ['UUUUUU', 'U.DD.U', 'U.DX.U', 'U.DD.U', '.U..U.', '..UU..'])
       } else {
         g.line(40, 56, 40, hem - 1, 'K')
         g.line(30, 62, 35, 62, 'K').line(45, 62, 50, 62, 'K')
@@ -432,7 +460,7 @@ function sleeves(a: Appearance): { upper: [string, string]; lower: [string, stri
   const skin: [string, string] = ['S', 's']
   const cloth: [string, string] = ['A', 'a']
   if (a.top === 'tank') return { upper: skin, lower: skin }
-  if (a.top === 'tee' || a.top === 'jersey') return { upper: cloth, lower: skin }
+  if (TEES.has(a.top)) return { upper: cloth, lower: skin }
   if (BLAZERS.has(a.top)) return { upper: cloth, lower: cloth, cuff: a.top === 'suit' ? 'V' : 'G' }
   return { upper: cloth, lower: cloth, cuff: a.top === 'hoodie' ? 'a' : undefined }
 }
@@ -447,23 +475,23 @@ function hand(g: Grid, cx: number, cy: number, mirror: boolean) {
 function arm(a: Appearance, side: 'back' | 'front', pose: ArmPose): Pixels {
   const g = new Grid(CHAR_W, CHAR_H)
   const { upper, lower, cuff } = sleeves(a)
-  const tee = a.top === 'tee' || a.top === 'jersey'
+  const tee = TEES.has(a.top)
 
   if (side === 'back') {
     // relaxed arm with a soft elbow bend
     const sh: Pt = [29.2, 41]
-    const el: Pt = [25.8, 55]
-    const wr: Pt = [26.4, 66]
+    const el: Pt = [24.2, 54]
+    const wr: Pt = [24.8, 65.5]
     capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
     capsule(g, el, wr, 3.8, 3.0, lower[0], lower[1])
-    if (tee) capsule(g, sh, [26.6, 49], 5, 4.5, 'A', 'a', 'Q') // short sleeve sits a little wider than the arm
-    if (cuff) g.rect(23, 64, 29, 65, cuff)
-    hand(g, 26.8, 69.6, false)
+    if (tee) capsule(g, sh, [25.8, 49], 5, 4.5, 'A', 'a', 'Q') // short sleeve sits a little wider than the arm
+    if (cuff) g.rect(21, 63, 28, 64, cuff)
+    hand(g, 25.2, 69, false)
     g.outline()
-    if (tee) g.line(23, 50, 30, 51, a.top === 'jersey' ? 'R' : 'a')
+    if (tee) g.line(21, 50, 29, 51, a.top === 'jersey' ? 'R' : 'a')
     if (a.accessories.includes('bracelet')) {
-      g.line(23, 64, 30, 65, 'X').line(23, 66, 30, 67, 'x')
-      g.set(25, 64, 'W')
+      g.line(21, 63, 28, 64, 'X').line(21, 65, 28, 66, 'x')
+      g.set(23, 63, 'W')
     }
     return g.toPixels()
   }
@@ -525,6 +553,7 @@ function frontHair(g: Grid, a: Appearance) {
   }
   switch (a.hair) {
     case 'wavy':
+    case 'mullet':
       cap()
       temples()
       for (const [x, y, r] of [[32, 7, 4.6], [38.5, 4.6, 5.2], [45.5, 5.6, 4.8], [50.5, 10.5, 3.4], [29.5, 11, 3.4]] as const) oval(g, x, y, r, r, 'H', 'j', 'h')
@@ -608,6 +637,7 @@ function head(a: Appearance, blink: boolean): Pixels {
   g.poly([[30.8, 19], [49.2, 19], [47.8, 26], [43.6, 30.6], [40, 31.6], [36.4, 30.6], [32.2, 26]], 'S')
   for (let y = 12; y <= 30; y++) for (let x = 46; x <= 49; x++) if (g.get(x, y) === 'S') g.set(x, y, 's')
   frontHair(g, a)
+  clipUnderHat(g, a)
   hat(g, a)
   g.outline()
 
@@ -629,15 +659,14 @@ function head(a: Appearance, blink: boolean): Pixels {
     g.set(30, 23, 'X').set(30, 24, 'x').set(49, 23, 'X').set(49, 24, 'x')
   }
   if (a.accessories.includes('glasses')) {
-    // slim rectangular frames: bold top rim, clear lenses, a fine lower rim and a glint
-    for (const x0 of [32, 42]) {
-      g.rect(x0, 17, x0 + 5, 17, 'K')
-      g.set(x0, 18, 'K').set(x0, 19, 'K').set(x0 + 5, 18, 'K').set(x0 + 5, 19, 'K')
-      g.rect(x0 + 1, 22, x0 + 4, 22, 'l')
-      g.set(x0 + 4, 18, 'W')
+    // bold rectangular frames that sit around the eyes, with a glint on each lens
+    for (const x0 of [31, 42]) {
+      g.rect(x0, 16, x0 + 7, 16, 'K').rect(x0, 23, x0 + 7, 23, 'K')
+      g.rect(x0, 17, x0, 22, 'K').rect(x0 + 7, 17, x0 + 7, 22, 'K')
+      g.set(x0 + 6, 17, 'W').set(x0 + 5, 17, 'L')
     }
-    g.rect(38, 18, 41, 18, 'K')
-    g.set(31, 18, 'K').set(48, 18, 'K')
+    g.rect(39, 18, 41, 18, 'K')
+    g.set(30, 17, 'K').set(50, 17, 'K')
   }
   if (a.accessories.includes('sunglasses')) {
     g.rect(31, 17, 48, 17, 'K')

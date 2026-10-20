@@ -1,11 +1,48 @@
-import { useLayoutEffect, useState, type RefObject } from 'react'
-import { creatureArt } from '../../sprites/creatures'
-import { PixelArt } from '../../ui/PixelArt'
+import { useLayoutEffect, useMemo, useState, type RefObject } from 'react'
+import { creatureArt, creatureArtHi, CREATURE_SIZE } from '../../sprites/creatures'
+import { pixelsToDataUrl } from '../../sprites/render'
+import type { Pixels } from '../../sprites/pixels'
+import { useSettings } from '../../systems/settings'
 import type { SpeciesId } from '../../battle/data'
 
-export function CreatureSprite({ id, scale, flip = false, className = '' }: { id: SpeciesId; scale: number; flip?: boolean; className?: string }) {
-  const art = creatureArt[id]
-  return <PixelArt pixels={art.pixels} palette={art.palette} scale={scale} className={`${flip ? 'flip' : ''} ${className}`} />
+/** BW-style breathing: the upper body rises by `d` pixels and the waist stretches to follow. */
+function breathe(px: Pixels, d: number): Pixels {
+  const split = Math.round(px.length * 0.62)
+  return px.map((row, y) => (y + d < split ? px[y + d] : y < split ? px[split] : row))
+}
+const stripCache = new Map<string, string>()
+function idleStrip(id: SpeciesId, hi: boolean): string {
+  const key = `${id}:${hi}`
+  let url = stripCache.get(key)
+  if (!url) {
+    const art = (hi ? creatureArtHi : creatureArt)[id]
+    // rest → up → further up → up (looping)
+    const lift = hi ? [0, 2, 3, 2] : [0, 1, 1, 1]
+    const frames = lift.map((d) => breathe(art.pixels, d))
+    url = pixelsToDataUrl(frames[0].map((_, y) => frames.map((f) => f[y]).join('')), art.palette)
+    stripCache.set(key, url)
+  }
+  return url
+}
+
+/**
+ * A battle creature with a looping idle animation. `scale` is in 40-pixel units; at even
+ * scales the 80×80 hi-res art is used, so big sprites get the finer linework.
+ */
+export function CreatureSprite({ id, scale, flip = false, still = false, className = '' }: { id: SpeciesId; scale: number; flip?: boolean; still?: boolean; className?: string }) {
+  const { reducedMotion } = useSettings()
+  const hi = scale % 2 === 0
+  const size = CREATURE_SIZE * scale
+  const url = useMemo(() => idleStrip(id, hi), [id, hi])
+  const animate = !still && !reducedMotion
+  return (
+    <span
+      role="img"
+      aria-label={id}
+      className={`pixelated inline-block align-bottom ${animate ? 'creature-idle' : ''} ${flip ? 'flip' : ''} ${className}`}
+      style={{ width: size, height: size, backgroundImage: `url(${url})`, backgroundSize: `${size * 4}px ${size}px`, backgroundRepeat: 'no-repeat', ['--cw' as string]: `${size}px` }}
+    />
+  )
 }
 
 /** Largest integer scale so `units` pixels fit in `fraction` of the element's height. */

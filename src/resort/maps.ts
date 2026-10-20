@@ -29,7 +29,7 @@ export interface ResortMap {
   spawn?: Spot & { facing: Facing }
   warps: Warp[]
   /** Interactable tiles (signs, PC, lift, studio door): id + optional text. */
-  things: Array<Spot & { id: string; text?: string[] }>
+  things: Array<Spot & { id: string; /** dialogue.csv key for signs */ textKey?: string }>
   /** Buildings standing on solid footprint tiles (x, y = back-left tile; w × d tiles). */
   structures?: Array<{ kind: StructureKind; x: number; y: number; w: number; d: number }>
   /** Tiles where online visitors may stand. */
@@ -76,8 +76,8 @@ const plaza: ResortMap = {
   ],
   things: [
     { x: 3, y: 8, id: 'studio' },
-    { x: 4, y: 13, id: 'sign', text: ['BATTLE RESORT', '▸ North: the Battle Tower — five floors, five versions of Aaryan.', '▸ West: the Avatar Studio — change your look any time.'] },
-    { x: 24, y: 13, id: 'sign', text: ['GUEST BOARD', '▸ Everyone you see here made an avatar on the TrainerDex.', '▸ Walk up to them to see their party and say hi.'] },
+    { x: 4, y: 13, id: 'sign', textKey: 'sign.resort' },
+    { x: 24, y: 13, id: 'sign', textKey: 'sign.guestboard' },
   ],
   visitorArea: { x0: 1, y0: 9, x1: 26, y1: 16 },
   music: 'resort',

@@ -412,8 +412,9 @@ export default function Fight({
 
 function Scene({ battle, view, encounter, look, onSkip }: { battle: BattleState; view: View; encounter: boolean; look?: Appearance; onSkip: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
-  const oppScale = useHeightScale(ref, 0.3, 40)
-  const plyScale = useHeightScale(ref, 0.46, 40)
+  // in 40px units, always even so the 80×80 hi-res art is used
+  const oppScale = useHeightScale(ref, 0.3, 80) * 2
+  const plyScale = useHeightScale(ref, 0.46, 80) * 2
   // the trainer stands on the far platform, so they must fit in the space above it
   const trainerScale = useHeightScale(ref, 0.4, CHAR_H)
   const opp = battle.sides[1].team[view.active[1]]

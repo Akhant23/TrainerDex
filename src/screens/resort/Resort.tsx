@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEven
 import { navigate } from '../../app/router'
 import { menu } from '../../content/menu'
 import { towerStages } from '../../content/aaryan'
+import { anyLine, line, lines } from '../../content/script'
 import { species, type SpeciesId } from '../../battle/data'
 import { floors, floorSetup, unlockedSpecies } from '../../battle/tower'
 import { maps, placeVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, type MapId, type Warp } from '../../resort/maps'
 import { TILE } from '../../resort/tiles'
-import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor } from '../../resort/render'
+import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { staff } from '../../resort/npcs'
 import { WALK_CYCLE, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
@@ -24,6 +25,7 @@ import Fight from '../battle/Fight'
 import { SectionScreen } from '../SectionScreen'
 import AvatarStudio, { DEFAULT_AVATAR } from './AvatarStudio'
 import SuggestionBox from './SuggestionBox'
+import PartyBag from './PartyBag'
 
 const entry = menu.find((m) => m.id === 'battle')!
 const WALK_MS = 150
@@ -49,7 +51,7 @@ interface Dialogue {
   choices?: Array<{ label: string; action: () => void }>
   then?: () => void
 }
-type Panel = 'none' | 'studio' | 'pc' | 'lift' | 'profile' | 'suggest'
+type Panel = 'none' | 'studio' | 'pc' | 'lift' | 'profile' | 'suggest' | 'bag'
 
 // where you are survives leaving for a battle (and a page refresh) and coming back
 type Place = { map: MapId; x: number; y: number; facing: Facing }
@@ -77,6 +79,17 @@ const world = {
   },
 }
 
+const OPPOSITE: Record<Facing, Facing> = { up: 'down', down: 'up', left: 'right', right: 'left' }
+/** Where the lead creature stands: the tile behind you, or your own tile if that's blocked. */
+function petSpot(map: MapId, x: number, y: number, facing: Facing) {
+  const mp = maps[map]
+  const { w, h } = size(mp)
+  const b = step(x, y, OPPOSITE[facing])
+  const ok = b.x >= 0 && b.y >= 0 && b.x < w && b.y < h && !isSolidTile(mp, b.x, b.y)
+  return { ...(ok ? b : { x, y }), facing }
+}
+const PLACE_NAMES: Record<MapId, string> = { plaza: 'the plaza', reception: 'the reception', floor1: 'the tower', floor2: 'the tower', floor3: 'the tower', floor4: 'the tower', floor5: 'the Champion’s floor' }
+
 const floorNumber = (m: MapId) => (m.startsWith('floor') ? Number(m.slice(5)) : 0)
 
 /* ---------------- screen ---------------- */
@@ -93,7 +106,7 @@ export default function Resort() {
         setup={floorSetup(fight.floor, save.party)}
         seed={fight.seed}
         title={`FLOOR ${fight.floor} · ${stage.title}`}
-        opponent={{ look: stage.look, name: 'AARYAN', tag: `FLOOR ${fight.floor} · ${stage.title}`, winLines: [`AARYAN: ${stage.defeat}`], loseLines: ['AARYAN: Come back when you’re ready. The tower isn’t going anywhere.'] }}
+        opponent={{ look: stage.look, name: 'AARYAN', tag: `FLOOR ${fight.floor} · ${stage.title}`, winLines: [`AARYAN: ${line(`tower.${stage.id}.defeat`)}`], loseLines: [`AARYAN: ${line('tower.lose')}`] }}
         mode="tower"
         recordWin={fight.floor === 5 ? 'champion' : null}
         onExit={(_to, won) => {
@@ -126,6 +139,8 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tagRefs = useRef(new Map<string, HTMLDivElement>())
   const me = useRef({ ...world.get(), moving: null as null | { tx: number; ty: number; t0: number; dur: number }, turnAt: 0, bumpAt: 0 })
+  // your lead creature follows one step behind
+  const pet = useRef({ ...(() => { const w = world.get(); return petSpot(w.map, w.x, w.y, w.facing) })(), moving: null as null | { fx: number; fy: number; tx: number; ty: number; t0: number; dur: number } })
   const held = useRef<Facing[]>([])
   // a quick tap (pressed and released between frames) still counts as one step
   const tapped = useRef<Facing | null>(null)
@@ -149,7 +164,7 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
 
   /* ----- characters on this map ----- */
   const chars: Char[] = useMemo(() => {
-    const list: Char[] = staff.filter((s) => s.map === mapId).map((s) => ({ id: s.id, x: s.x, y: s.y, facing: s.facing, look: s.look, name: s.name, kind: 'staff' as const, lines: s.lines }))
+    const list: Char[] = staff.filter((s) => s.map === mapId).map((s) => ({ id: s.id, x: s.x, y: s.y, facing: s.facing, look: s.look, name: s.name, kind: 'staff' as const, lines: lines(s.linesKey) }))
     const n = floorNumber(mapId)
     if (n) list.push({ id: 'boss', ...FLOOR_BOSS, facing: 'down', look: towerStages[n - 1].look, name: 'AARYAN', kind: 'boss' })
     if (mapId === 'plaza' && online.length) {
@@ -178,6 +193,7 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
     window.setTimeout(
       () => {
         Object.assign(me.current, { map: to, x, y, facing, moving: null })
+        Object.assign(pet.current, petSpot(to, x, y, facing), { moving: null })
         world.set({ map: to, x, y, facing })
         setMapId(to)
         setNearby(null)
@@ -203,9 +219,9 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
     if (c.kind === 'boss') {
       const n = floorNumber(mapId)
       const stage = towerStages[n - 1]
-      if (save.floorCleared >= n) return say({ lines: [`AARYAN · ${stage.title}: ${stage.defeat}`] })
+      if (save.floorCleared >= n) return say({ lines: [`AARYAN · ${stage.title}: ${line(`tower.${stage.id}.defeat`)}`] })
       return say({
-        lines: [`AARYAN · ${stage.title} (${stage.years}): ${stage.intro}`],
+        lines: [`AARYAN · ${stage.title} (${stage.years}): ${line(`tower.${stage.id}.intro`)}`],
         choices: [
           { label: 'BATTLE!', action: () => (world.set({ map: mapId, x: me.current.x, y: me.current.y, facing: me.current.facing }), onBattle(n)) },
           { label: 'NOT YET', action: () => undefined },
@@ -216,11 +232,9 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
       const next = Math.min(5, save.floorCleared + 1)
       return say({
         lines: [
-          'Welcome to the Battle Tower!',
-          `▸ You’ve cleared ${save.floorCleared} of 5 floors.${save.floorCleared < 5 ? ` Floor ${next} is open.` : ' You’re the Champion!'}`,
-          '▸ Use the PC on the left to set your party of up to three.',
-          '▸ Got an idea for a new creature or type? Drop it in the red suggestion box.',
-          '▸ The lift on the right takes you up. Fancy a quick exhibition match instead?',
+          ...lines('staff.receptionist.welcome'),
+          `${line('staff.receptionist.progress', { cleared: save.floorCleared })} ${save.floorCleared < 5 ? line('staff.receptionist.next', { next }) : line('staff.receptionist.champion')}`,
+          ...lines('staff.receptionist.tips'),
         ],
         choices: [
           { label: 'QUICK BATTLE', action: () => navigate('/battle/quick') },
@@ -231,24 +245,44 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
     say({ lines: c.lines ?? ['…'] })
   }
 
+  const reactPet = (lead: SpeciesId) => {
+    const name = species[lead].name
+    pet.current.facing = OPPOSITE[me.current.facing]
+    audio.cry(lead)
+    const vars = { creature: name, place: PLACE_NAMES[mapId] }
+    const cry = `${name}: ${line(`cry.${lead}`)}`
+    if (Math.random() < 0.2)
+      return say({
+        lines: [cry, line('follower.wantsBattle', vars), line('follower.battleAsk', vars)],
+        choices: [
+          { label: 'BATTLE!', action: () => navigate('/battle/quick') },
+          { label: 'NOT NOW', action: () => undefined },
+        ],
+      })
+    say({ lines: [cry, anyLine('follower.react', vars)] })
+  }
+
   const interact = () => {
     const m = me.current
     const t = step(m.x, m.y, m.facing)
+    const lead = resortSave.get().party[0]
+    const pt = pet.current
+    if (lead && !pt.moving && pt.x === t.x && pt.y === t.y && !(pt.x === m.x && pt.y === m.y)) return reactPet(lead)
     const cs = charsRef.current
     const c = cs.find((x) => x.x === t.x && x.y === t.y) ?? (tileAt(maps[m.map], t.x, t.y) === 'C' ? cs.find((x) => { const t2 = step(t.x, t.y, m.facing); return x.x === t2.x && x.y === t2.y }) : undefined)
     if (c) return talk(c)
     const th = thingAt(maps[m.map], t.x, t.y)
     if (!th) return
     sfx('select')
-    if (th.id === 'sign') return say({ lines: th.text ?? [] })
+    if (th.id === 'sign') return say({ lines: th.textKey ? lines(th.textKey) : [] })
     if (th.id === 'studio') return setPanel('studio')
     if (th.id === 'pc') return setPanel('pc')
     if (th.id === 'suggest') return setPanel('suggest')
     if (th.id === 'lift') return setPanel('lift')
     if (th.id === 'lift-up') {
       const n = floorNumber(m.map)
-      if (save.floorCleared < n) return say({ lines: ['The lift is locked. Beat Aaryan on this floor to go up.'] })
-      if (n === 5) return say({ lines: ['This is the top of the tower. The view’s pretty good from here.'] })
+      if (save.floorCleared < n) return say({ lines: lines('resort.liftLocked') })
+      if (n === 5) return say({ lines: lines('resort.topFloor') })
       return warpTo(`floor${n + 1}` as MapId, FLOOR_ARRIVAL.x, FLOOR_ARRIVAL.y, FLOOR_ARRIVAL.facing)
     }
   }
@@ -348,7 +382,14 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
                 m.bumpAt = now
               }
             } else {
-              m.moving = { tx: t.x, ty: t.y, t0: now, dur: run.current ? RUN_MS : WALK_MS }
+              const dur = run.current ? RUN_MS : WALK_MS
+              m.moving = { tx: t.x, ty: t.y, t0: now, dur }
+              // the creature steps into the tile you just left
+              const pt = pet.current
+              if (pt.x !== m.x || pt.y !== m.y) {
+                pt.facing = pt.x < m.x ? 'right' : pt.x > m.x ? 'left' : pt.y < m.y ? 'down' : 'up'
+                pt.moving = { fx: pt.x, fy: pt.y, tx: m.x, ty: m.y, t0: now, dur }
+              }
             }
           }
         }
@@ -364,7 +405,21 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
       const walkFrame = WALK_CYCLE[Math.floor(now / 140) % 4]
       const actors: Actor[] = charsRef.current.map((c) => ({ look: c.look, facing: c.facing, frame: 0, x: c.x * TILE + 8, y: c.y * TILE + 14 }))
       actors.push({ look: resortSave.get().avatar ?? DEFAULT_AVATAR, facing: m.facing, frame: m.moving ? walkFrame : 0, x: px + 8, y: py + 14 })
-      drawWorld(ctx, mp, cam, actors, now)
+      const pt = pet.current
+      if (pt.moving && now - pt.moving.t0 >= pt.moving.dur) {
+        pt.x = pt.moving.tx
+        pt.y = pt.moving.ty
+        pt.moving = null
+      }
+      const lead = resortSave.get().party[0]
+      const creatures: CreatureActor[] = []
+      if (lead) {
+        const pk = pt.moving ? Math.min(1, (now - pt.moving.t0) / pt.moving.dur) : 0
+        const fx = pt.moving ? pt.moving.fx + (pt.moving.tx - pt.moving.fx) * pk : pt.x
+        const fy = pt.moving ? pt.moving.fy + (pt.moving.ty - pt.moving.fy) * pk : pt.y
+        creatures.push({ id: lead, facing: pt.facing, x: fx * TILE + 8, y: fy * TILE + 13, hop: pt.moving ? Math.sin(pk * Math.PI) * 3 : 0, breath: pt.moving ? 0 : Math.floor(now / 520) % 2 })
+      }
+      drawWorld(ctx, mp, cam, actors, now, creatures)
 
       // name tags + bubbles follow their owners
       const k2 = canvas.clientWidth / VIEW_W
@@ -486,7 +541,7 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
               progress.unlock('resort-guest')
               pushOnline({ avatar: a, name, greeting })
               setPanel('none')
-              if (first) say({ lines: [`Looking sharp, ${name}!`, '▸ Walk with the arrow keys or WASD (hold Shift to run), or use the pad below.', '▸ Press A / Enter to talk. The Battle Tower is straight ahead.'] })
+              if (first) say({ lines: lines('resort.welcome', { name }) })
             }}
           />
         </>
@@ -497,6 +552,17 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
             pushOnline({ party })
             setPanel('none')
           }}
+        />
+      ) : panel === 'bag' ? (
+        <PartyBag
+          party={save.party}
+          onLead={(id) => {
+            const party = [id, ...save.party.filter((p) => p !== id)]
+            resortSave.update({ party })
+            pushOnline({ party })
+          }}
+          onPc={() => setPanel('pc')}
+          onClose={() => setPanel('none')}
         />
       ) : panel === 'suggest' ? (
         <SuggestionBox onClose={() => setPanel('none')} />
@@ -524,6 +590,7 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
           release={release}
           onA={() => !blocked.current && ctl.current.interact()}
           onAvatar={() => setPanel('studio')}
+          onBag={() => setPanel('bag')}
         />
       )}
     </SectionScreen>
@@ -544,6 +611,7 @@ function Controls({
   release,
   onA,
   onAvatar,
+  onBag,
 }: {
   nearby: Char | null
   party: SpeciesId[]
@@ -556,6 +624,7 @@ function Controls({
   release: (d: Facing) => () => void
   onA: () => void
   onAvatar: () => void
+  onBag: () => void
 }) {
   const pad = (d: Facing, label: string, cls: string) => (
     <button
@@ -620,6 +689,9 @@ function Controls({
           <span aria-hidden className="absolute top-1/3 left-1/3 h-1/3 w-1/3 bg-[#3a3d4e]" />
         </div>
         <div className="flex flex-col gap-1">
+          <button type="button" className="pixel-btn !text-[13px]" onClick={onBag}>
+            PARTY
+          </button>
           <button type="button" className="pixel-btn !text-[13px]" onClick={onAvatar}>
             AVATAR
           </button>

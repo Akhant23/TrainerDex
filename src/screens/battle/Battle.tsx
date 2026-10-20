@@ -217,7 +217,7 @@ function HallOfFame() {
               <div className="flex items-end justify-center gap-[6%]">
                 {latest.team.map((id) => (
                   <span key={id} className="sparkle-host">
-                    <CreatureSprite id={id as SpeciesId} scale={3} />
+                    <CreatureSprite id={id as SpeciesId} scale={2} />
                   </span>
                 ))}
               </div>

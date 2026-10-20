@@ -12,9 +12,15 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
   blinking head) so `src/ui/CharacterSprite.tsx` can animate them like BW: breathing, a head bob,
   hair sway, swinging arms, random blinks, a fist-pump victory pose, and a nod on the VS screen. Animation is off when the
   visitor turns on reduced motion.
-- **Overworld walker** — `src/sprites/overworld.ts` draws a 24×32 chibi (big head, outlined, shaded)
-  from the same appearance: 4 directions × 3 frames, used in the resort and the Medal Box room.
+- **Overworld walker** — `src/sprites/overworld.ts` draws a BW-style chibi (big head, small body,
+  arms flared out, outlined and shaded) from the same appearance: 4 directions × 3 frames, used in
+  the resort and the Medal Box room. The art is 48×64 and shown at half size, so walkers keep the
+  same fine detail as the battle sprites.
   The idle animation is only for the battle/profile sprite — walkers stand still like in BW.
+- **Hats** always sit on top: any hair above the brim is clipped away before the hat is drawn.
+- **Creatures** — `src/sprites/creatures.ts` builds each creature from shapes, rendered twice: 40×40
+  for small icons and 80×80 (`creatureArtHi`, finer outlines) for battles, the party screen and the
+  creature that follows you. They breathe in a 4-frame idle loop like BW sprites.
 - **Colours** — the colour tables (`SKINS`, `HAIR_COLOURS`, `CLOTH_COLOURS`, `EYE_COLOURS`) are at the
   top of `character.ts`. Each entry is `[base, shade, light]`.
 
@@ -22,12 +28,13 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
 
 All of Aaryan's looks are in `src/content/aaryan.ts`:
 
-- `signature` — the everyday look (main menu, Trainer Card, Champion floor). Wavy black hair, slim
-  clear glasses, white jersey with red trim, black joggers and sneakers; silver chain, a stud in
+- `signature` — the everyday look (main menu, Trainer Card, Champion floor). Black hair with a wavy
+  top and fringe, worn as a modern mullet; bold rectangular glasses; white jersey with red trim, black joggers and sneakers; silver chain, a stud in
   each ear, a watch on one wrist, bracelets on the other, and a belt chain. No beard.
 - `shinySignature` — the 1-in-128 shiny colours.
 - `towerStages` — one look per Battle Tower floor, taken from photos of each period (outfits only):
-  SBHS uniform → first-year shirt and tie → Marketing Director suit → Yellow Shirts tours → Champion.
+  SBHS uniform (brown blazer, blue piping, dark red tie, grey trousers, black belt and shoes) →
+  first-year colour run (paint-splashed tee) → Marketing Director suit → Yellow Shirts tours → Champion.
 
 Change any field to another option id (the lists are in `supabase/functions/_shared/appearance.ts`)
 and the battle sprite, portrait and walker all update. `npm run sprites:export` writes PNG previews

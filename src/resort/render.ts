@@ -10,8 +10,10 @@
  *   u = wy − camY,  scale = D / (D − u·T),  sx = W/2 + (wx − camX)·scale,  sy = Y0 + u·scale·C
  */
 import { hexToRgba, type Palette, type Pixels } from '../sprites/pixels'
-import { overworldFor, type Facing } from '../sprites/overworld'
+import { overworldFor, OW_W, OW_WORLD, type Facing } from '../sprites/overworld'
 import { paletteFor, type Appearance } from '../sprites/character'
+import { creatureArtHi } from '../sprites/creatures'
+import { flipX } from '../sprites/raster'
 import { tiles, tilePalette, TILE } from './tiles'
 import { structureArt } from './structures'
 import { size, tileAt, type ResortMap } from './maps'
@@ -19,13 +21,15 @@ import { size, tileAt, type ResortMap } from './maps'
 export const VIEW_W = 256
 export const VIEW_H = 192
 /** Internal resolution multiplier, so scaled sprites keep crisp pixels. */
-export const RES = 3
+export const RES = 4
 const Y0 = 138
 const D = 230
 const T = 0.7
 const C = 0.74
 /** Tiles of padding around each map (edge tiles repeated) so the far distance is never empty. */
 const PAD = 16
+/** The floor texture is pre-scaled so filtering keeps the pixel art crisp up close. */
+const GROUND_RES = 2
 
 export interface Camera {
   x: number
@@ -67,16 +71,17 @@ function ground(m: ResortMap, frame: 0 | 1): HTMLCanvasElement {
   if (c) return c
   const { w, h } = size(m)
   c = document.createElement('canvas')
-  c.width = (w + PAD * 2) * TILE
-  c.height = (h + PAD * 2) * TILE
+  c.width = (w + PAD * 2) * TILE * GROUND_RES
+  c.height = (h + PAD * 2) * TILE * GROUND_RES
   const ctx = c.getContext('2d')!
+  ctx.imageSmoothingEnabled = false
   for (let ty = -PAD; ty < h + PAD; ty++)
     for (let tx = -PAD; tx < w + PAD; tx++) {
       if (!m.outdoor && (tx < 0 || ty < 0 || tx >= w || ty >= h)) continue
       const ch = tileAt(m, Math.max(0, Math.min(w - 1, tx)), Math.max(0, Math.min(h - 1, ty)))
       const def = tiles[ch] ?? tiles.X
       const px = frame && def.frame2 ? def.frame2 : def.px
-      ctx.drawImage(pixelCanvas(px, tilePalette, `tile:${ch}:${frame && def.frame2 ? 1 : 0}`), (tx + PAD) * TILE, (ty + PAD) * TILE)
+      ctx.drawImage(pixelCanvas(px, tilePalette, `tile:${ch}:${frame && def.frame2 ? 1 : 0}`), (tx + PAD) * TILE * GROUND_RES, (ty + PAD) * TILE * GROUND_RES, TILE * GROUND_RES, TILE * GROUND_RES)
     }
   groundCache.set(key, c)
   return c
@@ -106,27 +111,52 @@ export interface Actor {
   y: number
 }
 
+/** A party creature walking behind its trainer. */
+export interface CreatureActor {
+  id: string
+  facing: Facing
+  x: number
+  y: number
+  /** hop height in world pixels while walking */
+  hop: number
+  /** 0 or 1: resting breath frame */
+  breath: number
+}
+
+/** Creature art faces left; facing right flips it. Two breathing frames each. */
+function creatureFrames(id: string, flipped: boolean, breath: number): HTMLCanvasElement {
+  const art = creatureArtHi[id]
+  const split = Math.round(art.pixels.length * 0.62)
+  const base = breath ? art.pixels.map((row, y) => (y + 2 < split ? art.pixels[y + 2] : y < split ? art.pixels[split] : row)) : art.pixels
+  return pixelCanvas(flipped ? flipX(base) : base, art.palette, `cr:${id}:${flipped}:${breath}`)
+}
+/** World size of a following creature (its 80px art is drawn at this fraction). */
+const CREATURE_WORLD = 0.3
+
 /** Draw one frame of the map with its actors. */
-export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number) {
+export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number, creatures: CreatureActor[] = []) {
   const outdoor = !!m.outdoor
   const { w, h } = size(m)
   ctx.imageSmoothingEnabled = false
   ctx.fillStyle = outdoor ? '#bfe4f8' : '#101018'
   ctx.fillRect(0, 0, VIEW_W * RES, VIEW_H * RES)
 
-  // floor, one screen row at a time
+  // floor, one screen row at a time (filtered, like a textured 3D floor, so it doesn't shimmer)
   const g = ground(m, Math.floor(now / 600) % 2 === 1 ? 1 : 0)
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'low'
   for (let sy = 0; sy < VIEW_H * RES; sy++) {
     const v = ((sy + 0.5) / RES - Y0) / (C * D)
     const den = 1 + v * T
     if (den <= 0.05) continue
     const u = (v * D) / den
     const s = D / (D - u * T)
-    const srcY = Math.floor(cam.y + u + PAD * TILE)
+    const srcY = Math.floor((cam.y + u + PAD * TILE) * GROUND_RES)
     if (srcY < 0 || srcY >= g.height) continue
-    const srcW = VIEW_W / s
-    ctx.drawImage(g, cam.x - VIEW_W / 2 / s + PAD * TILE, srcY, srcW, 1, 0, sy, VIEW_W * RES, 1)
+    const srcW = (VIEW_W / s) * GROUND_RES
+    ctx.drawImage(g, (cam.x - VIEW_W / 2 / s + PAD * TILE) * GROUND_RES, srcY, srcW, 1, 0, sy, VIEW_W * RES, 1)
   }
+  ctx.imageSmoothingEnabled = false
   // a little haze toward the back
   const haze = ctx.createLinearGradient(0, 0, 0, VIEW_H * RES * 0.45)
   haze.addColorStop(0, outdoor ? 'rgba(220,240,255,0.45)' : 'rgba(0,0,0,0.45)')
@@ -137,12 +167,12 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   // everything that stands up, sorted back to front
   type Item = { depth: number; draw: () => void }
   const items: Item[] = []
-  const sprite = (img: HTMLCanvasElement, bx: number, by: number, anchorX: number) => {
+  const sprite = (img: HTMLCanvasElement, bx: number, by: number, anchorX: number, ws = 1) => {
     const p = project(cam, bx, by)
     if (p.s <= 0.2) return
-    const dw = img.width * p.s * RES
-    const dh = img.height * p.s * RES
-    const dx = (p.x - anchorX * p.s) * RES
+    const dw = img.width * ws * p.s * RES
+    const dh = img.height * ws * p.s * RES
+    const dx = (p.x - anchorX * ws * p.s) * RES
     const dy = p.y * RES - dh
     if (dx > VIEW_W * RES || dx + dw < 0 || dy > VIEW_H * RES || dy + dh < 0) return
     ctx.drawImage(img, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh))
@@ -183,7 +213,12 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   }
   for (const a of actors) {
     const img = characterFrames(a.look)[a.facing][a.frame]
-    items.push({ depth: a.y, draw: () => (shadow(a.x, a.y, 7), sprite(img, a.x, a.y + 1, 12)) })
+    items.push({ depth: a.y, draw: () => (shadow(a.x, a.y, 7), sprite(img, a.x, a.y + 1, OW_W / 2, OW_WORLD)) })
+  }
+  for (const c of creatures) {
+    if (!creatureArtHi[c.id]) continue
+    const img = creatureFrames(c.id, c.facing === 'right', c.breath)
+    items.push({ depth: c.y, draw: () => (shadow(c.x, c.y, 6), sprite(img, c.x, c.y + 2 - c.hop, img.width / 2, CREATURE_WORLD)) })
   }
   items.sort((p, q) => p.depth - q.depth).forEach((i) => i.draw())
 }

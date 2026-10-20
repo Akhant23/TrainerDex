@@ -13,7 +13,7 @@ The interactive, Gen IV/V-style personal site of **Aaryan Khan**, a Law / Biotec
 | 2. Design foundation | ✅ | DS shell, intro, dialogue engine, main menu, navigation, settings + save, sprite prototype, audio, play time |
 | 3. Personal content | ✅ | Profile, Pokédex (15 entries), Trainer Card + 8 badges + polishing, PC (resume viewer, 11 portfolio case studies, 27-entry experience log), Photo Album (10 memories) |
 | 4. Interactive | ✅ | Battle simulator (15 original creatures, 3 difficulties, TRAINERDEX BADGE, Hall of Fame), 19 visitor medals + Medal Box, Easter eggs, walking sprite |
-| 4b. Battle Resort | ✅ | BW-style animated sprites, a 2.5D walkable resort (plaza → tower reception → 5 floors of Aaryan's life stages → Champion), VS intro screens, avatar studio (camera / upload colour-matching, randomise), other visitors' avatars, profiles + speech bubbles, a creature suggestion box (online features once Supabase is set up) |
+| 4b. Battle Resort | ✅ | BW-style animated sprites, a 2.5D walkable resort (plaza → tower reception → 5 floors of Aaryan's life stages → Champion), VS intro screens, avatar studio (camera / upload colour-matching, randomise), your lead creature follows you (talk to it), a party screen, other visitors' avatars, profiles + speech bubbles, a creature suggestion box (online features once Supabase is set up) |
 | 5. Backend | ◐ | Poké Pager UI, admin dashboard (#/admin: messages + resort avatars), Supabase schema + RLS, Edge Functions (`submit-message`, `save-trainer`, `forget-me`) with validation / Turnstile / rate limiting — **built; needs your Supabase project to go live** ([docs/BACKEND.md](docs/BACKEND.md)) |
 | 6. Testing & launch | ⏳ | a11y, Lighthouse, deploy |
 
@@ -54,7 +54,7 @@ docs/             PLANNING.md, CONTENT.md, SPRITES.md, BACKEND.md
 supabase/         migrations (tables, RLS) + Edge Functions submit-message and save-trainer
 ```
 
-- Updating text and details: [docs/CONTENT.md](docs/CONTENT.md)
+- Updating text and details: [docs/CONTENT.md](docs/CONTENT.md) — all dialogue is in one spreadsheet, `src/content/dialogue.csv`
 - Changing Aaryan's looks, the tower stages or the avatar options: [docs/SPRITES.md](docs/SPRITES.md)
 
 ## What I still need from you

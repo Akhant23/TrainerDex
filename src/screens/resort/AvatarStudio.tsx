@@ -66,10 +66,10 @@ export function randomAvatar(): Appearance {
 }
 
 const LABEL: Record<string, string> = {
-  wavy: 'WAVY', curtains: 'MIDDLE PART', short: 'SHORT', spiky: 'SPIKY', curly: 'CURLY', long: 'LONG', bun: 'BUN', buzz: 'BUZZ',
+  wavy: 'WAVY', mullet: 'MULLET', curtains: 'MIDDLE PART', short: 'SHORT', spiky: 'SPIKY', curly: 'CURLY', long: 'LONG', bun: 'BUN', buzz: 'BUZZ',
   soft: 'SOFT', round: 'ROUND', sharp: 'SHARP', wide: 'WIDE',
   smile: 'SMILE', grin: 'GRIN', smirk: 'SMIRK', calm: 'CALM',
-  tee: 'TEE', jersey: 'JERSEY', hoodie: 'HOODIE', jacket: 'JACKET', shirt: 'SHIRT + TIE', blazer: 'BLAZER', suit: 'SUIT', school: 'SCHOOL BLAZER', tank: 'TANK TOP',
+  tee: 'TEE', splash: 'PAINT TEE', jersey: 'JERSEY', hoodie: 'HOODIE', jacket: 'JACKET', shirt: 'SHIRT + TIE', blazer: 'BLAZER', suit: 'SUIT', school: 'SCHOOL BLAZER', tank: 'TANK TOP',
   none: 'NONE', cap: 'CAP', beanie: 'BEANIE', bucket: 'BUCKET HAT', headband: 'HEADBAND',
   joggers: 'JOGGERS', jeans: 'JEANS', shorts: 'SHORTS', skirt: 'SKIRT', slacks: 'SLACKS',
   sneakers: 'SNEAKERS', boots: 'BOOTS', formal: 'FORMAL',
