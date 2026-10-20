@@ -272,7 +272,7 @@ export default function SettingsScreen() {
                             window.setTimeout(() => sfx('cursor'), 20)
                           }}
                           className={`font-display cursor-pointer border-0 px-2 py-1.5 text-[clamp(13px,2.9cqi,17px)] ${
-                            on ? 'bg-dex-red text-paper shadow-[0_0_0_2px_var(--color-ink)]' : 'bg-transparent text-muted hover:text-ink'
+                            on ? 'gv-tile text-paper' : 'bg-transparent text-muted hover:text-ink'
                           }`}
                         >
                           {o.label}

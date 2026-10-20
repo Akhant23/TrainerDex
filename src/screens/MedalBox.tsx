@@ -44,7 +44,7 @@ export default function MedalBox() {
                 aria-label={has || !('hidden' in md) ? `${md.name}${has ? ', earned' : ', not yet earned'}` : 'Hidden medal'}
                 {...nav.itemProps(i)}
                 className={`flex aspect-square cursor-pointer items-center justify-center border-0 bg-paper outline-none ${
-                  i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'
+                  i === nav.focus ? 'gv-card--selected' : 'gv-card'
                 }`}
               >
                 <MedalArt medal={md} earned={has} scale={3} />

@@ -334,7 +334,7 @@ function PortfolioBoxes() {
               onMouseEnter={() => nav.setFocus(i)}
               onClick={() => open(p)}
               className={`relative aspect-square cursor-pointer overflow-hidden border-0 bg-paper p-0 outline-none ${
-                i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'
+                i === nav.focus ? 'gv-card--selected' : 'gv-card'
               }`}
             >
               <img src={p.thumb} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />

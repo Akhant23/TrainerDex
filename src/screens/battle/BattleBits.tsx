@@ -68,26 +68,28 @@ export function useHeightScale(ref: RefObject<HTMLElement | null>, fraction: num
 }
 
 /** Game-style HP bar. */
-export function HpBar({ hp, max, showNumbers = false }: { hp: number; max: number; showNumbers?: boolean }) {
+/** Gen V HP gauge: an outlined HP tag, a dark track, and a fill lit along its top half. */
+export function HpBar({ hp, max, showNumbers = false, dark = false }: { hp: number; max: number; showNumbers?: boolean; dark?: boolean }) {
   const pct = Math.max(0, Math.min(100, (hp / max) * 100))
-  const color = pct > 50 ? 'var(--color-leaf)' : pct > 20 ? 'var(--color-amber)' : 'var(--color-ember)'
+  const color = pct > 50 ? '#48c050' : pct > 20 ? '#f0b020' : '#e83828'
+  const light = pct > 50 ? '#88f070' : pct > 20 ? '#ffe070' : '#ff8868'
   return (
     <div>
-      <div className="flex items-center gap-1">
-        <span className="font-display rounded-sm bg-[#e0a020] px-1 text-[clamp(8px,2.2cqi,13px)] leading-tight text-ink">HP</span>
+      <div className="flex items-center gap-1.5">
+        <span className="font-display rounded-[3px] bg-[#f0a828] px-1 text-[clamp(8px,2.2cqi,13px)] leading-tight text-[#3a2008] shadow-[0_0_0_1.5px_var(--gv-ink)]">HP</span>
         <div
           role="meter"
           aria-label="HP"
           aria-valuemin={0}
           aria-valuemax={max}
           aria-valuenow={Math.round(hp)}
-          className="h-[clamp(5px,1.4cqi,9px)] flex-1 bg-[#384050] shadow-[0_0_0_2px_var(--color-ink)]"
+          className="h-[clamp(6px,1.5cqi,10px)] flex-1 rounded-[2px] bg-[#262a3c] shadow-[0_0_0_2px_var(--gv-ink),inset_0_1px_0_rgb(255_255_255_/_0.12)]"
         >
-          <div className="h-full" style={{ width: `${pct}%`, background: color, boxShadow: 'inset 0 -2px 0 rgb(0 0 0 / 0.25)' }} />
+          <div className="h-full rounded-[1px]" style={{ width: `${pct}%`, background: `linear-gradient(180deg, ${light} 0 45%, ${color} 45% 100%)` }} />
         </div>
       </div>
       {showNumbers && (
-        <p className="font-display m-0 mt-0.5 text-right text-[clamp(10px,2.8cqi,17px)]">
+        <p className={`gv-label m-0 mt-0.5 text-right text-[clamp(10px,2.8cqi,17px)] ${dark ? 'text-paper' : ''}`}>
           {Math.max(0, Math.round(hp))}/{max}
         </p>
       )}

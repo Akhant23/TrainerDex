@@ -68,7 +68,7 @@ export default function PhotoAlbum({ path }: { path: string }) {
               onClick={() => open(i)}
               className={`relative flex h-full min-h-0 cursor-pointer items-center justify-center overflow-hidden border-0 p-0 outline-none ${
                 p ? 'bg-paper' : 'bg-[#c8cede]'
-              } ${i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'}`}
+              } ${i === nav.focus ? 'gv-card--selected' : 'gv-card'}`}
             >
               {p ? <img src={p.thumb} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" /> : <PixelIcon name="album" scale={2} className="opacity-30 grayscale" />}
               <span className="font-display absolute top-0.5 left-0.5 bg-ink/70 px-1 text-[11px] text-paper">{pad(i + 1)}</span>

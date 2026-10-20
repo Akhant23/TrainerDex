@@ -649,7 +649,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
                 className="pointer-events-none absolute top-0 left-0 flex flex-col items-center"
               >
                 {nearbyChar?.id === c.id && (
-                  <span className="mb-1 max-w-[180px] bg-paper px-2 py-1 text-center text-[13px] leading-snug text-ink shadow-[0_0_0_2px_var(--color-ink)]">
+                  <span className="mb-1 gv-bubble max-w-[180px] px-2 py-1 text-center text-[13px] leading-snug text-ink">
                     {(c.message ?? c.greeting ?? 'Hi!').slice(0, 80)}
                   </span>
                 )}
@@ -840,7 +840,7 @@ function Controls({
       onPointerLeave={release(d)}
       onPointerCancel={release(d)}
       onContextMenu={(e) => e.preventDefault()}
-      className={`absolute flex h-1/3 w-1/3 touch-none items-center justify-center border-0 bg-[#3a3d4e] text-[18px] text-paper select-none active:bg-[#5a5d70] ${cls}`}
+      className={`gv-pad absolute flex h-1/3 w-1/3 touch-none items-center justify-center border-0 text-[18px] text-paper select-none ${cls}`}
     >
       {label}
     </button>
@@ -903,11 +903,13 @@ function Controls({
             key={it.label}
             type="button"
             onClick={it.onClick}
-            className="flex cursor-pointer flex-col items-center gap-1 border-0 px-1 py-2 text-paper shadow-[0_0_0_2px_var(--color-ink),inset_0_-3px_0_rgb(0_0_0_/_0.25)]"
-            style={{ background: it.color }}
+            className="gv-tile flex flex-col items-center gap-1.5 px-1 pt-2 pb-2.5 text-paper"
+            style={{ ['--tile' as string]: it.color }}
           >
-            <PixelIcon name={it.icon} scale={2} />
-            <span className="font-display text-[12px] leading-none">{it.label}</span>
+            <span className="gv-chip flex p-0.5">
+              <PixelIcon name={it.icon} scale={2} />
+            </span>
+            <span className="gv-label text-[12px] leading-none">{it.label}</span>
           </button>
         ))}
       </nav>
@@ -918,10 +920,10 @@ function Controls({
           {pad('down', '▼', 'bottom-0 left-1/3 rounded-b-md')}
           {pad('left', '◀', 'top-1/3 left-0 rounded-l-md')}
           {pad('right', '▶', 'top-1/3 right-0 rounded-r-md')}
-          <span aria-hidden className="absolute top-1/3 left-1/3 h-1/3 w-1/3 bg-[#3a3d4e]" />
+          <span aria-hidden className="gv-pad-hub absolute top-1/3 left-1/3 h-1/3 w-1/3" />
         </div>
         <p className="m-0 hidden max-w-[11em] text-center text-[12px] leading-snug text-muted sm:block">Arrows / WASD to walk · Shift to run · A to talk</p>
-        <button type="button" onClick={onA} aria-label="A: talk / interact" className="font-display h-14 w-14 shrink-0 cursor-pointer rounded-full border-0 bg-dex-red text-[20px] text-paper shadow-[0_0_0_3px_var(--color-ink),inset_0_-4px_0_rgb(0_0_0_/_0.25)]">
+        <button type="button" onClick={onA} aria-label="A: talk / interact" className="gv-tile gv-label h-14 w-14 shrink-0 !rounded-full text-[20px] text-paper" style={{ ['--tile' as string]: 'var(--color-dex-red)' }}>
           A
         </button>
       </div>
@@ -965,7 +967,7 @@ function PartyPC({ onDone }: { onDone: (party: SpeciesId[]) => void }) {
               disabled={!open}
               onClick={() => toggle(id)}
               aria-pressed={slot >= 0}
-              className={`relative flex cursor-pointer flex-col items-center gap-1 border-0 bg-paper px-1 py-2 disabled:cursor-not-allowed ${slot >= 0 ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'}`}
+              className={`relative flex cursor-pointer flex-col items-center gap-1 border-0 bg-paper px-1 py-2 disabled:cursor-not-allowed ${slot >= 0 ? 'gv-card--selected' : 'gv-card'}`}
             >
               <span className={open ? '' : 'brightness-0 opacity-40'}>
                 <CreatureSprite id={id} scale={2} />
@@ -999,7 +1001,7 @@ function Lift({ cleared, onPick, onClose }: { cleared: number; onPick: (n: numbe
             type="button"
             disabled={!open}
             onClick={() => onPick(f.floor)}
-            className="flex w-full cursor-pointer items-center gap-3 border-0 bg-paper px-3 py-2 text-left shadow-[0_0_0_2px_var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full cursor-pointer items-center gap-3 border-0 bg-paper px-3 py-2 text-left gv-card disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="font-display w-[3ch] text-[20px]">{f.floor}</span>
             <span className="min-w-0 flex-1">

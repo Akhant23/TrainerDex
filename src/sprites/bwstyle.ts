@@ -73,3 +73,51 @@ export function selectiveOutline(pixels: Pixels, palette: Palette): { pixels: Pi
   pal.K ??= INK
   return { pixels: out.map((r) => r.join('')), palette: pal }
 }
+
+const SHADE = '#1a1438'
+const LIGHT = '#fffbe8'
+
+/**
+ * Gen V-style form shading for flat-filled art: a cool shadow band inside the silhouette along
+ * its lower-right edge and a warm rim light along its upper-left edge, so large sprites read as
+ * rounded forms rather than flat cut-outs. Works per pixel from the silhouette, before outlining
+ * is resolved (`edge` marks outline pixels). `band` is the shadow depth in pixels.
+ */
+export function formShade(pixels: Pixels, palette: Palette, band = 3, edge = OUTLINE_KEY): { pixels: Pixels; palette: Palette } {
+  const h = pixels.length
+  const w = pixels[0]?.length ?? 0
+  const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? '.' : pixels[y][x])
+  const open = (c: string) => c === '.' || c === edge
+  const out = pixels.map((r) => [...r])
+  const pal: Palette = { ...palette }
+  const keys = new Map<string, string>()
+  let next = 0x100
+  for (const [key, hex] of Object.entries(palette))
+    if (key.charCodeAt(0) >= 0x100) {
+      keys.set(hex, key)
+      next = Math.max(next, key.charCodeAt(0) + 1)
+    }
+  const keyFor = (hex: string) => {
+    let k = keys.get(hex)
+    if (!k) {
+      k = String.fromCharCode(next++)
+      keys.set(hex, k)
+      pal[k] = hex
+    }
+    return k
+  }
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const c = pixels[y][x]
+      if (open(c) || c === 'K' || !(c in palette)) continue
+      let shadow = false
+      for (let i = 1; i <= band && !shadow; i++) shadow = open(at(x + i, y + i)) || open(at(x, y + i)) || (i <= band - 1 && open(at(x + i, y)))
+      if (shadow) {
+        out[y][x] = keyFor(mix(palette[c], SHADE, 0.2))
+        continue
+      }
+      const lit = open(at(x - 1, y - 1)) || open(at(x, y - 1))
+      if (lit) out[y][x] = keyFor(mix(palette[c], LIGHT, 0.3))
+    }
+  return { pixels: out.map((r) => r.join('')), palette: pal }
+}

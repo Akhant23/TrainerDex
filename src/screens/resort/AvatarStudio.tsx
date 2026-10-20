@@ -161,7 +161,7 @@ export default function AvatarStudio({
 
   return (
     <div className="space-y-4 p-[3%] text-[15px]">
-      <div className="flex items-end justify-center gap-6 bg-[radial-gradient(circle_at_50%_70%,#ffffff,#d8e4f4)] py-3 shadow-[0_0_0_2px_var(--color-ink)]">
+      <div className="flex items-end justify-center gap-6 bg-[radial-gradient(circle_at_50%_70%,#ffffff,#d8e4f4)] py-3 gv-card">
         <div className="flex flex-col items-center gap-1">
           <CharacterSprite appearance={a} scale={2} pose={TURN[turn].pose} style={TURN[turn].flip ? { transform: 'scaleX(-1)' } : undefined} alt={`Your avatar, ${TURN[turn].label.toLowerCase()} view`} />
           <button type="button" className="pixel-btn !px-2 !py-1 !text-[12px]" onClick={() => (sfx('cursor'), setTurn((t) => (t + 1) % TURN.length))} aria-label="Turn the avatar around">
@@ -185,7 +185,7 @@ export default function AvatarStudio({
         </label>
       </div>
 
-      <section className="space-y-2 bg-[#eef3fa] px-3 py-3 shadow-[0_0_0_2px_var(--color-ink)]">
+      <section className="space-y-2 bg-[#eef3fa] px-3 py-3 gv-card">
         <h3 className="font-display m-0 text-[14px] text-dex-red">START FROM A PHOTO (OPTIONAL)</h3>
         <ul className="m-0 list-none space-y-1 p-0 text-[14px]">
           <li>▸ Take a selfie or pick a photo and we’ll match your skin tone, hair and top colour.</li>
@@ -257,7 +257,7 @@ export default function AvatarStudio({
           {ACCESSORIES.map((x) => {
             const on = a.accessories.includes(x)
             return (
-              <button key={x} type="button" aria-pressed={on} onClick={() => toggleAcc(x)} className={`font-display cursor-pointer border-0 px-2.5 py-1.5 text-[13px] ${on ? 'bg-dex-red text-paper' : 'bg-[#dfe4f0] text-ink'} shadow-[0_0_0_2px_var(--color-ink)]`}>
+              <button key={x} type="button" aria-pressed={on} onClick={() => toggleAcc(x)} className="gv-toggle px-2.5 py-1.5 text-[13px]">
                 {x.toUpperCase()}
               </button>
             )

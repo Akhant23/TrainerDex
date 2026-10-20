@@ -26,9 +26,15 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
   creature that follows you. Every species has two views: the **front** (the foe in battle) and a
   **back** view (your own creature, seen over its shoulder toward the foe, as in Gen V). They
   breathe in a 4-frame idle loop like BW sprites.
-- **BW outlines** — `src/sprites/bwstyle.ts` gives creatures Gen V "selective outlining": instead of
-  one flat black line, each outline pixel is a dark shade of the colour it borders, a little lighter
-  on the lit upper-left side and darkest along the bottom and right. Eyes and mouths stay pure ink.
+- **Outline weight** — every outline is one *design* pixel thick: art drawn at 2× density (trainers,
+  creatures, flyers) gets a 2-pixel outline, and walkers (drawn at 2× and shown at half size) are
+  thickened the same way, so characters carry the same weight as the world's tiles and the UI's
+  borders (see `docs/DESIGN.md`).
+- **BW outlines and shading** — `src/sprites/bwstyle.ts` gives creatures Gen V "selective
+  outlining": instead of one flat black line, each outline pixel is a dark shade of the colour it
+  borders, a little lighter on the lit upper-left side and darkest along the bottom and right. Eyes
+  and mouths stay pure ink. `formShade` adds a cool shadow band inside the lower-right silhouette
+  and a warm rim light on the upper left, so big sprites read as rounded forms.
 - **Held items** — `src/sprites/held.ts` draws the gavel, flag, pennant, guitar, cricket bat,
   needle, placard and ball in their own local space around a grip point. `HOLDS` places each
   species' item per view (front, back, flight) — position, rotation, scale, flip, behind/in front —

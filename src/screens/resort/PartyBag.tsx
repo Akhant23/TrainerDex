@@ -30,7 +30,7 @@ export default function PartyBag({ party, onLead, onPc, onClose }: { party: Spec
               sfx('cursor')
               setSel(i)
             }}
-            className={`relative flex flex-1 cursor-pointer flex-col items-center border-0 bg-paper py-1 ${i === sel ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'}`}
+            className={`relative flex flex-1 cursor-pointer flex-col items-center border-0 bg-paper py-1 ${i === sel ? 'gv-card--selected' : 'gv-card'}`}
           >
             <CreatureSprite id={p} scale={1} still={i !== sel} />
             <span className="font-display text-[12px]">{species[p].name}</span>

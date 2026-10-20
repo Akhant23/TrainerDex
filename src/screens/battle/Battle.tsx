@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { navigate } from '../../app/router'
 import { menu } from '../../content/menu'
 import { types } from '../../content/pokedex'
@@ -13,7 +13,8 @@ import { TrainerSprite } from '../../ui/TrainerSprite'
 import { TypeChip } from '../../ui/bits'
 import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
-import { CreatureSprite } from './BattleBits'
+import { CreatureSprite, useHeightScale } from './BattleBits'
+import { CHAR_H } from '../../sprites/character'
 import Fight from './Fight'
 import { Backdrop, RECEPTION_ARENA } from './Backdrop'
 import Resort from '../resort/Resort'
@@ -56,6 +57,32 @@ function QuickBattle({ path }: { path: string }) {
 
 /* ---------------- Setup ---------------- */
 
+/**
+ * The reception scene above the setup: Aaryan on a battle pad on the floor in front of the
+ * counter. The pad and his feet are anchored to the stage, and his size is a whole-number scale
+ * of the stage height, so he stands on the pad — never on the counter, never clipped — at any size.
+ */
+function HubStage({ hasBadge }: { hasBadge: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const scale = useHeightScale(ref, 0.76, CHAR_H)
+  return (
+    <div ref={ref} className="relative min-h-0 flex-1">
+      <div className="platform" style={{ left: '50%', top: '90%', width: '50%', height: '13%' }} />
+      <div className="stand" style={{ left: '50%', top: '93%' }}>
+        <TrainerSprite scale={scale} />
+      </div>
+      {hasBadge && (
+        <div className="gv-hud-wrap absolute top-[5%] right-[3%]">
+          <div className="gv-hud gv-hud--mine flex items-center gap-2 py-1 pr-3 pl-6">
+            <PixelArt pixels={trainerdexBadge.pixels} palette={trainerdexBadge.palette} scale={2} label="TRAINERDEX BADGE earned" />
+            <span className="gv-label text-[12px] text-gold">BADGE EARNED</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Setup({ onStart }: { onStart: (d: Difficulty, s: SpeciesId) => void }) {
   const { sfx } = useSettings()
   const { trainerdexBadge: hasBadge, hallOfFame } = useProgress()
@@ -77,17 +104,7 @@ function Setup({ onStart }: { onStart: (d: Difficulty, s: SpeciesId) => void }) 
         <div className="absolute inset-0 flex flex-col">
           {/* exhibition matches happen in the tower reception */}
           <Backdrop arena={RECEPTION_ARENA} />
-          <div className="relative flex min-h-0 flex-1 items-end justify-center gap-[6%] pb-[4%]">
-            <div className="h-[80%]">
-              <TrainerSprite fill={0.98} />
-            </div>
-            {hasBadge && (
-              <div className="mb-[6%] flex flex-col items-center gap-1">
-                <PixelArt pixels={trainerdexBadge.pixels} palette={trainerdexBadge.palette} scale={4} label="TRAINERDEX BADGE earned" />
-                <span className="font-display text-outline text-[11px] text-gold">BADGE EARNED</span>
-              </div>
-            )}
-          </div>
+          <HubStage hasBadge={hasBadge} />
           <div className="p-[2%]">
             <DialogueBox
               key={step}
@@ -136,7 +153,7 @@ function DifficultyPick({ initial, onPick, wins }: { initial: number; onPick: (d
             onMouseEnter={() => nav.setFocus(i)}
             onClick={() => onPick(d)}
             className={`flex w-full cursor-pointer items-center justify-between gap-3 border-0 bg-paper px-4 py-3 text-left outline-none ${
-              i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'
+              i === nav.focus ? 'gv-card--selected' : 'gv-card'
             }`}
           >
             <span>
@@ -188,7 +205,7 @@ function StarterPick({ onPick }: { onPick: (s: SpeciesId) => void }) {
               {...nav.itemProps(i)}
               onMouseEnter={() => nav.setFocus(i)}
               onClick={() => onPick(id)}
-              className={`flex cursor-pointer flex-col items-center gap-2 border-0 px-1 py-3 outline-none ${i === nav.focus ? 'bg-paper shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'bg-paper/80 shadow-[0_0_0_2px_var(--color-ink)]'}`}
+              className={`flex cursor-pointer flex-col items-center gap-2 border-0 px-1 py-3 outline-none ${i === nav.focus ? 'bg-paper gv-card--selected' : 'bg-paper/80 gv-card'}`}
               style={{ background: i === nav.focus ? `radial-gradient(circle at 50% 40%, #fff, ${types[sp.types[0]].color}55)` : undefined }}
             >
               <CreatureSprite id={id} scale={2} />
@@ -252,7 +269,7 @@ function HallOfFame() {
         {hallOfFame.length === 0 && <p className="m-0 p-2 text-[15px]">Records are saved in this browser only.</p>}
         <ol className="m-0 list-none space-y-2 p-0">
           {hallOfFame.map((h, i) => (
-            <li key={h.date + i} className="flex items-center justify-between gap-2 bg-paper px-3 py-2 shadow-[0_0_0_2px_var(--color-ink)]">
+            <li key={h.date + i} className="flex items-center justify-between gap-2 bg-paper px-3 py-2 gv-card">
               <span>
                 <span className="font-display block text-[14px] text-dex-red">{h.difficulty.toUpperCase()}</span>
                 <span className="text-[14px]">

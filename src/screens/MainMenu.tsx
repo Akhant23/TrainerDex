@@ -136,7 +136,7 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
                 sfx('select')
                 navigate('/medals')
               }}
-              className="font-display cq-text-xs mt-[6%] flex w-full cursor-pointer items-center justify-between border-0 bg-[#f8e8a8] px-[4%] py-[3%] text-ink shadow-[0_0_0_2px_var(--color-ink)] hover:bg-[#fff0b8]"
+              className="font-display cq-text-xs mt-[6%] flex w-full cursor-pointer items-center justify-between border-0 bg-[#f8e8a8] px-[4%] py-[3%] text-ink gv-card hover:bg-[#fff0b8]"
             >
               <span>★ MEDALS</span>
               <span>
@@ -202,7 +202,7 @@ function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) =
 
   return (
     <div className="bg-dots flex h-full flex-1 flex-col">
-      <div className="font-display flex items-center justify-between bg-ink px-[3%] py-[1.6%] text-[clamp(13px,3.1cqi,18px)] text-paper">
+      <div className="gv-header font-display flex items-center justify-between px-[3%] py-[1.6%] text-[clamp(13px,3.1cqi,18px)] text-paper">
         <span>MENU</span>
         <span className="text-frame-hi">
           TRAINER: <span className="text-gold">{name}</span>
@@ -221,15 +221,11 @@ function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) =
             onFocus={() => setFocus(i)}
             onMouseEnter={() => focus !== i && setFocus(i)}
             onClick={() => open(entry)}
-            className="group relative flex cursor-pointer items-center gap-[6%] border-0 px-[5%] text-left outline-none focus-visible:outline-none"
-            style={{
-              background: entry.color[0],
-              boxShadow: `inset 0 calc(-1.5 * var(--u)) 0 ${entry.color[1]}, inset 0 var(--u) 0 rgb(255 255 255 / 0.25), 0 0 0 var(--u) var(--color-ink)`,
-              transform: i === focus ? 'translateY(calc(-1 * var(--u) / 2))' : undefined,
-            }}
+            data-selected={i === focus}
+            className="gv-tile group flex items-center gap-[6%] px-[5%] text-left outline-none focus-visible:outline-none"
+            style={{ ['--tile' as string]: entry.color[0], ['--tile-dark' as string]: entry.color[1] }}
           >
-            {i === focus && <span aria-hidden className="pointer-events-none absolute inset-[calc(var(--u)*-2)] shadow-[0_0_0_var(--u)_var(--color-gold)]" />}
-            <span className="flex shrink-0 items-center justify-center rounded-sm bg-paper/90 p-[3%] shadow-[0_0_0_2px_var(--color-ink)]">
+            <span className="gv-chip flex shrink-0 items-center justify-center p-[3%]">
               <span className="flex sm:hidden">
                 <PixelIcon name={entry.icon} scale={2} />
               </span>
@@ -237,7 +233,7 @@ function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) =
                 <PixelIcon name={entry.icon} scale={3} />
               </span>
             </span>
-            <span className="font-display text-outline min-w-0 text-[clamp(14px,3.6cqi,22px)] leading-tight text-paper">{entry.label}</span>
+            <span className="gv-label min-w-0 text-[clamp(14px,3.6cqi,22px)] leading-tight text-paper">{entry.label}</span>
             <span id={`tile-${entry.id}-num`} className="font-display absolute top-[6%] right-[4%] text-[13px] text-paper/70">
               <span className="sr-only">Shortcut key </span>
               {i + 1}

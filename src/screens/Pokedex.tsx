@@ -39,7 +39,7 @@ function List() {
       title={`SEEN ${dexSeen.length}/${pokedex.length}`}
       top={<DexScreen dex={focused} seen={dexSeen.includes(focused.no)} />}
     >
-      <ul role="listbox" aria-label="Pokédex entries" className="m-0 list-none space-y-2 p-[3%]">
+      <ul role="listbox" aria-label="Pokédex entries" className="m-0 list-none space-y-3 p-[3%]">
         {pokedex.map((d, i) => {
           const seen = dexSeen.includes(d.no)
           const on = i === nav.focus
@@ -52,10 +52,11 @@ function List() {
                 {...nav.itemProps(i)}
                 onMouseEnter={() => nav.setFocus(i)}
                 onClick={() => open(d)}
-                className={`flex w-full cursor-pointer items-center gap-3 border-0 px-3 py-1.5 text-left outline-none ${on ? 'bg-dex-red text-paper shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'bg-paper text-ink'}`}
+                data-selected={on}
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-[calc(var(--u)*1.5)] border-0 px-3 py-1.5 text-left outline-none ${on ? 'gv-tile text-paper' : 'gv-card bg-paper text-ink'}`}
               >
                 <span className="font-display text-[15px]">{pad(d.no)}</span>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8ecf4] shadow-[0_0_0_2px_var(--color-ink)]">
+                <span className="gv-chip flex h-8 w-8 shrink-0 items-center justify-center !rounded-full">
                   <DexArtView art={d.art} scale={1} />
                 </span>
                 <span className="font-display min-w-0 flex-1 truncate text-[clamp(14px,3.4cqi,18px)]">{d.name}</span>

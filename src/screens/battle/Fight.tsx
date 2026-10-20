@@ -487,24 +487,26 @@ function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip 
 
         {/* info boxes */}
         {view.trainer === 'gone' && view.shown[1] && (
-          <InfoBox className="left-[3%] top-[5%]" name={nameOf(opp)} level={opp.level} hp={view.hp[1]} max={opp.maxHp} team={battle.sides[1].team.map((m) => m.hp > 0)} />
+          <InfoBox side="foe" className="left-[2%] top-[5%]" name={nameOf(opp)} level={opp.level} hp={view.hp[1]} max={opp.maxHp} team={battle.sides[1].team.map((m) => m.hp > 0)} />
         )}
-        {view.shown[0] && <InfoBox className="right-[3%] top-[60%]" name={nameOf(ply)} level={ply.level} hp={view.hp[0]} max={ply.maxHp} numbers />}
+        {view.shown[0] && <InfoBox side="mine" className="right-[2%] top-[60%]" name={nameOf(ply)} level={ply.level} hp={view.hp[0]} max={ply.maxHp} numbers />}
         {view.trainer === 'intro' && (
-          <PixelBox variant="plate" className="absolute top-[5%] left-[3%] px-3 py-2">
-            <p className="font-display m-0 text-[clamp(10px,2.8cqi,17px)]">TRAINER {battle.foe.toUpperCase()}</p>
+          <div className="gv-hud-wrap absolute top-[5%] left-[2%]">
+            <div className="gv-hud gv-hud--foe py-2 pr-8 pl-3">
+            <p className="gv-label m-0 text-[clamp(10px,2.8cqi,17px)] text-paper">TRAINER {battle.foe.toUpperCase()}</p>
             <p className="m-0 mt-1 flex gap-1" aria-label={`${battle.sides[1].team.length} creatures`}>
               {battle.sides[1].team.map((_, i) => (
-                <span key={i} className="inline-block h-[clamp(6px,1.8cqi,10px)] w-[clamp(6px,1.8cqi,10px)] rounded-full bg-dex-red shadow-[0_0_0_2px_var(--color-ink)]" />
+                <span key={i} className="inline-block h-[clamp(6px,1.8cqi,10px)] w-[clamp(6px,1.8cqi,10px)] rounded-full bg-dex-red shadow-[0_0_0_2px_var(--gv-ink)]" />
               ))}
             </p>
-          </PixelBox>
+            </div>
+          </div>
         )}
       </div>
 
       {/* message box */}
-      <div className="bg-[#283048] p-[1.5%]">
-        <PixelBox className="flex min-h-[3.4em] items-center px-[3%] py-[1.5%] text-[clamp(12px,3.4cqi,20px)] font-semibold" aria-live="polite">
+      <div className="gv-header p-[1.5%]">
+        <PixelBox variant="dark" className="flex min-h-[3.4em] items-center px-[3%] py-[1.5%] text-[clamp(12px,3.4cqi,20px)] font-semibold" aria-live="polite">
           {view.message}
         </PixelBox>
       </div>
@@ -514,24 +516,27 @@ function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip 
   )
 }
 
-function InfoBox({ name, level, hp, max, numbers = false, team, className }: { name: string; level: number; hp: number; max: number; numbers?: boolean; team?: boolean[]; className: string }) {
+/** Gen V battle plate: a dark slanted bar (the foe's slants right, yours left) with name, level and HP. */
+function InfoBox({ name, level, hp, max, numbers = false, team, className, side }: { name: string; level: number; hp: number; max: number; numbers?: boolean; team?: boolean[]; className: string; side: 'foe' | 'mine' }) {
   return (
-    <PixelBox variant="plate" className={`absolute w-[44%] px-[2.5%] py-[1.5%] ${className}`}>
-      <div className="font-display flex items-baseline justify-between gap-2 text-[clamp(10px,2.9cqi,17px)]">
-        <span className="truncate">{name}</span>
-        <span className="shrink-0">Lv{level}</span>
+    <div className={`gv-hud-wrap absolute w-[46%] ${className}`}>
+      <div className={`gv-hud gv-hud--${side} ${side === 'foe' ? 'pr-[9%] pl-[4%]' : 'pl-[9%] pr-[4%]'} py-[2%]`}>
+        <div className="gv-label flex items-baseline justify-between gap-2 text-[clamp(10px,2.9cqi,17px)] text-paper">
+          <span className="truncate">{name}</span>
+          <span className="shrink-0 text-[#ffe9a0]">Lv{level}</span>
+        </div>
+        <div className="mt-[3%]">
+          <HpBar hp={hp} max={max} showNumbers={numbers} dark />
+        </div>
+        {team && (
+          <p className="m-0 mt-1 flex gap-[3%]" aria-label={`${team.filter(Boolean).length} of ${team.length} creatures left`}>
+            {team.map((ok, i) => (
+              <span key={i} className={`inline-block h-[clamp(5px,1.4cqi,9px)] w-[clamp(5px,1.4cqi,9px)] rounded-full shadow-[0_0_0_1.5px_var(--gv-ink)] ${ok ? 'bg-dex-red' : 'bg-[#6a7088]'}`} />
+            ))}
+          </p>
+        )}
       </div>
-      <div className="mt-[3%]">
-        <HpBar hp={hp} max={max} showNumbers={numbers} />
-      </div>
-      {team && (
-        <p className="m-0 mt-1 flex gap-[3%]" aria-label={`${team.filter(Boolean).length} of ${team.length} creatures left`}>
-          {team.map((ok, i) => (
-            <span key={i} className={`inline-block h-[clamp(4px,1.3cqi,8px)] w-[clamp(4px,1.3cqi,8px)] rounded-full shadow-[0_0_0_1px_var(--color-ink)] ${ok ? 'bg-dex-red' : 'bg-[#9098a8]'}`} />
-          ))}
-        </p>
-      )}
-    </PixelBox>
+    </div>
   )
 }
 
@@ -559,12 +564,11 @@ function CommandPanel({ battle, onPick }: { battle: BattleState; onPick: (p: Pan
           {...nav.itemProps(i)}
           onMouseEnter={() => nav.setFocus(i)}
           onClick={() => pick(i)}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] border-0 text-paper outline-none ${
-            i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold),inset_0_-6px_0_rgb(0_0_0_/_0.25)]' : 'shadow-[0_0_0_var(--u)_var(--color-ink),inset_0_-6px_0_rgb(0_0_0_/_0.25)]'
-          }`}
-          style={{ background: it.bg }}
+          data-selected={i === nav.focus}
+          className="gv-tile flex flex-col items-center justify-center gap-1 !rounded-[14px] text-paper outline-none"
+          style={{ ['--tile' as string]: it.bg }}
         >
-          <span className={`font-display text-outline ${it.id === 'fight' ? 'text-[clamp(20px,6.3cqi,36px)]' : 'text-[clamp(14px,4.2cqi,22px)]'}`}>{it.label}</span>
+          <span className={`gv-label ${it.id === 'fight' ? 'text-[clamp(20px,6.3cqi,36px)]' : 'text-[clamp(14px,4.2cqi,22px)]'}`}>{it.label}</span>
           {it.sub && <span className="text-[13px] text-paper/90">{it.sub}</span>}
         </button>
       ))}
@@ -590,12 +594,11 @@ function FightPanel({ battle, onMove }: { battle: BattleState; onMove: (i: numbe
               {...nav.itemProps(i)}
               onMouseEnter={() => nav.setFocus(i)}
               onClick={() => onMove(i)}
-              className={`flex cursor-pointer flex-col justify-center gap-1 rounded-[12px] border-0 px-[6%] text-left text-paper outline-none disabled:cursor-not-allowed disabled:opacity-40 ${
-                i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold),inset_0_-5px_0_rgb(0_0_0_/_0.25)]' : 'shadow-[0_0_0_var(--u)_var(--color-ink),inset_0_-5px_0_rgb(0_0_0_/_0.25)]'
-              }`}
-              style={{ background: t.color }}
+              data-selected={i === nav.focus}
+              className="gv-tile flex flex-col justify-center gap-1 !rounded-[12px] px-[6%] text-left text-paper outline-none"
+              style={{ ['--tile' as string]: t.color }}
             >
-              <span className="font-display text-outline text-[clamp(11px,3.4cqi,18px)] leading-tight">{mv.name}</span>
+              <span className="gv-label text-[clamp(11px,3.4cqi,18px)] leading-tight">{mv.name}</span>
               <span className="flex items-center justify-between text-[13px] text-paper text-outline">
                 <span className="font-display text-[clamp(8px,2.5cqi,13px)]">{t.label}</span>
                 <span>

@@ -84,3 +84,13 @@ describe('flight', () => {
     expect(validate(riderFor(signature), paletteFor(signature), OW_W, OW_H)).toEqual([])
   })
 })
+
+describe('pixel weight', () => {
+  it('hi-density outlines are one design pixel thick (k fine pixels)', async () => {
+    const { HiGrid } = await import('./raster')
+    const g = new HiGrid(10, 10, 2).rect(3, 3, 6, 6, 'A').outline('K')
+    const row = g.toPixels()[9] // fine row through the middle of the square
+    // left edge: two fine outline pixels, then the fill
+    expect(row.slice(4, 8)).toBe('KKAA')
+  })
+})

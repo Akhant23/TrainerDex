@@ -53,11 +53,11 @@ export function SectionScreen({ entry, top, children, onBack, backTo, title, sub
       top={top ?? <TitleCard entry={entry} />}
       bottom={
         <div className="flex h-full flex-1 flex-col bg-[#e8ecf4] text-ink">
-          <div className="flex items-center justify-between gap-2 px-[2%] py-[1%]" style={{ background: entry.color[1] }}>
+          <div className="gv-titlebar flex items-center justify-between gap-2 px-[2%] py-[1%]" style={{ ['--tb1' as string]: entry.color[0], ['--tb2' as string]: entry.color[1] }}>
             <button type="button" onClick={back} className="pixel-btn !text-[14px]" aria-label={backTo === '/' && !onBack ? 'Back to main menu' : 'Back'}>
               ◀ BACK
             </button>
-            <h2 className="font-display text-outline m-0 truncate pr-2 text-[clamp(15px,3.9cqi,22px)] text-paper">{title ?? entry.label}</h2>
+            <h2 className="gv-label m-0 truncate pr-2 text-[clamp(15px,3.9cqi,22px)] text-paper">{title ?? entry.label}</h2>
           </div>
           {subheader}
           <div key={scrollKey} className="ds-bottom-scroll">
@@ -72,7 +72,7 @@ export function SectionScreen({ entry, top, children, onBack, backTo, title, sub
 export function TitleCard({ entry, subtitle }: { entry: MenuEntry; subtitle?: string }) {
   return (
     <div className="bg-stripes absolute inset-0 flex flex-col items-center justify-center gap-[5%] p-[4%]" style={{ ['--s1' as string]: entry.color[0], ['--s2' as string]: entry.color[1] }}>
-      <span className="rounded-sm bg-paper p-[2%] shadow-[0_0_0_var(--u)_var(--color-ink),0_var(--u)_0_calc(var(--u))_var(--color-ink)]">
+      <span className="gv-chip p-[2%] shadow-[0_0_0_var(--u)_var(--gv-ink),0_calc(var(--u)*2)_0_var(--u)_var(--gv-drop)]">
         <span className="hidden sm:flex">
           <PixelIcon name={entry.icon} scale={4} />
         </span>
@@ -80,7 +80,7 @@ export function TitleCard({ entry, subtitle }: { entry: MenuEntry; subtitle?: st
           <PixelIcon name={entry.icon} scale={3} />
         </span>
       </span>
-      <h1 className="font-display text-outline m-0 text-center text-[clamp(22px,8.4cqi,56px)] text-paper">{entry.label}</h1>
+      <h1 className="gv-label text-outline m-0 text-center text-[clamp(22px,8.4cqi,56px)] text-paper">{entry.label}</h1>
       {subtitle && <p className="font-display text-outline m-0 text-center text-[clamp(13px,3.4cqi,20px)] text-gold">{subtitle}</p>}
     </div>
   )

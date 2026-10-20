@@ -14,7 +14,7 @@
 import { HiGrid } from './raster.ts'
 import type { Palette, Pixels } from './pixels.ts'
 import { drawItem, HOLDS, ITEM_PALETTE, itemDetails, type Hold } from './held.ts'
-import { OUTLINE_KEY, selectiveOutline } from './bwstyle.ts'
+import { formShade, OUTLINE_KEY, selectiveOutline } from './bwstyle.ts'
 import { creatureArtHi } from './creatures.ts'
 
 export const FLIGHT_BASE_W = 56
@@ -302,7 +302,8 @@ function buildFlyer(id: FlyerId): FlightSprite {
   for (let f = 0; f < 4; f++) {
     const { far, body, near, saddle: s } = spec.draw(f)
     const layers = [far, body, near].map((g) => {
-      const r = selectiveOutline(g.toPixels(), palette)
+      const sh = formShade(g.toPixels(), palette, K2 + 1)
+      const r = selectiveOutline(sh.pixels, sh.palette)
       palette = r.palette
       return r.pixels
     })

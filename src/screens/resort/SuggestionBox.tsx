@@ -91,7 +91,7 @@ export default function SuggestionBox({ onClose }: { onClose: () => void }) {
                 const on = picked.includes(t)
                 const color = t === NEW_TYPE ? '#5a5d70' : types[t as TypeId].color
                 return (
-                  <button key={t} type="button" aria-pressed={on} onClick={() => toggle(t)} className="font-display cursor-pointer border-0 px-2.5 py-1.5 text-[12px] text-paper shadow-[0_0_0_2px_var(--color-ink)]" style={{ background: on ? color : '#9aa0b0' }}>
+                  <button key={t} type="button" aria-pressed={on} onClick={() => toggle(t)} className="gv-tile gv-label px-2.5 py-1.5 text-[12px] text-paper" style={{ ['--tile' as string]: on ? color : '#9aa0b0' }}>
                     {t}
                   </button>
                 )

@@ -27,8 +27,8 @@ interface Props {
 }
 
 /**
- * The DS frame. Two screens side by side on wide desktops, stacked on tablets, and an
- * unframed stack on phones (see .ds-* rules in styles/index.css).
+ * The game frame: the scene window and the menu window side by side on wide desktops, stacked on
+ * tablets, and an unframed stack on phones (see .ds-* rules in styles/index.css).
  */
 export function DSShell({ top, bottom, compactTop = false, topLabel = 'Top screen', bottomLabel = 'Touch screen' }: Props) {
   return (
@@ -39,7 +39,6 @@ export function DSShell({ top, bottom, compactTop = false, topLabel = 'Top scree
           {top}
           <Wipe />
         </section>
-        <div className="ds-hinge" aria-hidden />
         <main aria-label={bottomLabel} className="ds-screen ds-screen--bottom">
           {bottom}
           <Wipe />

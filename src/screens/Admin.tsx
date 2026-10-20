@@ -207,7 +207,7 @@ function Trainers({ db }: { db: SupabaseClient }) {
           {rows.map((r) => {
             const look = parseAppearance(r.appearance)
             return (
-              <li key={r.id} className={`flex items-center gap-3 bg-paper px-3 py-2 shadow-[0_0_0_2px_var(--color-ink)] ${r.hidden ? 'opacity-60' : ''}`}>
+              <li key={r.id} className={`flex items-center gap-3 bg-paper px-3 py-2 gv-card ${r.hidden ? 'opacity-60' : ''}`}>
                 <span className="shrink-0">{look ? <CharacterSprite appearance={look} pose="portrait" scale={1} still alt={`${r.name}’s avatar`} /> : '?'}</span>
                 <span className="min-w-0 flex-1">
                   <span className="font-display block text-[14px]">
@@ -312,7 +312,7 @@ function Dashboard({ db, email, kind }: { db: SupabaseClient; email: string; kin
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">
           {rows.map((r) => (
-            <li key={r.id} className="bg-paper px-3 py-2 shadow-[0_0_0_2px_var(--color-ink)]">
+            <li key={r.id} className="bg-paper px-3 py-2 gv-card">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dfe6f0]">
                   <AvatarIcon avatar={r.avatar} />

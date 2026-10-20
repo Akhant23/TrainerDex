@@ -11,7 +11,7 @@
 import { Grid, HiGrid } from './raster.ts'
 import type { Palette, Pixels } from './pixels.ts'
 import { drawItem, HOLDS, ITEM_PALETTE, itemDetails } from './held.ts'
-import { OUTLINE_KEY, selectiveOutline } from './bwstyle.ts'
+import { formShade, OUTLINE_KEY, selectiveOutline } from './bwstyle.ts'
 
 export const CREATURE_SIZE = 40
 const K = '#1c1a24'
@@ -705,8 +705,12 @@ function build(k: number): Record<string, CreatureArt> {
   const out: Record<string, CreatureArt> = {}
   for (const [id, [front, back]] of Object.entries(builders)) {
     const f = front()
-    const fr = selectiveOutline(f.pixels, { ...f.palette, ...ITEM_PALETTE })
-    const bk = selectiveOutline(back(), fr.palette)
+    // big art gets Gen V form shading; the 40×40 icons stay crisp and flat
+    const shade = (px: Pixels, pal: Palette) => (k > 1 ? formShade(px, pal, k + 1) : { pixels: px, palette: pal })
+    const fs = shade(f.pixels, { ...f.palette, ...ITEM_PALETTE })
+    const fr = selectiveOutline(fs.pixels, fs.palette)
+    const bs = shade(back(), fr.palette)
+    const bk = selectiveOutline(bs.pixels, bs.palette)
     out[id] = { pixels: fr.pixels, back: bk.pixels, palette: bk.palette }
   }
   RES = 1

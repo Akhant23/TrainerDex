@@ -116,6 +116,21 @@ export class Grid {
     return this
   }
 
+  /**
+   * Grow an existing outline `ch` outward by one pixel (into transparent cells), so outlines on
+   * hi-density art can be one *design* pixel thick — the same weight as the world's pixels.
+   */
+  thicken(ch = 'K') {
+    const add: Array<[number, number]> = []
+    for (let y = 0; y < this.h; y++)
+      for (let x = 0; x < this.w; x++) {
+        if (this.cells[y][x] !== '.') continue
+        if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => this.get(x + dx, y + dy) === ch)) add.push([x, y])
+      }
+    add.forEach(([x, y]) => (this.cells[y][x] = ch))
+    return this
+  }
+
   /** Draw an outline in `ch` around every filled region (4-neighbour). */
   outline(ch = 'K') {
     const add: Array<[number, number]> = []
@@ -207,8 +222,10 @@ export class HiGrid {
       }
     return this
   }
+  /** Outline one design pixel thick (k fine pixels), matching the weight of 1× art. */
   outline(ch = 'K') {
     this.g.outline(ch)
+    for (let i = 1; i < this.k; i++) this.g.thicken(ch)
     return this
   }
   toPixels(): Pixels {

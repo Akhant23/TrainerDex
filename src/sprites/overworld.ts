@@ -168,7 +168,7 @@ function down(a: Appearance, step: Step): Pixels {
   fringeFront(g, a, cx)
   clipHair(g, a, (HAT_BRIM[a.hat] ?? 0) + 2)
   hat(g, a, cx, 'down')
-  g.outline()
+  g.outline().thicken()
   // face: tall BW eyes with a highlight, a small mouth
   if (has(a, 'sunglasses')) {
     g.rect(cx - 10, 20, cx - 2, 25, 'K').rect(cx + 2, 20, cx + 10, 25, 'K').rect(cx - 2, 21, cx + 2, 21, 'K')
@@ -242,7 +242,7 @@ function up(a: Appearance, step: Step): Pixels {
   if (a.hair !== 'long' && a.hair !== 'mullet') g.rect(cx - 4, 32, cx + 3, 32, 's')
   clipHair(g, a, (HAT_BRIM[a.hat] ?? 0) + 2)
   hat(g, a, cx, 'up')
-  g.outline()
+  g.outline().thicken()
   if (a.hair !== 'buzz') g.line(cx - 6, 8, cx - 4, 22, 'j').line(cx + 5, 9, cx + 6, 22, 'j')
   bodyDetails(g, a, true)
   return step === 0 ? g.toPixels() : shiftDown(g.toPixels(), 1)
@@ -299,7 +299,7 @@ function left(a: Appearance, step: Step, ride = false): Pixels {
   oval(g, cx + 6, 23, 2.2, 3, 'S', 's')
   clipHair(g, a, (HAT_BRIM[a.hat] ?? 0) + 2)
   hat(g, a, cx + 2, 'left')
-  g.outline()
+  g.outline().thicken()
   g.set(cx - 14, 24, 'S').set(cx - 14, 25, 's')
   // eye, glasses, mouth
   if (has(a, 'sunglasses')) g.rect(cx - 13, 20, cx - 7, 25, 'K').rect(cx - 7, 21, cx + 4, 21, 'K')
@@ -320,7 +320,7 @@ function left(a: Appearance, step: Step, ride = false): Pixels {
   capsule(arm, [cx + 1, 35], elbow, 2.8, 2.5, sleeveCol, sleeveCol === 'A' ? 'a' : 's')
   capsule(arm, elbow, [hand[0] + (ride ? 1 : 0), hand[1] - (ride ? 0 : 1.5)], 2.5, 2.2, forearmCol, forearmCol === 'A' ? 'a' : 's')
   oval(arm, hand[0], hand[1], 2.4, 2.4, 'S', 's')
-  arm.outline()
+  arm.outline().thicken()
   return overlay(g.toPixels(), arm.toPixels())
 }
 
