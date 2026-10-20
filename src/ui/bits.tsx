@@ -1,0 +1,64 @@
+import type { ReactNode } from 'react'
+import { types, type TypeId } from '../content/pokedex'
+import { sources, type SourceId } from '../content/sources'
+
+/** Pokémon-style type pill. */
+export function TypeChip({ type }: { type: TypeId }) {
+  const t = types[type]
+  return (
+    <span
+      className="font-display inline-block px-2 py-1 text-[9px] leading-none text-paper text-outline"
+      style={{ background: t.color, boxShadow: '0 0 0 2px var(--color-ink), inset 0 -2px 0 rgb(0 0 0 / 0.25)' }}
+    >
+      {t.label}
+    </span>
+  )
+}
+
+/** "Source: Resume · LinkedIn" line under facts. */
+export function Sources({ ids, className = '' }: { ids: readonly SourceId[]; className?: string }) {
+  if (!ids.length) return null
+  return (
+    <p className={`m-0 text-[13px] text-muted ${className}`}>
+      <span className="font-display text-[8px] tracking-wide">SOURCE </span>
+      {ids.map((id, i) => {
+        const s = sources[id]
+        return (
+          <span key={id}>
+            {i > 0 && ' · '}
+            {s.href ? (
+              <a href={s.href} target="_blank" rel="noreferrer" className="text-harbour underline decoration-dotted underline-offset-2">
+                {s.label}
+              </a>
+            ) : (
+              s.label
+            )}
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
+/** Small heading used inside content panels. */
+export function Heading({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <h3 className={`font-display m-0 mb-2 text-[clamp(10px,2.3cqi,13px)] text-dex-red ${className}`}>{children}</h3>
+}
+
+/** Pill list for skills/tags. */
+export function Tags({ items }: { items: readonly string[] }) {
+  return (
+    <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+      {items.map((s) => (
+        <li key={s} className="bg-[#dfe4f0] px-2 py-0.5 text-[14px] shadow-[0_0_0_2px_#b8c0d8]">
+          {s}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** Shown wherever a fact hasn't been supplied yet — never filled with invented text. */
+export function Pending({ children = 'Notes coming soon.' }: { children?: ReactNode }) {
+  return <span className="text-muted italic">{children}</span>
+}

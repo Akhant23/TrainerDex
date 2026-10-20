@@ -1,0 +1,507 @@
+@import 'tailwindcss';
+@import '@fontsource/press-start-2p/400.css';
+@import '@fontsource/pixelify-sans/400.css';
+@import '@fontsource/pixelify-sans/600.css';
+
+@theme {
+  --font-display: 'Press Start 2P', ui-monospace, monospace;
+  --font-body: 'Pixelify Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #1c1a24;
+  --color-paper: #f8f8f0;
+  --color-frame: #4a5068;
+  --color-frame-hi: #a8b8d8;
+  --color-dex-red: #e0383e;
+  --color-harbour: #2f5fb8;
+  --color-gold: #f0b830;
+  --color-leaf: #4fa850;
+  --color-amber: #f0a020;
+  --color-ember: #d83820;
+  --color-shell: #2a2c38;
+  --color-shell-hi: #3a3d4e;
+  --color-screen-bg: #101018;
+  --color-muted: #5c6078;
+}
+
+/* ---------- Base ---------- */
+
+:root {
+  /* the pixel unit: every border/notch/shadow is a multiple of it */
+  --u: 3px;
+  color-scheme: dark;
+}
+@media (min-width: 768px) {
+  :root {
+    --u: 4px;
+  }
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--color-screen-bg);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.35;
+  -webkit-font-smoothing: none;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'clig' 0;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+:focus-visible {
+  outline: var(--u) solid var(--color-gold);
+  outline-offset: var(--u);
+}
+
+.sr-only-focusable:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* ---------- Pixel box: notched corners via four offset shadows ---------- */
+
+.pixel-box {
+  --box-bg: var(--color-paper);
+  --box-border: var(--color-frame);
+  --box-inner: var(--color-frame-hi);
+  position: relative;
+  background: var(--box-bg);
+  color: var(--color-ink);
+  margin: var(--u);
+  box-shadow:
+    inset 0 0 0 var(--u) var(--box-inner),
+    0 calc(-1 * var(--u)) 0 0 var(--box-border),
+    0 var(--u) 0 0 var(--box-border),
+    calc(-1 * var(--u)) 0 0 0 var(--box-border),
+    var(--u) 0 0 0 var(--box-border);
+}
+.pixel-box--dark {
+  --box-bg: #262a3a;
+  --box-border: #0c0c14;
+  --box-inner: #4a5068;
+  color: var(--color-paper);
+}
+.pixel-box--plate {
+  --box-bg: #f0f0e8;
+  --box-border: var(--color-ink);
+  --box-inner: #ffffff;
+}
+.pixel-box--flat {
+  --box-inner: transparent;
+}
+
+/* ---------- Buttons ---------- */
+
+.pixel-btn {
+  --btn-bg: var(--color-paper);
+  --btn-fg: var(--color-ink);
+  --btn-border: var(--color-ink);
+  --btn-shadow: #b8bccc;
+  font-family: var(--font-display);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  border: 0;
+  padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  margin: var(--u);
+  cursor: pointer;
+  box-shadow:
+    inset 0 calc(-1 * var(--u)) 0 0 var(--btn-shadow),
+    0 calc(-1 * var(--u)) 0 0 var(--btn-border),
+    0 var(--u) 0 0 var(--btn-border),
+    calc(-1 * var(--u)) 0 0 0 var(--btn-border),
+    var(--u) 0 0 0 var(--btn-border);
+  transition: transform 60ms steps(1);
+  user-select: none;
+  touch-action: manipulation;
+}
+.pixel-btn:hover {
+  --btn-bg: #ffffff;
+}
+.pixel-btn:active {
+  transform: translateY(var(--u));
+  box-shadow:
+    0 calc(-1 * var(--u)) 0 0 var(--btn-border),
+    0 var(--u) 0 0 var(--btn-border),
+    calc(-1 * var(--u)) 0 0 0 var(--btn-border),
+    var(--u) 0 0 0 var(--btn-border);
+}
+.pixel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pixel-btn--primary {
+  --btn-bg: var(--color-dex-red);
+  --btn-fg: #fff;
+  --btn-shadow: #9a2028;
+}
+.pixel-btn--primary:hover {
+  --btn-bg: #f04a50;
+}
+.pixel-btn--ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--color-paper);
+  --btn-border: transparent;
+  --btn-shadow: transparent;
+}
+.pixel-btn--ghost:hover {
+  --btn-bg: rgb(255 255 255 / 0.08);
+}
+
+/* ---------- Typography helpers ---------- */
+
+.font-display {
+  font-family: var(--font-display);
+  line-height: 1.5;
+}
+.text-outline {
+  text-shadow:
+    2px 0 0 var(--color-ink),
+    -2px 0 0 var(--color-ink),
+    0 2px 0 var(--color-ink),
+    0 -2px 0 var(--color-ink),
+    2px 2px 0 var(--color-ink),
+    -2px -2px 0 var(--color-ink),
+    2px -2px 0 var(--color-ink),
+    -2px 2px 0 var(--color-ink);
+}
+/* Gen IV text has a soft drop shadow down-right */
+.text-dropshadow {
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 0.18);
+}
+
+/* ---------- Backgrounds ---------- */
+
+.bg-stripes {
+  --s1: #e0383e;
+  --s2: #c82c34;
+  background-color: var(--s1);
+  background-image: repeating-linear-gradient(135deg, var(--s1) 0 16px, var(--s2) 16px 32px);
+  background-size: 45.25px 45.25px;
+  animation: stripes-scroll 2.4s linear infinite;
+}
+@keyframes stripes-scroll {
+  to {
+    background-position: 45.25px 0;
+  }
+}
+.bg-dots {
+  background-color: #e8ecf4;
+  background-image: radial-gradient(#cdd4e4 2px, transparent 2.5px);
+  background-size: 16px 16px;
+}
+.bg-grid {
+  background-color: #dfe6f0;
+  background-image:
+    linear-gradient(#c9d2e2 2px, transparent 2px),
+    linear-gradient(90deg, #c9d2e2 2px, transparent 2px);
+  background-size: 24px 24px;
+}
+
+/* ---------- DS shell ---------- */
+
+.ds-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ds-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+}
+.ds-screen {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  container-type: inline-size;
+  isolation: isolate;
+}
+.ds-screen--top {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+}
+.ds-screen--top.ds-screen--compact {
+  aspect-ratio: 16 / 7;
+}
+.ds-screen--bottom {
+  width: 100%;
+  min-height: 60dvh;
+  display: flex;
+  flex-direction: column;
+}
+.ds-hinge {
+  display: none;
+}
+
+/* Tablet + narrow desktop: classic vertical DS */
+@media (min-width: 640px) {
+  .ds-page {
+    padding: 12px 16px 24px;
+  }
+  .ds-shell {
+    width: min(92vw, 600px, calc((100dvh - 150px) / 1.5 * 4 / 3));
+    min-width: 440px;
+    background: var(--color-shell);
+    padding: 18px 18px;
+    border-radius: 18px;
+    box-shadow:
+      inset 0 2px 0 var(--color-shell-hi),
+      inset 0 -4px 0 #1a1c26,
+      0 18px 40px rgb(0 0 0 / 0.5);
+  }
+  .ds-screen {
+    border: 4px solid #0a0a10;
+    border-radius: 4px;
+  }
+  .ds-screen--top.ds-screen--compact {
+    aspect-ratio: 4 / 3;
+  }
+  .ds-screen--bottom {
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+  }
+  .ds-hinge {
+    display: block;
+    width: 100%;
+    height: 22px;
+    margin: 8px 0;
+    border-radius: 6px;
+    background: linear-gradient(#22242f, #31333f 40%, #22242f);
+    box-shadow: inset 0 1px 0 #444758;
+  }
+}
+
+/* Wide landscape desktop: screens side by side so nothing scrolls on a laptop */
+@media (min-width: 1024px) and (min-aspect-ratio: 5/4) {
+  .ds-shell {
+    flex-direction: row;
+    align-items: stretch;
+    width: auto;
+    min-width: 0;
+    padding: 22px;
+    gap: 0;
+  }
+  .ds-screen--top,
+  .ds-screen--bottom {
+    width: min(44vw, 720px, calc((100dvh - 150px) * 4 / 3));
+    aspect-ratio: 4 / 3;
+  }
+  .ds-hinge {
+    width: 22px;
+    height: auto;
+    margin: 0 14px;
+    background: linear-gradient(90deg, #22242f, #31333f 40%, #22242f);
+  }
+}
+
+.ds-bottom-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-frame) transparent;
+}
+
+/* Sizes inside screens track the screen width (container query units) like a scaled 256px canvas */
+.cq-text-xs {
+  font-size: clamp(9px, 2.4cqi, 14px);
+}
+.cq-text-sm {
+  font-size: clamp(11px, 3cqi, 18px);
+}
+.cq-text-md {
+  font-size: clamp(14px, 3.8cqi, 24px);
+}
+.cq-text-lg {
+  font-size: clamp(16px, 5cqi, 32px);
+}
+.cq-text-xl {
+  font-size: clamp(18px, 7cqi, 44px);
+}
+
+/* ---------- Screen wipe (Gen IV style horizontal bars) ---------- */
+
+.wipe {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+}
+.wipe > span {
+  background: #0a0a10;
+  transform: scaleX(0);
+}
+.wipe--cover > span {
+  animation: wipe-in 220ms steps(6) forwards;
+}
+.wipe--reveal > span {
+  transform: scaleX(1);
+  animation: wipe-out 220ms steps(6) forwards;
+}
+.wipe > span:nth-child(odd) {
+  transform-origin: left;
+}
+.wipe > span:nth-child(even) {
+  transform-origin: right;
+}
+@keyframes wipe-in {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes wipe-out {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* ---------- Small animations ---------- */
+
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.bob {
+  animation: bob 0.9s steps(1) infinite;
+}
+@keyframes bob {
+  50% {
+    transform: translateY(var(--u));
+  }
+}
+.hop {
+  animation: hop 380ms steps(5);
+}
+@keyframes hop {
+  40% {
+    transform: translateY(-14%);
+  }
+  70% {
+    transform: translateY(-4%);
+  }
+}
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+.shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.55) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: shine 3.2s ease-in-out 0.8s infinite;
+}
+@keyframes shine {
+  0% {
+    transform: translateX(-120%);
+  }
+  35%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+.sparkle {
+  animation: sparkle 1.4s steps(4) infinite;
+}
+@keyframes sparkle {
+  0%,
+  100% {
+    transform: scale(0.6) rotate(0deg);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1) rotate(45deg);
+    opacity: 1;
+  }
+}
+.cursor-arrow {
+  animation: nudge 0.6s steps(1) infinite;
+}
+@keyframes nudge {
+  50% {
+    transform: translateX(calc(var(--u)));
+  }
+}
+.advance-arrow {
+  animation: advance 0.6s steps(1) infinite;
+}
+@keyframes advance {
+  50% {
+    transform: translateY(var(--u));
+  }
+}
+
+/* Reduced motion: stop decorative movement (functional fades still allowed) */
+[data-motion='reduced'] .bg-stripes,
+[data-motion='reduced'] .bob,
+[data-motion='reduced'] .hop,
+[data-motion='reduced'] .shine::after,
+[data-motion='reduced'] .sparkle,
+[data-motion='reduced'] .cursor-arrow,
+[data-motion='reduced'] .advance-arrow,
+[data-motion='reduced'] .blink {
+  animation: none !important;
+}
+
+/* ---------- Range input ---------- */
+
+.pixel-range {
+  appearance: none;
+  height: calc(var(--u) * 3);
+  background: var(--color-frame);
+  box-shadow: inset 0 0 0 var(--u) var(--color-ink);
+  cursor: pointer;
+}
+.pixel-range::-webkit-slider-thumb {
+  appearance: none;
+  width: calc(var(--u) * 4);
+  height: calc(var(--u) * 6);
+  background: var(--color-gold);
+  box-shadow: inset 0 0 0 var(--u) var(--color-ink);
+}
+.pixel-range::-moz-range-thumb {
+  width: calc(var(--u) * 4);
+  height: calc(var(--u) * 6);
+  border: var(--u) solid var(--color-ink);
+  border-radius: 0;
+  background: var(--color-gold);
+}
+
+@keyframes photo-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--dx, 0));
+  }
+}
+[data-motion='reduced'] [style*='photo-in'] {
+  animation: none !important;
+}
