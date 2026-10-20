@@ -45,7 +45,7 @@ export const photos: Photo[] = [
     title: 'O-Week HQ',
     caption: 'In a Yellow Shirts tee, lying on a mountain of O-Week tour bags.',
     category: 'Leadership',
-    dexEntry: 'Tour bags for 3,000+ first-years have to go somewhere. It chose to nap on them.',
+    dexEntry: 'Tour bags for 3,500 first-years have to go somewhere. It chose to nap on them.',
     alt: 'Aaryan smiling, lying back on a huge pile of cream O-Week drawstring bags, wearing a yellow “Need help? Yellow Shirts” T-shirt.',
   },
   {

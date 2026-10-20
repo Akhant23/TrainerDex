@@ -29,9 +29,9 @@ visitor's chosen name.
 **Replace the resume** — overwrite `public/resume/resume.pdf`. The PC shows it inline, with download,
 new-tab and full-screen buttons; phones default to the text version built from `experience.ts`.
 
-**Fill in a portfolio case study** — in `portfolio.ts` set `role`, `tools`, and any `null` case-study
-fields (challenge, strategy, result), then `confirmed: true`. Leave a field `null` rather than guess:
-the site shows "Notes coming soon".
+**Fill in a portfolio case study** — in `portfolio.ts` set `role`, `tools` and any case-study
+fields you have something real for (challenge, strategy, result). Fields left `null` are simply not
+shown — don't fill them with guesses.
 
 **Swap an album photo** — export at ~1600px on the long edge into `public/photos/NN-name.jpg` plus a
 ~420px `NN-name-thumb.jpg`, **strip location metadata** (phone photos carry GPS), then edit its entry in
@@ -62,14 +62,13 @@ key prefix `tdx:v1:`). Nothing is sent anywhere. **Settings → Reset save data*
 
 ## Open questions
 
-Resolved on 20 Oct 2026: name (lead with **Aaryan Khan**), UNSOC title (VP Outreach), Tours
-Coordinator dates (2025–2026), certifications (all 5), portfolio authorship (all Aaryan's — Canva +
-Photoshop; 2024 = Marketing Director, 2025 = Marketing Coordinator), resume kept as-is with phone
-and referees, album photos chosen.
+None outstanding (20 Oct 2026). Decisions on record:
 
-Still open:
-1. UNSW graduation: resume says **expected 2028** (used), LinkedIn says 2027.
-2. Year unknown for **LawPLUS Trivia Night** (8 Apr — no weekday printed) and the two **Country Club: The Edit** pages, so they show role "Designer — UNSW Law Society marketing" without Director/Coordinator. Tell me the year and I'll set it.
-3. Case-study **challenge / strategy / result** notes are empty for every piece (shows "Notes coming soon"). Real numbers — ticket sales, merch orders, reach — would make these much stronger.
-4. **The Rager** stays hidden (`published: false`, files not in `public/`).
-5. The resume lists one UNSW Future Students role (2023 – Present); LinkedIn splits it into Adviser (Nov 2023 – Dec 2024) and Enquiries Assistant (Dec 2024 – Present). The site follows LinkedIn.
+- Name: lead with **Aaryan Khan**; resume PDF kept as-is, with phone and referees.
+- Graduation: **expected 2028** (LinkedIn now matches).
+- Portfolio: all Aaryan's (Canva + Photoshop). 2024 pieces as Marketing Director (incl. LawPLUS Trivia Night); 2025 pieces as Marketing Coordinator. Country Club: The Edit (2025) was a merch campaign co-led with the co-coordinator.
+- Merch: 2024 hoodie, socks and Law Camp leader shirt designed by Aaryan; the range sold out in both 2024 and 2025, and the Dean wore it both years.
+- O-Week tours: 3,500 tourees, the highest since COVID (from Aaryan; LinkedIn says 3,000+).
+- UNSW Future Students: one role, renamed in Dec 2024 — shown once under its current name, Nov 2023 – present.
+- The Rager stays hidden.
+

@@ -420,12 +420,14 @@ function CaseStudyView({ project }: { project: Project }) {
             <Tags items={project.categories} />
           </div>
         </PixelBox>
-        {steps.map(([label, text]) => (
-          <section key={label}>
-            <Heading>{label}</Heading>
-            <p className="m-0">{text ?? <Pending />}</p>
-          </section>
-        ))}
+        {steps
+          .filter(([, text]) => text)
+          .map(([label, text]) => (
+            <section key={label}>
+              <Heading>{label}</Heading>
+              <p className="m-0">{text}</p>
+            </section>
+          ))}
         {!project.confirmed && <p className="m-0 text-[13px] text-muted">Draft entry — year and role still to be confirmed.</p>}
         <div className="flex justify-between pt-1">
           <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(-1)}>

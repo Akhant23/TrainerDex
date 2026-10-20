@@ -3,8 +3,8 @@
  *
  * All published pieces were designed by Aaryan (Canva + Photoshop): 2024 work as Marketing
  * Director, 2025 work as Marketing Coordinator. Years come from the printed date + weekday.
- * Case-study fields left null (challenge, strategy, result) show "Notes coming soon" —
- * fill them in rather than letting the site guess. `confirmed: false` = year still unknown.
+ * Case-study fields left null are simply not shown — fill them in when there's something real
+ * to say (results, numbers) rather than letting the site guess.
  */
 export const categories = ['Marketing', 'Branding', 'Graphic Design', 'Social Media', 'Campaigns', 'Events', 'Strategy', 'Other'] as const
 export type Category = (typeof categories)[number]
@@ -117,15 +117,15 @@ export const portfolio: Project[] = [
     org: 'UNSW Law Society · LawPLUS',
     type: 'Event cover',
     categories: ['Graphic Design', 'Events'],
-    date: '8 Apr',
+    date: '8 Apr 2024',
     thumb: '/portfolio/lawplus-trivia-night-thumb.jpg',
     media: [cover('lawplus-trivia-night', 'Event cover: Hollywood theme with red velvet curtain, gold art-deco frames, film strips and a gold statuette; “LawPLUS Trivia Night”, Colombo Theatre B, 8 Apr, 6:30–8:30pm, sponsored by Clayton Utz.')],
-    role: 'Designer — UNSW Law Society marketing',
+    role: 'Designer — as Marketing Director, UNSW Law Society (2024)',
     tools: ['Canva', 'Photoshop'],
     summary: 'Movie-themed trivia night in Colombo Theatre B. Red velvet curtains, gold art-deco framing, curling film strips and an awards statuette, with a sponsor bar.',
     caseStudy: { mission: 'Promote a movie-themed LawPLUS trivia night.', execution: 'Awards-night visual language — velvet, gold deco ornament, film strips and a statuette — with sponsor branding.', ...todo },
     published: true,
-    confirmed: false,
+    confirmed: true,
   },
   {
     id: 'suits-and-scrubs',
@@ -149,15 +149,15 @@ export const portfolio: Project[] = [
     org: 'UNSW Law Society',
     type: 'Merch lookbook (animated)',
     categories: ['Branding', 'Campaigns', 'Social Media'],
-    date: null,
+    date: '2025',
     thumb: '/portfolio/country-club-page-2-thumb.jpg',
     media: [story('country-club-page-2', 'Animated lookbook page: two models in Law Society hoodies on a golf course, serif title “Country Club — The Edit”, “The Hoodie”.', 1080, 1350)],
-    role: 'Designer — UNSW Law Society marketing',
+    role: 'Co-led the merch campaign with the co-coordinator — as Marketing Coordinator, UNSW Law Society (2025)',
     tools: ['Canva', 'Photoshop'],
     summary: 'Page from “Country Club: The Edit”, a Law Society merch lookbook shot on a golf course. Editorial serif type introduces the hoodie.',
-    caseStudy: { mission: 'Launch a Law Society merch range with an editorial, country-club look.', execution: 'Golf-course photoshoot, editorial serif and script type, and animated pages for social.', ...todo },
+    caseStudy: { mission: 'Launch a Law Society merch range with an editorial, country-club look.', execution: 'Golf-course photoshoot, editorial serif and script type, and animated pages for social.', challenge: null, strategy: null, result: 'The 2025 range sold out — and the Dean wore it.' },
     published: true,
-    confirmed: false,
+    confirmed: true,
   },
   {
     id: 'country-club-pages-6-7',
@@ -165,15 +165,15 @@ export const portfolio: Project[] = [
     org: 'UNSW Law Society',
     type: 'Merch lookbook (animated)',
     categories: ['Branding', 'Campaigns', 'Social Media'],
-    date: null,
+    date: '2025',
     thumb: '/portfolio/country-club-pages-6-7-thumb.jpg',
     media: [story('country-club-pages-6-7', 'Animated lookbook spread: “Behind the Scenes” on a golf course, then a collage of shoot photos and crewneck flat-lays.', 1080, 1350)],
-    role: 'Designer — UNSW Law Society marketing',
+    role: 'Co-led the merch campaign with the co-coordinator — as Marketing Coordinator, UNSW Law Society (2025)',
     tools: ['Canva', 'Photoshop'],
     summary: 'Behind-the-scenes spread from the same lookbook: an animated title over the course, then a collage of shoot photos and product flat-lays.',
-    caseStudy: { mission: 'Show the people and process behind the merch launch.', execution: 'Animated transition from title card to a photo collage mixing candid shoot moments with product flat-lays.', ...todo },
+    caseStudy: { mission: 'Show the people and process behind the merch launch.', execution: 'Animated transition from title card to a photo collage mixing candid shoot moments with product flat-lays.', challenge: null, strategy: null, result: 'The 2025 range sold out — and the Dean wore it.' },
     published: true,
-    confirmed: false,
+    confirmed: true,
   },
   {
     id: 'winter-merch-2024',
@@ -184,10 +184,10 @@ export const portfolio: Project[] = [
     date: 'Sales close Thu 6 June 2024',
     thumb: '/portfolio/winter-merch-2024-thumb.jpg',
     media: [story('winter-merch-2024', 'Animated story on a purple starry background: polaroid photos of students in Law Society merch, handwritten callouts “2024 Exclusive!”, “Laptop Sleeve!?”, “LawSocks!”, “Sales open now!”.')],
-    role: 'Designer — as Marketing Director, UNSW Law Society (2024)',
+    role: 'Designed the hoodie and socks, and the campaign — as Marketing Director, UNSW Law Society (2024)',
     tools: ['Canva', 'Photoshop'],
     summary: 'Sales-open story for the 2024 winter merch drop. Polaroid-style product photos and handwritten callouts (“Laptop Sleeve!?”, “LawSocks!”) over a purple night sky.',
-    caseStudy: { mission: 'Drive sales of the 2024 winter merch range before the 6 June close.', execution: 'Scrapbook polaroids, hand-lettered callouts and a starry purple palette, animated for Instagram stories.', ...todo },
+    caseStudy: { mission: 'Drive sales of the 2024 winter merch range before the 6 June close.', execution: 'Scrapbook polaroids, hand-lettered callouts and a starry purple palette, animated for Instagram stories.', challenge: null, strategy: null, result: 'The 2024 range sold out — and the Dean wore it.' },
     published: true,
     confirmed: true,
   },

@@ -54,6 +54,6 @@ docs/             PLANNING.md, CONTENT.md, SPRITES.md
 
 ## What I still need from you
 
-See **Open questions** in [docs/CONTENT.md](docs/CONTENT.md#open-questions): two portfolio years, case-study results, and the graduation year.
+Content questions are all settled (see [docs/CONTENT.md](docs/CONTENT.md#open-questions)). More portfolio results or numbers would always strengthen the case studies.
 
 **Needed for Phase 5–6:** a free **Supabase** project and **Cloudflare Turnstile** site (I'll walk you through both), and a **Vercel** or Netlify account. Optional custom domain.

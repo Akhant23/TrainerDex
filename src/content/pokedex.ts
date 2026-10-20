@@ -70,8 +70,8 @@ export const pokedex: DexEntry[] = [
     category: 'Marketing Pokémon',
     types: ['CREATIVE', 'LEADER'],
     art: { kind: 'badge', id: 'prism' },
-    entry: 'Has run marketing for the UNSW Law Society, UNSOC, Beyond The Bounds and the Student Legal Education Group. Works in Photoshop, Illustrator, Premiere Pro and Canva Pro.',
-    sources: ['resume', 'linkedinVolunteering'],
+    entry: 'Has run marketing for the UNSW Law Society, UNSOC, Beyond The Bounds and the Student Legal Education Group. Its Law Society merch sold out two years running — the Dean was spotted wearing it.',
+    sources: ['resume', 'linkedinVolunteering', 'aaryan'],
   },
   {
     no: 6,
@@ -79,8 +79,8 @@ export const pokedex: DexEntry[] = [
     category: 'Beacon Pokémon',
     types: ['LEADER'],
     art: { kind: 'badge', id: 'beacon' },
-    entry: 'Led O-Week campus tours that introduced more than 3,000 first-years to UNSW, and has been a Student Ambassador since 2023. Knows where every lecture theatre is.',
-    sources: ['resume', 'linkedinVolunteering'],
+    entry: 'Led O-Week campus tours for 3,500 first-years — the most since COVID — and has been a Student Ambassador since 2023. Knows where every lecture theatre is.',
+    sources: ['resume', 'linkedinVolunteering', 'aaryan'],
   },
   {
     no: 7,
