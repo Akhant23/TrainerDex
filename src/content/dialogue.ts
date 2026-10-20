@@ -22,6 +22,12 @@ export const dialogue = {
   secretClicks: 10,
   secretReaction: '...OK, you found it. There is no secret. Or IS there?',
 
+  /** Pokédex Easter egg: 1 in `odds` chance when opening an entry. */
+  rareEncounter: {
+    odds: 12,
+    lines: ['A wild AARYAN appeared!', '…He seems to be looking for his phone charger.', 'He checked his watch. Something about a deadline.', 'Wild AARYAN fled!'],
+  },
+
   menuWelcome: 'Welcome back, {name}! Where to next?',
 } as const
 

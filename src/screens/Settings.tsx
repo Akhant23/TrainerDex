@@ -26,7 +26,7 @@ type Row =
   | ChoiceRow<'music'>
   | ChoiceRow<'motion'>
   | { kind: 'volume'; label: string; help: string }
-  | { kind: 'action'; id: 'replay' | 'reset' | 'save'; label: string; help: string }
+  | { kind: 'action'; id: 'medals' | 'replay' | 'reset' | 'save'; label: string; help: string }
 
 const rows: Row[] = [
   {
@@ -72,6 +72,7 @@ const rows: Row[] = [
       { label: 'FULL', value: 'full' as MotionPref },
     ],
   },
+  { kind: 'action', id: 'medals', label: 'MEDAL BOX', help: 'See the medals you’ve earned exploring the TrainerDex.' },
   { kind: 'action', id: 'replay', label: 'REPLAY INTRO', help: 'Watch the opening again from the start.' },
   { kind: 'action', id: 'reset', label: 'RESET SAVE DATA', help: 'Forget your name, play time and settings on this device.' },
   { kind: 'action', id: 'save', label: 'SAVE & EXIT', help: 'Save these options and return to the menu.' },
@@ -132,8 +133,11 @@ export default function SettingsScreen() {
     }
   }
 
-  const act = (id: 'replay' | 'reset' | 'save') => {
-    if (id === 'save') {
+  const act = (id: 'medals' | 'replay' | 'reset' | 'save') => {
+    if (id === 'medals') {
+      preview(null)
+      navigate('/medals')
+    } else if (id === 'save') {
       setMode('saving')
     } else if (id === 'reset') {
       setMode('confirmReset')

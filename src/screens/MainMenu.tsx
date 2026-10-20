@@ -12,6 +12,9 @@ import { formatPlaytime } from '../systems/format'
 import { PixelBox } from '../ui/PixelBox'
 import { PixelIcon } from '../ui/PixelIcon'
 import { TrainerSprite } from '../ui/TrainerSprite'
+import { progress, useProgress } from '../systems/progress'
+import { medals } from '../content/medals'
+import { hasShinyCharm } from '../systems/konami'
 
 const COLS = 2
 // remembered for the session so Back returns the cursor to where it was
@@ -39,7 +42,16 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
   const { name } = useVisitor()
   const playtime = usePlaytime()
   const { sfx } = useSettings()
-  const [shiny] = useState(() => Math.random() < 1 / shinyOdds)
+  const [shiny, setShiny] = useState(() => hasShinyCharm() || Math.random() < 1 / shinyOdds)
+  const earned = Object.keys(useProgress().medals).length
+  useEffect(() => {
+    if (shiny) progress.unlock('shiny')
+  }, [shiny])
+  useEffect(() => {
+    const on = () => setShiny(true)
+    window.addEventListener('tdx:shiny-charm', on)
+    return () => window.removeEventListener('tdx:shiny-charm', on)
+  }, [])
   const [bubble, setBubble] = useState<string | null>(null)
   const [hopKey, setHopKey] = useState(0)
   const clicks = useRef({ count: 0, last: 0, next: 0 })
@@ -56,6 +68,7 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
     let line: string
     if (c.count >= dialogue.secretClicks) {
       line = dialogue.secretReaction
+      progress.unlock('secret')
       c.count = 0
     } else {
       line = dialogue.spriteReactions[c.next % dialogue.spriteReactions.length]
@@ -115,6 +128,19 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
                 {time.minutes}
               </dd>
             </dl>
+            <button
+              type="button"
+              onClick={() => {
+                sfx('select')
+                navigate('/medals')
+              }}
+              className="font-display cq-text-xs mt-[6%] flex w-full cursor-pointer items-center justify-between border-0 bg-[#f8e8a8] px-[4%] py-[3%] text-ink shadow-[0_0_0_2px_var(--color-ink)] hover:bg-[#fff0b8]"
+            >
+              <span>★ MEDALS</span>
+              <span>
+                {earned}/{medals.length}
+              </span>
+            </button>
           </PixelBox>
         </div>
       </div>

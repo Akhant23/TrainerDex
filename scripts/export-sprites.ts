@@ -10,6 +10,7 @@ import { deflateSync } from 'node:zlib'
 import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
 import { trainerFrames, trainerPalette, shinyPalette } from '../src/sprites/trainerData.ts'
 import { creatureArt, trainerdexBadge } from '../src/sprites/creatures.ts'
+import { overworldFrames } from '../src/sprites/overworld.ts'
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   let c = n
@@ -90,6 +91,7 @@ writeFileSync(
   sheet([...trainerFrames.idle, ...trainerFrames.blink, ...trainerFrames.victory, ...trainerFrames.back], trainerPalette, 6),
 )
 for (const [id, art] of Object.entries(creatureArt)) writeFileSync(`sprites-export/creature-${id}@4x.png`, sheet([art.pixels], art.palette, 4))
+writeFileSync('sprites-export/overworld@6x.png', sheet([...overworldFrames.down, ...overworldFrames.up, ...overworldFrames.left, ...overworldFrames.right], trainerPalette, 6))
 writeFileSync('sprites-export/trainerdex-badge@6x.png', sheet([trainerdexBadge.pixels], trainerdexBadge.palette, 6))
 // all creatures in one strip, sharing one palette per sprite is not possible, so stitch per creature
 console.log('Wrote sprites to sprites-export/')

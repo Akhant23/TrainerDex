@@ -5,6 +5,7 @@ import { profile } from '../content/profile'
 import { experience, formatRange, type ExperienceKind } from '../content/experience'
 import { categories, publishedPortfolio, type Category, type Media, type Project } from '../content/portfolio'
 import { useSettings } from '../systems/settings'
+import { progress } from '../systems/progress'
 import { useGameKeys } from '../systems/input'
 import { ChoiceMenu } from '../ui/ChoiceMenu'
 import { DialogueBox } from '../ui/DialogueBox'
@@ -96,6 +97,7 @@ function PCMenu() {
 /* ---------------- Resume ---------------- */
 
 function Resume() {
+  useEffect(() => progress.unlock('recruiter'), [])
   const isSmall = useMemo(() => window.matchMedia?.('(max-width: 639px)').matches ?? false, [])
   const [view, setView] = useState(isSmall ? 1 : 0)
   const [expanded, setExpanded] = useState(false)

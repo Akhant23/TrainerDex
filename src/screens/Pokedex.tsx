@@ -1,4 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { dialogue } from '../content/dialogue'
+import { DialogueBox } from '../ui/DialogueBox'
+import { TrainerSprite } from '../ui/TrainerSprite'
 import { navigate } from '../app/router'
 import { menu } from '../content/menu'
 import { pokedex, types, type DexEntry } from '../content/pokedex'
@@ -76,7 +79,11 @@ let lastIndex = 0
 
 function Detail({ dex }: { dex: DexEntry }) {
   const { sfx } = useSettings()
+  const [wild, setWild] = useState(() => Math.random() < 1 / dialogue.rareEncounter.odds)
   useEffect(() => progress.seeDex(dex.no), [dex.no])
+  useEffect(() => {
+    if (wild) sfx('encounter')
+  }, [wild, sfx])
   const idx = pokedex.indexOf(dex)
   const go = (d: number) => {
     const next = pokedex[(idx + d + pokedex.length) % pokedex.length]
@@ -85,11 +92,28 @@ function Detail({ dex }: { dex: DexEntry }) {
     navigate(`/pokedex/${next.no}`)
   }
   useGameKeys((k, e) => {
+    if (wild) return
     if (k === 'left' || k === 'up') go(-1)
     else if (k === 'right' || k === 'down') go(1)
     else return
     e.preventDefault()
   })
+
+  if (wild)
+    return (
+      <SectionScreen entry={entry} backTo="/pokedex" title="A WILD ENCOUNTER!" top={<WildEncounter />} backKeys={false}>
+        <div className="p-[4%]">
+          <DialogueBox
+            lines={dialogue.rareEncounter.lines}
+            onDone={() => {
+              progress.unlock('rare-encounter')
+              sfx('back')
+              setWild(false)
+            }}
+          />
+        </div>
+      </SectionScreen>
+    )
 
   return (
     <SectionScreen entry={entry} backTo="/pokedex" title={`No.${pad(dex.no)}`} top={<DexScreen dex={dex} seen />} scrollKey={dex.no}>
@@ -143,6 +167,21 @@ function DexScreen({ dex, seen }: { dex: DexEntry; seen: boolean }) {
         <span className="font-display text-[clamp(10px,3cqi,18px)]">{seen ? dex.name : '?????'}</span>
         <span className="flex gap-1.5">{seen && dex.types.map((t) => <TypeChip key={t} type={t} />)}</span>
       </PixelBox>
+    </div>
+  )
+}
+
+function WildEncounter() {
+  return (
+    <div className="battle-field absolute inset-0 overflow-hidden">
+      <div className="platform" style={{ left: '50%', top: '86%', width: '50%', height: '14%' }} />
+      <div className="stand anim-enter" style={{ left: '50%', top: '88%', height: '72%' }}>
+        <TrainerSprite pose="victory" shiny fill={0.98} className="hop" />
+      </div>
+      <span aria-hidden className="sparkle absolute top-[14%] left-[60%] text-[clamp(14px,5cqi,28px)] text-gold">
+        ✦
+      </span>
+      <div className="encounter" aria-hidden />
     </div>
   )
 }

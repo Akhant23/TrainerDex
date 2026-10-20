@@ -718,3 +718,22 @@ body {
 }
 
 }
+
+.medal-toast {
+  animation: medal-in 3200ms steps(8) forwards;
+}
+@keyframes medal-in {
+  0% {
+    transform: translateY(-140%);
+  }
+  8%,
+  88% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-140%);
+  }
+}
+[data-motion='reduced'] .medal-toast {
+  animation: none;
+}

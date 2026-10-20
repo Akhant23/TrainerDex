@@ -5,6 +5,9 @@ import { menuEntryForRoute } from '../content/menu'
 import { navigate, useHashPath, useWipedPath } from './router'
 import { WipeContext } from './DSShell'
 import MainMenu from '../screens/MainMenu'
+import { progress } from '../systems/progress'
+import { MedalToast } from '../ui/Medals'
+import { useKonami } from '../systems/konami'
 
 // Sections load on demand so the first visit only downloads the shell, intro and menu.
 const loaders = {
@@ -16,10 +19,12 @@ const loaders = {
   pc: () => import('../screens/PC'),
   album: () => import('../screens/PhotoAlbum'),
   battle: () => import('../screens/battle/Battle'),
+  medals: () => import('../screens/MedalBox'),
 }
 const Intro = lazy(() => import('../screens/Intro'))
 const SettingsScreen = lazy(loaders.settings)
 const ComingSoon = lazy(loaders.comingSoon)
+const MedalBox = lazy(loaders.medals)
 const sections: Record<string, LazyExoticComponent<ComponentType<{ path: string }>>> = {
   profile: lazy(loaders.profile),
   pokedex: lazy(loaders.pokedex),
@@ -60,12 +65,25 @@ function Game() {
   const { shown, phase } = useWipedPath(path, reducedMotion)
   const finishIntro = useCallback(() => setIntroSeen(true), [setIntroSeen])
   usePrefetchSections(introSeen)
+  useKonami()
 
   // Unknown routes fall back to the menu.
   const entry = menuEntryForRoute(shown)
+  const isMedals = shown === '/medals'
   useEffect(() => {
-    if (shown !== '/' && !entry) navigate('/')
-  }, [shown, entry])
+    if (shown !== '/' && !entry && !isMedals) navigate('/')
+  }, [shown, entry, isMedals])
+
+  // medals: first visit, section visits, late-night visits
+  useEffect(() => {
+    if (!introSeen) return
+    progress.unlock('first-encounter')
+    const h = new Date().getHours()
+    if (h < 5) progress.unlock('night-owl')
+  }, [introSeen])
+  useEffect(() => {
+    if (introSeen && entry) progress.visitSection(entry.id)
+  }, [introSeen, entry])
 
   if (!introSeen)
     return (
@@ -75,7 +93,8 @@ function Game() {
     )
 
   let screen
-  if (shown === '/' || !entry) screen = <MainMenu />
+  if (isMedals) screen = <MedalBox />
+  else if (shown === '/' || !entry) screen = <MainMenu />
   else if (entry.id === 'settings') screen = <SettingsScreen />
   else if (sections[entry.id]) {
     const Section = sections[entry.id]
@@ -85,6 +104,7 @@ function Game() {
   return (
     <WipeContext.Provider value={phase}>
       <Suspense fallback={<Loading />}>{screen}</Suspense>
+      <MedalToast />
     </WipeContext.Provider>
   )
 }

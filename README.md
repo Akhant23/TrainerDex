@@ -12,7 +12,7 @@ The interactive, Gen IV/V-style personal site of **Aaryan Khan**, a Law / Biotec
 | 1. Planning | ✅ | [docs/PLANNING.md](docs/PLANNING.md) |
 | 2. Design foundation | ✅ | DS shell, intro, dialogue engine, main menu, navigation, settings + save, sprite prototype, audio, play time |
 | 3. Personal content | ✅ | Profile, Pokédex (15 entries), Trainer Card + 8 badges + polishing, PC (resume viewer, 11 portfolio case studies, 27-entry experience log), Photo Album (10 memories) |
-| 4. Interactive | ◐ | **Battle simulator done** (9 original creatures, 3 difficulties, TRAINERDEX BADGE, Hall of Fame). Still to do: visitor achievements, Easter eggs, walking sprite |
+| 4. Interactive | ✅ | Battle simulator (9 original creatures, 3 difficulties, TRAINERDEX BADGE, Hall of Fame), 16 visitor medals + Medal Box, Easter eggs, walking sprite |
 | 5. Backend | ⏳ | Poké Pager guestbook + moderation (Supabase) |
 | 6. Testing & launch | ⏳ | a11y, Lighthouse, deploy |
 
@@ -32,6 +32,8 @@ npm run sprites:export   # write the prototype sprites to sprites-export/ as PNG
 ```
 
 Controls: arrows move · Enter / Space / Z = A · Esc / X / Backspace = B · 1–8 jump to a menu tile.
+
+Easter eggs (spoilers): keep poking Aaryan on the menu; 1-in-128 shiny; 1-in-12 wild encounter when opening a Pokédex entry; ↑↑↓↓←→←→BA; visit after midnight. All tracked in the Medal Box (★ MEDALS on the main menu, or Settings → Medal Box).
 
 ## Where things live
 

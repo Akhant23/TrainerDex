@@ -55,9 +55,20 @@ a strong player: Casual ~100%, Standard ~74%, Champion ~25%.
 Creature art is drawn from shapes in `src/sprites/creatures.ts` (see `raster.ts`); `npm run
 sprites:export` writes PNG previews to `sprites-export/`.
 
+## Medals and Easter eggs
+
+`src/content/medals.ts` lists the 16 medals (name, description, tier, hidden + hint). The rules that
+award them live in `src/systems/progress.ts` (collections, battles, polishing) and in the screens that
+trigger them (shiny/secret on the main menu, resume in the PC, rare encounter in the Pokédex, the
+Konami code in `src/systems/konami.ts`). Rare-encounter odds and lines are in `dialogue.ts`; shiny
+odds in `sprites.ts`.
+
+The walking sprite is generated in `src/sprites/overworld.ts` (4 directions × 3 frames) and appears
+in the Medal Box room.
+
 ## Visitor data
 
-Visitors' settings, chosen name, play time, Pokédex progress, badge shine, TRAINERDEX BADGE and Hall of Fame are stored only in their own browser (local storage,
+Visitors' settings, chosen name, play time, Pokédex progress, badge shine, TRAINERDEX BADGE, Hall of Fame and medals are stored only in their own browser (local storage,
 key prefix `tdx:v1:`). Nothing is sent anywhere. **Settings → Reset save data** clears it.
 
 ## Open questions
