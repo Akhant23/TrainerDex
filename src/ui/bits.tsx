@@ -19,7 +19,7 @@ export function TypeChip({ type }: { type: TypeId }) {
 export function Sources({ ids, className = '' }: { ids: readonly SourceId[]; className?: string }) {
   if (!ids.length) return null
   return (
-    <p className={`m-0 text-[13px] text-muted ${className}`}>
+    <p className={`m-0 border-t border-dashed border-[#c8d0e0] pt-3 text-[13px] leading-relaxed text-muted ${className}`}>
       <span className="font-display text-[11px] tracking-wide">SOURCE </span>
       {ids.map((id, i) => {
         const s = sources[id]
@@ -42,15 +42,15 @@ export function Sources({ ids, className = '' }: { ids: readonly SourceId[]; cla
 
 /** Small heading used inside content panels. */
 export function Heading({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <h3 className={`font-display m-0 mb-2 text-[clamp(14px,3.2cqi,18px)] text-dex-red ${className}`}>{children}</h3>
+  return <h3 className={`font-display m-0 mb-3 text-[clamp(14px,3.2cqi,18px)] text-dex-red ${className}`}>{children}</h3>
 }
 
 /** Pill list for skills/tags. */
 export function Tags({ items }: { items: readonly string[] }) {
   return (
-    <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+    <ul className="m-0 flex list-none flex-wrap gap-2.5 p-0">
       {items.map((s) => (
-        <li key={s} className="bg-[#dfe4f0] px-2 py-0.5 text-[14px] shadow-[0_0_0_2px_#b8c0d8]">
+        <li key={s} className="bg-[#dfe4f0] px-2.5 py-1 text-[14px] leading-snug shadow-[0_0_0_2px_#b8c0d8]">
           {s}
         </li>
       ))}
@@ -76,7 +76,7 @@ export function Bullets({ items, className = '' }: { items: string | readonly st
   const list = typeof items === 'string' ? toPoints(items) : items
   if (list.length === 1) return <p className={`m-0 leading-relaxed ${className}`}>{list[0]}</p>
   return (
-    <ul className={`m-0 list-none space-y-2.5 p-0 leading-relaxed ${className}`}>
+    <ul className={`m-0 list-none space-y-3.5 p-0 leading-relaxed ${className}`}>
       {list.map((t) => (
         <li key={t} className="flex gap-2.5">
           <span aria-hidden className="shrink-0 text-dex-red">

@@ -10,7 +10,7 @@
  * Light comes from the upper left: shading falls on the right of every shape.
  * Pure TypeScript (no DOM) so tests and the export script can use it.
  */
-import { Grid } from './raster.ts'
+import { Grid, HiGrid, type Raster } from './raster.ts'
 import type { Palette, Pixels } from './pixels.ts'
 
 export const CHAR_W = 80
@@ -114,47 +114,40 @@ export function paletteFor(a: Appearance): Palette {
 export type Pt = [number, number]
 
 /** Filled ellipse; `shade` on the right/bottom-right, `light` on the upper-left rim. */
-export function oval(g: Grid, cx: number, cy: number, rx: number, ry: number, ch: string, shade?: string, light?: string, shadeAt = 0.45) {
-  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
-    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-      const dx = (x + 0.5 - cx) / rx
-      const dy = (y + 0.5 - cy) / ry
-      if (dx * dx + dy * dy > 1) continue
-      let c = ch
-      if (shade && dx * 0.85 + dy * 0.35 > shadeAt) c = shade
-      else if (light && dx * 0.6 + dy * 0.8 < -0.72) c = light
-      g.set(x, y, c)
-    }
+export function oval(g: Raster, cx: number, cy: number, rx: number, ry: number, ch: string, shade?: string, light?: string, shadeAt = 0.45) {
+  g.sample(cx - rx - 1, cy - ry - 1, cx + rx, cy + ry, (px, py) => {
+    const dx = (px - cx) / rx
+    const dy = (py - cy) / ry
+    if (dx * dx + dy * dy > 1) return null
+    if (shade && dx * 0.85 + dy * 0.35 > shadeAt) return shade
+    if (light && dx * 0.6 + dy * 0.8 < -0.72) return light
+    return ch
+  })
 }
 
 /** A tapered capsule from p0 (radius r0) to p1 (radius r1), shaded on its right side. */
-export function capsule(g: Grid, p0: Pt, p1: Pt, r0: number, r1: number, ch: string, shade?: string, light?: string) {
+export function capsule(g: Raster, p0: Pt, p1: Pt, r0: number, r1: number, ch: string, shade?: string, light?: string) {
   const [x0, y0] = p0
   const [x1, y1] = p1
   const vx = x1 - x0
   const vy = y1 - y0
   const len2 = vx * vx + vy * vy || 1
   const r = Math.max(r0, r1)
-  for (let y = Math.floor(Math.min(y0, y1) - r); y <= Math.ceil(Math.max(y0, y1) + r); y++)
-    for (let x = Math.floor(Math.min(x0, x1) - r); x <= Math.ceil(Math.max(x0, x1) + r); x++) {
-      const px = x + 0.5
-      const py = y + 0.5
-      const t = Math.max(0, Math.min(1, ((px - x0) * vx + (py - y0) * vy) / len2))
-      const cx = x0 + vx * t
-      const cy = y0 + vy * t
-      const rr = r0 + (r1 - r0) * t
-      const d = Math.hypot(px - cx, py - cy)
-      if (d > rr) continue
-      // how far toward the right-hand rim this pixel sits (-1 … 1)
-      const side = (px - cx) / rr
-      let c = ch
-      if (shade && side > 0.3) c = shade
-      else if (light && side < -0.7) c = light
-      g.set(x, y, c)
-    }
+  g.sample(Math.min(x0, x1) - r - 1, Math.min(y0, y1) - r - 1, Math.max(x0, x1) + r, Math.max(y0, y1) + r, (px, py) => {
+    const t = Math.max(0, Math.min(1, ((px - x0) * vx + (py - y0) * vy) / len2))
+    const cx = x0 + vx * t
+    const cy = y0 + vy * t
+    const rr = r0 + (r1 - r0) * t
+    if (Math.hypot(px - cx, py - cy) > rr) return null
+    // how far toward the right-hand rim this point sits (-1 … 1)
+    const side = (px - cx) / rr
+    if (shade && side > 0.3) return shade
+    if (light && side < -0.7) return light
+    return ch
+  })
 }
 
-export function chain(g: Grid, pts: Pt[], a = 'X', b = 'x') {
+export function chain(g: Raster, pts: Pt[], a = 'X', b = 'x') {
   let i = 0
   for (let k = 0; k < pts.length - 1; k++) {
     const [x0, y0] = pts[k]
@@ -165,6 +158,20 @@ export function chain(g: Grid, pts: Pt[], a = 'X', b = 'x') {
 }
 
 const M = (x: number) => 80 - x // mirror about the centre line
+
+/** Resolution the layers are rasterised at: 1 = 80×120, 2 = 160×240 (same art, finer pixels). */
+let K = 1
+const canvas = (): Raster => (K === 1 ? new Grid(CHAR_W, CHAR_H) : new HiGrid(CHAR_W, CHAR_H, K))
+/** Run a renderer at k× resolution. */
+export function atResolution<T>(k: number, fn: () => T): T {
+  const prev = K
+  K = k
+  try {
+    return fn()
+  } finally {
+    K = prev
+  }
+}
 const mirrorRow = (r: string) => [...r].reverse().join('')
 
 /* ---------------- Layers ---------------- */
@@ -185,7 +192,7 @@ const TEES = new Set<Appearance['top']>(['tee', 'splash', 'jersey'])
 const BLAZERS = new Set<Appearance['top']>(['blazer', 'suit', 'school'])
 
 function hairBack(a: Appearance): Pixels {
-  const g = new Grid(CHAR_W, CHAR_H)
+  const g = canvas()
   switch (a.hair) {
     case 'wavy':
       oval(g, 40, 14, 13, 11.5, 'H', 'j', 'h')
@@ -226,14 +233,14 @@ function hairBack(a: Appearance): Pixels {
 
 /** Hats sit on top of the hair: nothing of the hair pokes out above the brim. */
 export const HAT_BRIM: Partial<Record<Appearance['hat'], number>> = { cap: 12, beanie: 12, bucket: 11 }
-function clipUnderHat(g: Grid, a: Appearance) {
+function clipUnderHat(g: Raster, a: Appearance) {
   const brim = HAT_BRIM[a.hat]
   if (brim === undefined) return
   for (let y = 0; y < brim; y++) for (let x = 0; x < CHAR_W; x++) if ('Hjh'.includes(g.get(x, y))) g.set(x, y, '.')
 }
 
 function legs(a: Appearance): Pixels {
-  const g = new Grid(CHAR_W, CHAR_H)
+  const g = canvas()
   const bare = a.bottom === 'shorts' || a.bottom === 'skirt'
   const hipL: Pt = [34.6, 74]
   const kneeL: Pt = [34, 92]
@@ -318,7 +325,7 @@ function legs(a: Appearance): Pixels {
   return g.toPixels()
 }
 
-function tie(g: Grid, school: boolean) {
+function tie(g: Raster, school: boolean) {
   g.rect(39, 37, 40, 39, 'R').set(38, 38, 'R').set(41, 38, 'r')
   g.poly([[38.6, 40], [41.4, 40], [42.4, 55], [40, 58], [37.6, 55]], 'R')
   g.poly([[40, 40], [41.4, 40], [42.4, 55], [40, 58]], 'r')
@@ -326,7 +333,7 @@ function tie(g: Grid, school: boolean) {
 }
 
 function torso(a: Appearance): Pixels {
-  const g = new Grid(CHAR_W, CHAR_H)
+  const g = canvas()
   // neck (under the chin's shadow)
   g.rect(36, 28, 43, 37, 'S').rect(41, 28, 43, 37, 's').rect(36, 30, 43, 31, 'O')
 
@@ -465,7 +472,7 @@ function sleeves(a: Appearance): { upper: [string, string]; lower: [string, stri
   return { upper: cloth, lower: cloth, cuff: a.top === 'hoodie' ? 'a' : undefined }
 }
 
-function hand(g: Grid, cx: number, cy: number, mirror: boolean) {
+function hand(g: Raster, cx: number, cy: number, mirror: boolean) {
   oval(g, cx, cy, 3, 3.6, 'S', 's', 'T')
   // thumb on the inside, a knuckle line
   g.set(Math.floor(mirror ? cx - 3 : cx + 2.5), Math.floor(cy - 1.5), 'S')
@@ -473,7 +480,7 @@ function hand(g: Grid, cx: number, cy: number, mirror: boolean) {
 }
 
 function arm(a: Appearance, side: 'back' | 'front', pose: ArmPose): Pixels {
-  const g = new Grid(CHAR_W, CHAR_H)
+  const g = canvas()
   const { upper, lower, cuff } = sleeves(a)
   const tee = TEES.has(a.top)
 
@@ -561,7 +568,7 @@ const MOUTHS: Record<Appearance['face'], string[]> = {
   calm: ['.KKK.'],
 }
 
-function frontHair(g: Grid, a: Appearance) {
+function frontHair(g: Raster, a: Appearance) {
   // the fringe stays above the brows so eyes and glasses read clearly
   const cap = () => oval(g, 40, 10, 11.6, 6.2, 'H', 'j', 'h')
   const temples = () => {
@@ -621,7 +628,7 @@ function frontHair(g: Grid, a: Appearance) {
   }
 }
 
-function hat(g: Grid, a: Appearance) {
+function hat(g: Raster, a: Appearance) {
   switch (a.hat) {
     case 'cap':
       oval(g, 40, 8.6, 11.6, 6.6, 'Y', 'y')
@@ -645,7 +652,7 @@ function hat(g: Grid, a: Appearance) {
 }
 
 function head(a: Appearance, blink: boolean): Pixels {
-  const g = new Grid(CHAR_W, CHAR_H)
+  const g = canvas()
   // ears
   oval(g, 30.6, 20.5, 1.9, 2.9, 'S', 's')
   oval(g, 49.4, 20.5, 1.9, 2.9, 's')
@@ -733,7 +740,7 @@ export function renderFlat(a: Appearance, pose: ArmPose = 'idle'): Pixels {
  * raises the right arm with a ball in hand.
  */
 export function renderBack(a: Appearance, throwing = false): Pixels {
-  const g = new Grid(CHAR_W, CHAR_H)
+  const g = canvas()
   const blazer = BLAZERS.has(a.top)
   const hem = blazer ? 72 : UNTUCKED.has(a.top) ? 68 : 64
   // neck
@@ -761,7 +768,7 @@ export function renderBack(a: Appearance, throwing = false): Pixels {
   if (a.accessories.includes('bag')) g.line(49, 38, 32, 59, 'Z', 2)
 
   // head from behind: all hair, ears showing
-  const head = new Grid(CHAR_W, CHAR_H)
+  const head = canvas()
   oval(head, 30.6, 20.5, 1.9, 2.9, 'S', 's')
   oval(head, 49.4, 20.5, 1.9, 2.9, 's')
   const big = a.hair === 'wavy' || a.hair === 'mullet' || a.hair === 'curly' || a.hair === 'curtains'
@@ -782,7 +789,7 @@ export function renderBack(a: Appearance, throwing = false): Pixels {
   const left = arm(a, 'back', 'idle')
   let right: Pixels
   if (throwing) {
-    const r = new Grid(CHAR_W, CHAR_H)
+    const r = canvas()
     const { upper, lower } = sleeves(a)
     capsule(r, [51, 41], [60, 33], 4.6, 3.8, upper[0], upper[1])
     capsule(r, [60, 33], [62, 21], 3.8, 3.1, lower[0], lower[1])
@@ -797,4 +804,125 @@ export function renderBack(a: Appearance, throwing = false): Pixels {
     right = r.toPixels()
   } else right = left.map((row) => [...row].reverse().join(''))
   return flatten([legs(a), g.toPixels(), left, right, head.toPixels()])
+}
+
+/* ---------------- Side view ---------------- */
+
+/** The trainer in profile, facing right: for turnarounds and side-on moments. */
+export function renderSide(a: Appearance): Pixels {
+  const blazer = BLAZERS.has(a.top)
+  const hem = blazer ? 72 : UNTUCKED.has(a.top) ? 68 : 64
+  const bare = a.bottom === 'shorts' || a.bottom === 'skirt'
+  const { upper, lower, cuff } = sleeves(a)
+
+  // legs: the far leg a step behind and in shadow, the near leg in front
+  const legs = canvas()
+  for (const [hx, fx, far] of [[37, 35, true], [42, 44, false]] as const) {
+    const top: Pt = [hx, 72]
+    const knee: Pt = [hx + (far ? -1 : 1), 92]
+    const ankle: Pt = [fx, 106]
+    const col = far ? 'b' : 'B'
+    if (bare) {
+      capsule(legs, top, [knee[0], 85], 5.6, 4.8, col, 'b')
+      capsule(legs, [knee[0], 84], ankle, 4.2, 3.2, far ? 's' : 'S', 's')
+    } else {
+      capsule(legs, top, knee, 5.6, 4.8, col, 'b', far ? undefined : 'P')
+      capsule(legs, knee, ankle, 4.8, a.bottom === 'joggers' ? 4 : 4.4, col, 'b')
+    }
+    oval(legs, fx + 3, 110.5, 7.5, 3.6, far ? 'f' : 'F', 'f', far ? undefined : 'e')
+    legs.rect(Math.floor(fx - 4), 113, Math.ceil(fx + 10), 114, a.shoes === 'formal' ? 'K' : a.shoes === 'sneakers' ? 'G' : 'f')
+  }
+  if (a.bottom === 'skirt') legs.poly([[31, 64], [49, 64], [53, 86], [28, 86]], 'B')
+  legs.poly([[31, 64], [49, 64], [50, 78], [30, 78]], 'B')
+  legs.outline()
+  legs.rect(32, 64, 48, 66, 'Z')
+  if (a.accessories.includes('beltchain')) chain(legs, [[46, 66], [47, 72], [44, 77], [41, 74], [40, 68]])
+
+  // torso in profile: chest to the right, back to the left
+  const body = canvas()
+  body.rect(37, 28, 43, 37, 'S').rect(37, 28, 39, 37, 's')
+  body.poly([[31, 37], [47, 37], [50, 46], [49.5, 58], [49, hem], [31, hem], [30, 56], [29.5, 45]], 'A')
+  body.poly([[31, 37], [36, 37], [34.5, 56], [35, hem], [31, hem], [30, 56], [29.5, 45]], 'a')
+  if (a.top === 'hoodie') oval(body, 33, 39, 4.5, 4, 'a')
+  if (a.accessories.includes('bag')) body.rect(27, 58, 33, 67, 'Z')
+  body.outline()
+  if (a.top === 'jersey') body.line(48, 46, 49, hem - 1, 'R').stamp(44, 36, ['RRRR'])
+  if (blazer) {
+    body.poly([[44, 37], [47.5, 37], [47.5, 52]], a.top === 'suit' ? 'V' : 'G')
+    body.line(47, 39, 47, 55, 'R')
+    body.line(44, 37, 48, 54, a.top === 'school' ? 'U' : 'K')
+  }
+  if (a.top === 'shirt') body.line(48, 39, 48, 55, 'R')
+  if (a.accessories.includes('chain')) chain(body, [[42, 37], [46, 42], [47, 44]])
+
+  // the near arm hangs at the side with a soft bend
+  const armG = canvas()
+  capsule(armG, [39.5, 40], [38.5, 54], 4.4, 3.6, upper[0], upper[1])
+  capsule(armG, [38.5, 54], [41, 65], 3.6, 2.9, lower[0], lower[1])
+  if (TEES.has(a.top)) capsule(armG, [39.5, 40], [39, 49], 4.9, 4.4, 'A', 'a', 'Q')
+  if (cuff) armG.rect(38, 63, 43, 64, cuff)
+  oval(armG, 41.8, 68.5, 3, 3.6, 'S', 's', 'T')
+  armG.outline()
+  if (a.accessories.includes('watch')) armG.rect(38, 62, 43, 63, 'Z').set(42, 62, 'X')
+  if (a.accessories.includes('bracelet')) armG.rect(38, 62, 43, 62, 'X')
+
+  // head in profile: the back of the skull is hair, the face reaches forward to the nose
+  const h = canvas()
+  const hairC = a.hair === 'buzz' ? 'j' : 'H'
+  const shine = a.hair === 'buzz' ? undefined : 'h'
+  const big = a.hair === 'wavy' || a.hair === 'mullet' || a.hair === 'curly' || a.hair === 'curtains'
+  oval(h, 37, 15, big ? 13 : 12, big ? 13 : 12, hairC, 'j', shine)
+  if (a.hair === 'mullet') h.poly([[25, 16], [36, 18], [37, 30], [35, 37], [32, 35], [29, 38], [27, 33], [25.5, 26]], 'H')
+  if (a.hair === 'long' || a.hair === 'curtains') h.poly([[25, 14], [36, 14], [37, a.hair === 'long' ? 50 : 30], [26, a.hair === 'long' ? 50 : 28]], 'H')
+  if (a.hair === 'bun') oval(h, 28, 7, 5, 4.5, 'H', 'j', 'h')
+  if (a.hair === 'curly') for (const [x, y] of [[26, 9], [25, 20], [31, 3], [40, 2], [48, 5]]) oval(h, x, y, 4.2, 4.2, 'H', 'j')
+  // face: forehead, nose, lips and chin, with the jaw running back to the ear
+  oval(h, 45, 19, 8, 10, 'S', undefined, 'T')
+  h.poly([[38, 22], [52, 22], [52.5, 27], [50, 31.5], [45, 32.5], [40, 30]], 'S')
+  h.poly([[51.5, 17], [55.5, 23.5], [51.5, 25]], 'S')
+  h.poly([[38, 24], [43, 30], [45, 32.5], [40, 30.5]], 's')
+  // the ear, just behind the middle of the head
+  oval(h, 39.5, 21, 2.3, 3.2, 'S', 's')
+  h.set(39, 21, 's').set(39, 22, 's')
+  // hair over the top, swept forward over the brow, with a sideburn in front of the ear
+  if (a.hair !== 'buzz') {
+    oval(h, 39, 8.5, 13, 6.5, hairC, 'j', shine)
+    h.poly([[30, 5], [50, 4], [54, 9], [53, 14], [50, 12], [47, 15], [44, 12], [42, 16.5], [41, 20], [39, 15], [34, 14]], hairC)
+    if (a.hair === 'wavy' || a.hair === 'mullet') for (const [x, y] of [[33, 2], [41, 1], [48, 3]]) oval(h, x, y, 4.4, 3.4, 'H', 'j', 'h')
+  }
+  if (a.hair === 'spiky') for (const x of [30, 37, 44]) h.poly([[x - 4, 6], [x + 5, 6], [x + 6, -2]], 'H')
+  clipUnderHat(h, a)
+  switch (a.hat) {
+    case 'cap':
+      oval(h, 39, 8.6, 12.6, 6.6, 'Y', 'y')
+      h.poly([[46, 11], [60, 13], [59, 15.5], [46, 14.5]], 'y')
+      break
+    case 'beanie':
+      oval(h, 39, 9, 13, 7.2, 'Y', 'y')
+      h.rect(26, 12, 51, 15, 'y')
+      break
+    case 'bucket':
+      h.poly([[30, 1.5], [48, 1.5], [50.5, 11], [27.5, 11]], 'Y')
+      oval(h, 39, 12.6, 16, 2.6, 'y')
+      break
+    case 'headband':
+      h.rect(27, 11, 51, 13, 'Y')
+      break
+  }
+  h.outline()
+  // eye, brow, mouth
+  const eye = EYES[a.eyes]
+  h.stamp(47, 18, eye.map((r) => r.slice(0, 3)))
+  h.line(46, 15, 50, 15, 'j')
+  h.stamp(49, 27, a.face === 'grin' ? ['KKK', 'WWK'] : a.face === 'calm' ? ['KKK'] : ['K..', '.KK'])
+  if (a.accessories.includes('earring')) h.set(39, 24, 'X')
+  if (a.accessories.includes('glasses')) {
+    h.rect(45, 16, 51, 16, 'K').rect(45, 23, 51, 23, 'K').rect(45, 17, 45, 22, 'K').rect(51, 17, 51, 22, 'K')
+    h.line(41, 18, 45, 17, 'K')
+    h.set(50, 17, 'W')
+  }
+  if (a.accessories.includes('sunglasses')) h.rect(45, 17, 52, 21, 'K').line(41, 18, 45, 17, 'K').set(47, 18, 'l')
+  if (a.accessories.includes('headphones')) oval(h, 39.5, 21, 3.5, 4, 'Z', 'z')
+
+  return flatten([legs.toPixels(), body.toPixels(), armG.toPixels(), h.toPixels()])
 }

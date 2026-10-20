@@ -10,6 +10,7 @@
  *   u = wy − camY,  scale = D / (D − u·T),  sx = W/2 + (wx − camX)·scale,  sy = H·FOCUS + u·scale·C
  */
 import { hexToRgba, type Palette, type Pixels } from '../sprites/pixels'
+import { overworldOverride } from '../sprites/assets'
 import { overworldFor, OW_W, OW_WORLD, type Facing } from '../sprites/overworld'
 import { paletteFor, type Appearance } from '../sprites/character'
 import { creatureArtHi } from '../sprites/creatures'
@@ -17,6 +18,7 @@ import { flipX } from '../sprites/raster'
 import { tiles, tilePalette, TILE } from './tiles'
 import { structureArt } from './structures'
 import { size, tileAt, type ResortMap } from './maps'
+import { drawHorizon, drawSky, drawWeatherOverlay, type SkyState } from './sky'
 
 export const VIEW_W = 256
 /** Default view height; the actual height follows the screen's shape (taller screens see further). */
@@ -24,14 +26,16 @@ export const VIEW_H = 192
 /** Internal resolution multiplier, so scaled sprites keep crisp pixels. */
 export const RES = 4
 /** The horizon-ish row where the camera's focus sits, as a fraction of the view height. */
-const FOCUS = 0.72
+const FOCUS = 0.8
 const D = 230
-const T = 0.7
+const T = 0.8
 const C = 0.74
 /** Tiles of padding around each map (edge tiles repeated) so the far distance is never empty. */
 const PAD = 16
 /** The floor texture is pre-scaled so filtering keeps the pixel art crisp up close. */
 const GROUND_RES = 2
+/** Outdoors, the ground stops this many tiles past the north edge; the sky starts there. */
+const NORTH_PAD = 1
 
 export interface Camera {
   x: number
@@ -80,6 +84,7 @@ function ground(m: ResortMap, frame: 0 | 1): HTMLCanvasElement {
   for (let ty = -PAD; ty < h + PAD; ty++)
     for (let tx = -PAD; tx < w + PAD; tx++) {
       if (!m.outdoor && (tx < 0 || ty < 0 || tx >= w || ty >= h)) continue
+      if (m.outdoor && ty < -NORTH_PAD) continue
       const ch = tileAt(m, Math.max(0, Math.min(w - 1, tx)), Math.max(0, Math.min(h - 1, ty)))
       const def = tiles[ch] ?? tiles.X
       const px = frame && def.frame2 ? def.frame2 : def.px
@@ -91,6 +96,8 @@ function ground(m: ResortMap, frame: 0 | 1): HTMLCanvasElement {
 
 const characterCache = new Map<string, Record<Facing, HTMLCanvasElement[]>>()
 export function characterFrames(look: Appearance): Record<Facing, HTMLCanvasElement[]> {
+  const drawn = overworldOverride(look)
+  if (drawn) return drawn
   const key = JSON.stringify(look)
   let hit = characterCache.get(key)
   if (!hit) {
@@ -126,7 +133,7 @@ export interface CreatureActor {
 }
 
 /** Creature art faces left; facing right flips it. Two breathing frames each. */
-function creatureFrames(id: string, flipped: boolean, breath: number): HTMLCanvasElement {
+export function creatureFrames(id: string, flipped: boolean, breath: number): HTMLCanvasElement {
   const art = creatureArtHi[id]
   const split = Math.round(art.pixels.length * 0.62)
   const base = breath ? art.pixels.map((row, y) => (y + 2 < split ? art.pixels[y + 2] : y < split ? art.pixels[split] : row)) : art.pixels
@@ -136,13 +143,29 @@ function creatureFrames(id: string, flipped: boolean, breath: number): HTMLCanva
 const CREATURE_WORLD = 0.3
 
 /** Draw one frame of the map with its actors. */
-export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number, creatures: CreatureActor[] = [], vh = VIEW_H) {
+export interface WorldExtras {
+  /** sky, weather and time of day (outdoor maps) */
+  sky?: SkyState
+  /** drawn after the world but under the weather/night overlay (flyers, surfers…) */
+  overlay?: (ctx: CanvasRenderingContext2D, proj: (wx: number, wy: number) => { x: number; y: number; s: number }) => void
+}
+
+export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number, creatures: CreatureActor[] = [], vh = VIEW_H, extras: WorldExtras = {}) {
   const Y0 = vh * FOCUS
   const outdoor = !!m.outdoor
   const { w, h } = size(m)
   ctx.imageSmoothingEnabled = false
   ctx.fillStyle = outdoor ? '#bfe4f8' : '#101018'
   ctx.fillRect(0, 0, VIEW_W * RES, vh * RES)
+
+  // sky down to where the ground ends, with distant hills on the horizon
+  const sky = outdoor ? extras.sky : undefined
+  if (sky) {
+    const hz = project(cam, cam.x, -NORTH_PAD * TILE, vh)
+    const hy = hz.s > 0 ? Math.round(hz.y * RES) : 0
+    drawSky(ctx, VIEW_W * RES, hy, now, sky, RES)
+    drawHorizon(ctx, VIEW_W * RES, hy, sky, RES)
+  }
 
   // floor, one screen row at a time (filtered, like a textured 3D floor, so it doesn't shimmer)
   const g = ground(m, Math.floor(now / 600) % 2 === 1 ? 1 : 0)
@@ -160,12 +183,14 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
     ctx.drawImage(g, (cam.x - VIEW_W / 2 / s + PAD * TILE) * GROUND_RES, srcY, srcW, 1, 0, sy, VIEW_W * RES, 1)
   }
   ctx.imageSmoothingEnabled = false
-  // a little haze toward the back
-  const haze = ctx.createLinearGradient(0, 0, 0, vh * RES * 0.45)
-  haze.addColorStop(0, outdoor ? 'rgba(220,240,255,0.45)' : 'rgba(0,0,0,0.45)')
-  haze.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = haze
-  ctx.fillRect(0, 0, VIEW_W * RES, vh * RES * 0.45)
+  // a little haze toward the back (indoors: shadow; outdoors without a sky: mist)
+  if (!sky) {
+    const haze = ctx.createLinearGradient(0, 0, 0, vh * RES * 0.45)
+    haze.addColorStop(0, outdoor ? 'rgba(220,240,255,0.45)' : 'rgba(0,0,0,0.45)')
+    haze.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = haze
+    ctx.fillRect(0, 0, VIEW_W * RES, vh * RES * 0.45)
+  }
 
   // everything that stands up, sorted back to front
   type Item = { depth: number; draw: () => void }
@@ -182,12 +207,15 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   }
   const shadow = (bx: number, by: number, rx: number) => {
     const p = project(cam, bx, by, vh)
+    // behind the camera (or far below the screen) the projection flips or explodes
+    if (p.s <= 0.2 || p.y > vh + 40) return
     ctx.fillStyle = 'rgba(20,24,40,0.28)'
     ctx.beginPath()
     ctx.ellipse(p.x * RES, p.y * RES, rx * p.s * RES, rx * 0.42 * p.s * C * RES, 0, 0, Math.PI * 2)
     ctx.fill()
   }
 
+  const lamps: Array<[number, number]> = []
   // only tiles that can be on screen
   const y0 = Math.max(0, Math.floor((cam.y - 320) / TILE))
   const y1 = Math.min(h - 1, Math.ceil((cam.y + 70) / TILE))
@@ -206,6 +234,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
       const img = pixelCanvas(prop.px, tilePalette, `prop:${tileAt(m, tx, ty)}`)
       const bx = tx * TILE + 8
       const by = (ty + 1) * TILE
+      if (tileAt(m, tx, ty) === 'l') lamps.push([bx, by])
       items.push({ depth: by, draw: () => (!def.wall && shadow(bx, by - 2, 7), sprite(img, bx, by, prop.anchorX)) })
     }
   for (const st of m.structures ?? []) {
@@ -224,6 +253,28 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
     items.push({ depth: c.y, draw: () => (shadow(c.x, c.y, 6), sprite(img, c.x, c.y + 2 - c.hop, img.width / 2, CREATURE_WORLD)) })
   }
   items.sort((p, q) => p.depth - q.depth).forEach((i) => i.draw())
+
+  extras.overlay?.(ctx, (wx, wy) => project(cam, wx, wy, vh))
+
+  // time of day + weather over everything, then lamps glowing through the dark
+  if (sky) {
+    const glow = drawWeatherOverlay(ctx, VIEW_W * RES, vh * RES, now, sky, RES)
+    if (glow > 0) {
+      ctx.globalCompositeOperation = 'lighter'
+      for (const [bx, by] of lamps) {
+        const p = project(cam, bx, by, vh)
+        const x = p.x * RES
+        const y = (p.y - 36 * p.s) * RES
+        const r = 26 * p.s * RES
+        const gr = ctx.createRadialGradient(x, y, 0, x, y, r)
+        gr.addColorStop(0, `rgba(255,220,120,${0.55 * glow})`)
+        gr.addColorStop(1, 'rgba(255,220,120,0)')
+        ctx.fillStyle = gr
+        ctx.fillRect(x - r, y - r, r * 2, r * 2)
+      }
+      ctx.globalCompositeOperation = 'source-over'
+    }
+  }
 }
 
 /** Where to aim the camera so the map edges don't swing too far into view. */

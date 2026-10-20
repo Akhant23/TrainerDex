@@ -34,9 +34,10 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-AU', { day
 type View = 'inbox' | 'compose' | 'sent'
 type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; messages: PublicMessage[] }
 
-export default function PokePager() {
+export default function PokePager({ path = '/pager' }: { path?: string }) {
   const { sfx } = useSettings()
-  const [view, setView] = useState<View>('inbox')
+  // #/pager/compose opens straight on a new message (used by the resort's COMMENT button)
+  const [view, setView] = useState<View>(path === '/pager/compose' ? 'compose' : 'inbox')
   const [load, setLoad] = useState<Load>(pagerConfigured ? { state: 'loading' } : { state: 'ready', messages: [] })
   const [focus, setFocus] = useState(0)
 

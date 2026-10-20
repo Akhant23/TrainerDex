@@ -387,7 +387,7 @@ export default function Fight({
         </>
       }
     >
-      <div className="flex min-h-[45dvh] flex-col bg-[#2a2c3a] p-[3%] sm:min-h-full">
+      <div className="fill-bottom flex min-h-[45dvh] flex-col bg-[#2a2c3a] p-[3%] sm:min-h-full">
         {panel === 'command' && <CommandPanel battle={battle} onPick={(p) => setPanel(p)} />}
         {panel === 'fight' && <FightPanel battle={battle} onMove={(i) => act({ kind: 'move', index: i })} />}
         {(panel === 'party' || panel === 'replace') && (

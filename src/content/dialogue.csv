@@ -95,3 +95,9 @@ regular.sol,SOL,Resort regular in the plaza (speech bubble + when you talk to th
 regular.ana,ANA,Resort regular in the plaza (speech bubble + when you talk to them),The Avatar Studio sells a paint tee. I may have bought five.
 regular.sam,SAM,Resort regular in the plaza (speech bubble + when you talk to them),Peer review says Helixor is the strongest. I was the peer.
 regular.kai,KAI,Resort regular in the plaza (speech bubble + when you talk to them),First time here. The guide says the tower has FIVE Aaryans?!
+guest.air,TRAVELLING TRAINER,A trainer who just landed on the plaza on a flying creature,Just flew in on {creature}! What a view from up there.
+guest.air,TRAVELLING TRAINER,A trainer who just landed on the plaza on a flying creature,{creature} needed a rest — this plaza looked like a nice spot.
+guest.air,TRAVELLING TRAINER,A trainer who just landed on the plaza on a flying creature,Flying in beats the bus. Anyone up for a battle?
+guest.sea,TRAVELLING TRAINER,A trainer who just surfed in to the beach,Surf’s up! {creature} carried me all the way here.
+guest.sea,TRAVELLING TRAINER,A trainer who just surfed in to the beach,Nothing beats arriving by sea. Is the Battle Tower that way?
+guest.sea,TRAVELLING TRAINER,A trainer who just surfed in to the beach,{creature} rode every wave on the way in. Battle me while I dry off?

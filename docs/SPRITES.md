@@ -21,26 +21,62 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
 - **Creatures** — `src/sprites/creatures.ts` builds each creature from shapes, rendered twice: 40×40
   for small icons and 80×80 (`creatureArtHi`, finer outlines) for battles, the party screen and the
   creature that follows you. They breathe in a 4-frame idle loop like BW sprites.
+- **Side view** — `renderSide` draws the same appearance in profile (hair falling down the back,
+  glasses arm, one shoe forward). The back view (`renderBack`) and ball throw are used at the start
+  of battles.
 - **Colours** — the colour tables (`SKINS`, `HAIR_COLOURS`, `CLOTH_COLOURS`, `EYE_COLOURS`) are at the
   top of `character.ts`. Each entry is `[base, shade, light]`.
 
 ## Poses and scales
 
+The large trainer sprite is drawn from continuous shapes, so it can be rasterised at 80×120 or at
+2× (160×240, same design, finer outlines). `CharacterSprite` uses the 2× art whenever it lands on
+whole device pixels: at even scales, or at any scale on a high-density screen.
+
 | Context | What's used | Size |
 |---|---|---|
 | Map (walking) | overworld walker, 4 directions × 3 frames | 48×64 art, shown at 24×32 |
-| Profile, menu, Trainer Card | battle sprite, idle (breathing, blinking) | 80×120 |
-| VS screen | battle sprite, `point` pose, nodding, cropped to a bust | 80×120 at 2–4× |
+| Profile, menu, Trainer Card | battle sprite, `idle` (breathing, blinking) | 80×120 (or 2×) |
+| Trainer Card ID photo, messages | `portrait`, a head-and-shoulders crop | 40×46 (or 2×) |
+| Avatar Studio turnaround | `idle` → `side` → `back` → `side` mirrored | 80×120 at 2× |
+| VS screen | `point`, nodding, cropped to a bust by the band | 80×120 at 2–4× |
 | Start of a battle | your trainer from behind (`back`), then `throw` with a ball | 80×120, cropped by the screen edge |
 | Win | `victory` (fist pump) | 80×120 |
 | Creatures | 80×80 hi-res (battle, party) or 40×40 (icons) | |
 
+`side` is a true profile facing right (`renderSide` in `character.ts`); mirror it for left.
+All sprites are drawn at whole-number scales with `image-rendering: pixelated`, never smoothed.
+The idle animation is only for the large sprites; map walkers stand still, as in BW.
+
 ## Replacing art with hand-drawn sprites
 
-Everything is generated in code, but `src/content/sprites.ts` has an asset manifest: set
-`aaryanFront`, `aaryanPortrait` or `creatures.<id>` to a PNG in `public/assets/…` (transparent
-background, the sizes above, facing as noted) and the site uses it instead — if the file fails to
-load it falls back to the generated sprite. No other code changes needed.
+Everything is generated in code, so nothing needs replacing. When there is finished art:
+
+1. `npm run sprites:export` writes editable starting points to `sprites-export/assets/`, laid out
+   like `public/assets/`:
+
+   | Slot | File | Frame | Layout |
+   |---|---|---|---|
+   | `aaryan.front` | `trainer/battle/aaryan-front.png` | 80×120 | standing, facing the viewer |
+   | `aaryan.vs` | `trainer/portraits/aaryan-vs.png` | 80×120 | pointing right; head and chest in the top half |
+   | `aaryan.victory` | `trainer/battle/aaryan-victory.png` | 80×120 | fist raised |
+   | `aaryan.portrait` | `trainer/portraits/aaryan-portrait.png` | 40×46 | head and shoulders |
+   | `aaryan.overworld` | `trainer/overworld/aaryan-walk.png` | 48×64 × 12 | one row: down, up, left, right × (stand, step A, step B) |
+   | creature `<id>` | `creatures/<id>.png` | 80×80 | facing left |
+
+   `@2x-detail` files are the same pose at twice the resolution. Trainer poses can be drawn at a
+   whole multiple of the frame size; the walk sheet must be exactly 48×64 per frame.
+   `trainer/reference/aaryan-turnaround@2x-detail.png` (front, side, back, throw) is for reference.
+2. Save the finished PNG (transparent background, hard pixel edges) to `public/assets/` at the
+   path above.
+3. Add the slot id to `enabledAssets` in `src/content/sprites.ts` (or the creature id to
+   `enabledCreatures`).
+
+Overrides apply to Aaryan's everyday look wherever it appears (menu, Profile, VS, Champion, Medal
+Box walker, Trainer Card photo). A missing or broken file logs a warning and the generated sprite
+is shown instead. `src/content/sprites.ts` is the source of truth; the export script writes
+`public/assets/manifest.json` from it (file, use, size, frame layout, facing, transparency).
+Visitors' avatars are always generated, since they're built from options.
 
 ## Changing Aaryan
 

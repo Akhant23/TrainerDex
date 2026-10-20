@@ -142,6 +142,27 @@ function sign(): Prop {
   return { px: g.outline().toPixels(), anchorX: 8 }
 }
 
+/** A BW-style post box on a short post, like the ones outside every house. */
+function mailbox(): Prop {
+  const g = grid(14, 22)
+  g.rect(6, 11, 7, 21, '8')
+  g.rect(1, 2, 12, 11, 'r').rect(1, 9, 12, 11, 'R').rect(2, 2, 11, 3, '4')
+  g.rect(3, 6, 10, 6, 'R')
+  g.rect(12, 3, 13, 8, 'y').set(13, 9, 'Y')
+  return { px: g.outline().toPixels(), anchorX: 7 }
+}
+
+/** A low stone planter of flowers, for the paving. */
+function planter(): Prop {
+  const g = grid(16, 14)
+  g.rect(1, 7, 14, 13, 'X').rect(1, 7, 14, 8, 'x').rect(1, 12, 14, 13, '8')
+  g.ellipse(8, 5, 7, 3.6, 'e', '3', 'E')
+  dots(g, [[3, 4], [6, 2], [9, 4], [12, 3], [5, 6], [11, 6]], 'r')
+  dots(g, [[4, 2], [8, 3], [13, 5], [7, 6]], 'y')
+  dots(g, [[2, 6], [10, 2]], 'q')
+  return { px: g.outline().toPixels(), anchorX: 8 }
+}
+
 function hedge(): Prop {
   const g = grid(16, 20)
   g.rect(0, 0, 15, 19, 'n')
@@ -320,6 +341,8 @@ export const tiles: Record<string, TileDef> = {
   // town extras
   O: { px: grass().toPixels(), prop: roundTree(), solid: true },
   n: { px: grass().toPixels(), prop: fence(), solid: true },
+  x: { px: paving().toPixels(), prop: mailbox(), solid: true },
+  q: { px: paving().toPixels(), prop: planter(), solid: true },
   // tower floor themes (1 school pitch · 2 colour run · 3 ballroom · 4 tours · 5 = gold carpet 'a')
   '!': { px: (() => { const g = fill('g'); for (let x = 0; x < 16; x += 8) g.rect(x, 0, x + 3, 15, 'G'); return g.rect(0, 15, 15, 15, 'h').toPixels() })(), solid: false },
   '@': { px: dots(fill('h'), [[2, 3], [10, 2], [6, 9], [13, 12], [3, 13]], 'q').stamp(12, 6, ['b']).stamp(7, 4, ['y']).stamp(1, 8, ['e']).stamp(9, 14, ['b']).toPixels(), solid: false },

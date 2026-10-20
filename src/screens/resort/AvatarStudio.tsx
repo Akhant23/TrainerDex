@@ -18,7 +18,7 @@ import {
 import { validateGreeting, validateTrainerName } from '../../../supabase/functions/_shared/validate'
 import { readPhoto, suggestColours, type PixelData } from '../../systems/photoColours'
 import { useSettings } from '../../systems/settings'
-import { CharacterSprite } from '../../ui/CharacterSprite'
+import { CharacterSprite, type CharacterPose } from '../../ui/CharacterSprite'
 import { OverworldSprite } from '../../ui/OverworldSprite'
 
 export const DEFAULT_AVATAR: Appearance = {
@@ -75,6 +75,14 @@ const LABEL: Record<string, string> = {
   sneakers: 'SNEAKERS', boots: 'BOOTS', formal: 'FORMAL',
 }
 
+/** The turnaround the preview steps through: front, right profile, back, left profile. */
+const TURN: { pose: CharacterPose; flip?: boolean; label: string }[] = [
+  { pose: 'idle', label: 'FRONT' },
+  { pose: 'side', label: 'SIDE' },
+  { pose: 'back', label: 'BACK' },
+  { pose: 'side', flip: true, label: 'SIDE' },
+]
+
 export default function AvatarStudio({
   initial,
   initialName,
@@ -96,6 +104,7 @@ export default function AvatarStudio({
   const [photoNote, setPhotoNote] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const [camera, setCamera] = useState(false)
+  const [turn, setTurn] = useState(0)
 
   const set = <K extends keyof Appearance>(k: K, v: Appearance[K]) => {
     sfx('cursor')
@@ -153,7 +162,12 @@ export default function AvatarStudio({
   return (
     <div className="space-y-4 p-[3%] text-[15px]">
       <div className="flex items-end justify-center gap-6 bg-[radial-gradient(circle_at_50%_70%,#ffffff,#d8e4f4)] py-3 shadow-[0_0_0_2px_var(--color-ink)]">
-        <CharacterSprite appearance={a} scale={2} alt="Your avatar" />
+        <div className="flex flex-col items-center gap-1">
+          <CharacterSprite appearance={a} scale={2} pose={TURN[turn].pose} style={TURN[turn].flip ? { transform: 'scaleX(-1)' } : undefined} alt={`Your avatar, ${TURN[turn].label.toLowerCase()} view`} />
+          <button type="button" className="pixel-btn !px-2 !py-1 !text-[12px]" onClick={() => (sfx('cursor'), setTurn((t) => (t + 1) % TURN.length))} aria-label="Turn the avatar around">
+            ⟳ {TURN[turn].label}
+          </button>
+        </div>
         <div className="flex flex-col items-center gap-1">
           <OverworldSprite appearance={a} facing="down" walking scale={3} />
           <span className="font-display text-[12px] text-muted">WALKING</span>

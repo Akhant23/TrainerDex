@@ -7,9 +7,11 @@ import { species, type SpeciesId } from '../../battle/data'
 import { challengeSetup, floors, floorSetup, unlockedSpecies } from '../../battle/tower'
 import { regulars } from '../../resort/regulars'
 import { formatRecord, type BattleRecord } from '../../../supabase/functions/_shared/trainer'
-import { maps, placeVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, type MapId, type Warp } from '../../resort/maps'
+import { maps, placeVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, type MapId, type ResortMap, type Warp } from '../../resort/maps'
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
+import { skyAt, skyLabel } from '../../resort/sky'
+import { drawAmbient, FLYERS, newAmbient, SURFERS, tickFlyers, type AmbientState } from '../../resort/ambient'
 import { staff } from '../../resort/npcs'
 import { WALK_CYCLE, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
@@ -26,9 +28,11 @@ import { CharacterSprite } from '../../ui/CharacterSprite'
 import { CreatureSprite } from '../battle/BattleBits'
 import Fight from '../battle/Fight'
 import { SectionScreen } from '../SectionScreen'
-import AvatarStudio, { DEFAULT_AVATAR } from './AvatarStudio'
+import AvatarStudio, { DEFAULT_AVATAR, randomAvatar } from './AvatarStudio'
 import SuggestionBox from './SuggestionBox'
 import PartyBag from './PartyBag'
+import { PixelIcon } from '../../ui/PixelIcon'
+import type { IconName } from '../../sprites/icons'
 
 const entry = menu.find((m) => m.id === 'battle')!
 const WALK_MS = 150
@@ -44,6 +48,8 @@ interface Char {
   look: Appearance
   name: string
   kind: 'staff' | 'visitor' | 'boss'
+  /** profile label, e.g. RESORT REGULAR / TRAVELLING TRAINER */
+  badge?: string
   lines?: string[]
   party?: string[]
   greeting?: string
@@ -57,7 +63,7 @@ interface Dialogue {
   choices?: Array<{ label: string; action: () => void }>
   then?: () => void
 }
-type Panel = 'none' | 'studio' | 'pc' | 'lift' | 'profile' | 'suggest' | 'bag'
+type Panel = 'none' | 'studio' | 'pc' | 'lift' | 'profile' | 'suggest' | 'bag' | 'record'
 
 // where you are survives leaving for a battle (and a page refresh) and coming back
 type Place = { map: MapId; x: number; y: number; facing: Facing }
@@ -97,6 +103,62 @@ function petSpot(map: MapId, x: number, y: number, facing: Facing) {
 const PLACE_NAMES: Record<MapId, string> = { plaza: 'the plaza', reception: 'the reception', floor1: 'the tower', floor2: 'the tower', floor3: 'the tower', floor4: 'the tower', floor5: 'the Champion’s floor' }
 
 const floorNumber = (m: MapId) => (m.startsWith('floor') ? Number(m.slice(5)) : 0)
+
+/* ---------------- travelling trainers ---------------- */
+
+interface Guest {
+  id: string
+  x: number
+  y: number
+  look: Appearance
+  name: string
+  party: SpeciesId[]
+  greeting: string
+  record: BattleRecord
+  mode: 'air' | 'sea'
+  species: SpeciesId
+  /** when they head off again */
+  until: number
+}
+
+const GUEST_NAMES = ['RAFA', 'JUNO', 'IMOGEN', 'THEO', 'ZARA', 'ARLO', 'NOOR', 'LEVI', 'MAYA', 'FINN', 'ODETTE', 'KOFI']
+const ALL_SPECIES = Object.keys(species) as SpeciesId[]
+const rnd = <T,>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)]
+const arrived = new WeakSet<object>()
+const departed = new Set<string>()
+
+/** Every so often a trainer flies or surfs in; they stay a while, then leave the way they came. */
+function tickGuests(a: AmbientState, now: number, mp: ResortMap, chars: Char[], me: [number, number], guests: Guest[], setGuests: (fn: (g: Guest[]) => Guest[]) => void) {
+  // arrivals that just touched down become guests you can talk to
+  for (const t of a.trips) {
+    if (t.leaving || arrived.has(t) || now - t.t0 < t.dur) continue
+    arrived.add(t)
+    const name = rnd(GUEST_NAMES)
+    const party = [t.species, ...ALL_SPECIES.filter((x) => x !== t.species).sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2))]
+    const wins = Math.floor(Math.random() * 20)
+    setGuests((g) => [...g, { id: t.id, x: t.tx, y: t.ty, look: t.look, name, party, greeting: anyLine(t.mode === 'air' ? 'guest.air' : 'guest.sea', { creature: species[t.species].name }), record: { titles: Math.random() < 0.1 ? 1 : 0, wins, losses: Math.floor(Math.random() * 15) }, mode: t.mode, species: t.species, until: now + 70_000 + Math.random() * 50_000 }])
+  }
+  // guests whose time is up head off
+  for (const g of guests) {
+    if (now < g.until || departed.has(g.id)) continue
+    departed.add(g.id)
+    setGuests((list) => list.filter((x) => x.id !== g.id))
+    a.trips.push({ id: `${g.id}-out`, mode: g.mode, species: g.species, look: g.look, tx: g.x, ty: g.y, t0: now, dur: g.mode === 'air' ? 2600 : 6000, leaving: true, seaY: 28, fromX: g.x < 18 ? -3 : 41 })
+  }
+  a.trips = a.trips.filter((t) => now - t.t0 < t.dur + 500)
+  if (now < a.nextGuest) return
+  a.nextGuest = now + 35_000 + Math.random() * 35_000
+  if (guests.length >= 4) return
+  const mode: 'air' | 'sea' = Math.random() < 0.6 ? 'air' : 'sea'
+  const taken = new Set([...chars.map((c) => `${c.x},${c.y}`), `${me[0]},${me[1]}`, ...a.trips.map((t) => `${t.tx},${t.ty}`)])
+  const spots: Array<[number, number]> = []
+  const [y0, y1, x0, x1] = mode === 'air' ? [8, 21, 9, 28] : [24, 26, 2, 35]
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!isSolidTile(mp, x, y) && !taken.has(`${x},${y}`) && tileAt(mp, x, y) !== 'D') spots.push([x, y])
+  if (!spots.length) return
+  const [tx, ty] = rnd(spots)
+  const fromX = Math.random() < 0.5 ? -3 : 41
+  a.trips.push({ id: `guest-${Math.floor(now)}`, mode, species: rnd(mode === 'air' ? FLYERS : SURFERS), look: randomAvatar(), tx, ty, t0: now, dur: mode === 'air' ? 2600 : 4000 + Math.abs(tx - fromX) * 120, leaving: false, seaY: 28, fromX })
+}
 
 /* ---------------- screen ---------------- */
 
@@ -168,6 +230,20 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const [nearby, setNearby] = useState<Char | null>(null)
   const [profile, setProfile] = useState<Char | null>(null)
   const [online, setOnline] = useState<OnlineTrainer[]>([])
+  // travelling trainers who flew or surfed in and are hanging around for a while
+  const [guests, setGuests] = useState<Guest[]>([])
+  const guestsRef = useRef(guests)
+  guestsRef.current = guests
+  const ambient = useRef(newAmbient(performance.now()))
+  const sky = useRef(skyAt())
+  const [skyStatus, setSkyStatus] = useState(() => skyLabel(sky.current))
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      sky.current = skyAt()
+      setSkyStatus(skyLabel(sky.current))
+    }, 15_000)
+    return () => window.clearInterval(id)
+  }, [])
   const [onlineState, setOnlineState] = useState<'off' | 'loading' | 'ok' | 'error'>(trainersOnline ? 'loading' : 'off')
   const [syncNote, setSyncNote] = useState('')
   const [fade, setFade] = useState(false)
@@ -237,9 +313,10 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         const p = placed.get(o.id)
         if (p) list.push({ id: o.id, ...p, look: o.appearance, name: o.name, kind: 'visitor', party: o.party, greeting: o.greeting, message: o.message, record: o.record, regular: o.regular })
       }
+      for (const g of guests) list.push({ id: g.id, x: g.x, y: g.y, facing: 'down', look: g.look, name: g.name, kind: 'visitor', party: g.party, greeting: g.greeting, record: g.record, regular: true, badge: 'TRAVELLING TRAINER' })
     }
     return list
-  }, [mapId, online])
+  }, [mapId, online, guests])
   const charsRef = useRef(chars)
   charsRef.current = chars
 
@@ -300,7 +377,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
           ...lines('staff.receptionist.tips'),
         ],
         choices: [
-          { label: 'QUICK BATTLE', action: () => navigate('/battle/quick') },
+          { label: 'QUICK BATTLE', action: () => (setReturnTo('/battle'), navigate('/battle/quick')) },
           { label: 'NO THANKS', action: () => undefined },
         ],
       })
@@ -453,6 +530,12 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
               m.moving = { tx: t.x, ty: t.y, t0: now, dur }
               // the creature steps into the tile you just left
               const pt = pet.current
+              // finish its previous step first, or it snaps back a tile when you keep walking
+              if (pt.moving) {
+                pt.x = pt.moving.tx
+                pt.y = pt.moving.ty
+                pt.moving = null
+              }
               if (pt.x !== m.x || pt.y !== m.y) {
                 pt.facing = pt.x < m.x ? 'right' : pt.x > m.x ? 'left' : pt.y < m.y ? 'down' : 'up'
                 pt.moving = { fx: pt.x, fy: pt.y, tx: m.x, ty: m.y, t0: now, dur }
@@ -486,7 +569,16 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         const fy = pt.moving ? pt.moving.fy + (pt.moving.ty - pt.moving.fy) * pk : pt.y
         creatures.push({ id: lead, facing: pt.facing, x: fx * TILE + 8, y: fy * TILE + 13, hop: pt.moving ? Math.sin(pk * Math.PI) * 3 : 0, breath: pt.moving ? 0 : Math.floor(now / 520) % 2 })
       }
-      drawWorld(ctx, mp, cam, actors, now, creatures, viewH.current)
+      // life around the plaza: flyers overhead, trainers flying or surfing in and out
+      const amb = ambient.current
+      if (mp.id === 'plaza') {
+        tickFlyers(amb, now, randomAvatar)
+        tickGuests(amb, now, mp, charsRef.current, [m.x, m.y], guestsRef.current, setGuests)
+      }
+      drawWorld(ctx, mp, cam, actors, now, creatures, viewH.current, {
+        sky: sky.current,
+        overlay: mp.id === 'plaza' ? (c, proj) => drawAmbient(c, amb, now, proj, Math.max(0, proj(0, -TILE).y * RES)) : undefined,
+      })
 
       // name tags + bubbles follow their owners
       const k2 = canvas.clientWidth / VIEW_W
@@ -620,6 +712,8 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
             setPanel('none')
           }}
         />
+      ) : panel === 'record' ? (
+        <RecordPanel onClose={() => setPanel('none')} />
       ) : panel === 'bag' ? (
         <PartyBag
           party={save.party}
@@ -667,6 +761,10 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
           onA={() => !blocked.current && ctl.current.interact()}
           onAvatar={() => setPanel('studio')}
           onBag={() => setPanel('bag')}
+          onRecord={() => setPanel('record')}
+          onIdeas={() => setPanel('suggest')}
+          place={map.name}
+          status={skyStatus}
         />
       )}
     </SectionScreen>
@@ -688,6 +786,10 @@ function Controls({
   onA,
   onAvatar,
   onBag,
+  onRecord,
+  onIdeas,
+  place,
+  status,
 }: {
   nearby: Char | null
   party: SpeciesId[]
@@ -701,7 +803,28 @@ function Controls({
   onA: () => void
   onAvatar: () => void
   onBag: () => void
+  onRecord: () => void
+  onIdeas: () => void
+  place: string
+  status: string
 }) {
+  const menuItems: Array<{ label: string; icon: IconName; color: string; onClick: () => void }> = [
+    { label: 'PARTY', icon: 'battle', color: '#c02838', onClick: onBag },
+    { label: 'RECORD', icon: 'card', color: '#d8a020', onClick: onRecord },
+    { label: 'AVATAR', icon: 'profile', color: '#3a7fe0', onClick: onAvatar },
+    { label: 'IDEAS', icon: 'book', color: '#2a9a90', onClick: onIdeas },
+    {
+      label: 'COMMENT',
+      icon: 'pager',
+      color: '#7a6ab8',
+      onClick: () => {
+        // leave a Poké Pager message, then come straight back here
+        setReturnTo('/battle')
+        navigate('/pager/compose')
+      },
+    },
+    { label: 'EXIT', icon: 'settings', color: '#5a5d70', onClick: () => navigate('/') },
+  ]
   const pad = (d: Facing, label: string, cls: string) => (
     <button
       type="button"
@@ -761,6 +884,28 @@ function Controls({
         </PixelBox>
       )}
 
+      {/* status strip, C-Gear style */}
+      <p className="font-display m-0 flex items-center justify-between gap-2 bg-[#2a2c3a] px-3 py-1.5 text-[12px] text-paper">
+        <span className="truncate">{place}</span>
+        <span className="shrink-0 text-gold">{status}</span>
+      </p>
+
+      {/* trainer menu */}
+      <nav aria-label="Trainer menu" className="grid grid-cols-3 gap-2">
+        {menuItems.map((it) => (
+          <button
+            key={it.label}
+            type="button"
+            onClick={it.onClick}
+            className="flex cursor-pointer flex-col items-center gap-1 border-0 px-1 py-2 text-paper shadow-[0_0_0_2px_var(--color-ink),inset_0_-3px_0_rgb(0_0_0_/_0.25)]"
+            style={{ background: it.color }}
+          >
+            <PixelIcon name={it.icon} scale={2} />
+            <span className="font-display text-[12px] leading-none">{it.label}</span>
+          </button>
+        ))}
+      </nav>
+
       <div className="flex items-center justify-between gap-3 px-1">
         <div className="relative aspect-square w-[min(34%,128px)] shrink-0">
           {pad('up', '▲', 'top-0 left-1/3 rounded-t-md')}
@@ -769,17 +914,7 @@ function Controls({
           {pad('right', '▶', 'top-1/3 right-0 rounded-r-md')}
           <span aria-hidden className="absolute top-1/3 left-1/3 h-1/3 w-1/3 bg-[#3a3d4e]" />
         </div>
-        <div className="flex flex-col gap-1">
-          <button type="button" className="pixel-btn !text-[13px]" onClick={onBag}>
-            PARTY
-          </button>
-          <button type="button" className="pixel-btn !text-[13px]" onClick={onAvatar}>
-            AVATAR
-          </button>
-          <button type="button" className="pixel-btn !text-[13px]" onClick={() => navigate('/')}>
-            EXIT
-          </button>
-        </div>
+        <p className="m-0 hidden max-w-[11em] text-center text-[12px] leading-snug text-muted sm:block">Arrows / WASD to walk · Shift to run · A to talk</p>
         <button type="button" onClick={onA} aria-label="A: talk / interact" className="font-display h-14 w-14 shrink-0 cursor-pointer rounded-full border-0 bg-dex-red text-[20px] text-paper shadow-[0_0_0_3px_var(--color-ink),inset_0_-4px_0_rgb(0_0_0_/_0.25)]">
           A
         </button>
@@ -888,7 +1023,7 @@ function TrainerProfile({ trainer, onClose, onChallenge }: { trainer: Char; onCl
           <CharacterSprite appearance={trainer.look} fill={0.98} alt={`${trainer.name}’s avatar`} />
         </div>
         <div className="min-w-0 flex-1 pb-1">
-          <p className="font-display m-0 text-[13px] text-muted">{trainer.regular ? 'RESORT REGULAR' : 'TRAINER'}</p>
+          <p className="font-display m-0 text-[13px] text-muted">{trainer.badge ?? (trainer.regular ? 'RESORT REGULAR' : 'TRAINER')}</p>
           <p className="font-display m-0 text-[20px] text-dex-red">{trainer.name}</p>
           <p className="m-0 mt-2 text-[15px] break-words">“{trainer.message ?? trainer.greeting ?? 'Hi!'}”</p>
           {trainer.message && <p className="m-0 mt-1 text-[13px] text-muted">From the Poké Pager</p>}
@@ -923,6 +1058,52 @@ function TrainerProfile({ trainer, onClose, onChallenge }: { trainer: Char; onCl
         </button>
       </div>
       <p className="m-0 text-[13px] text-muted">▸ You’ll face their most recent party, both sides at level 28. Wins and losses count towards your record.</p>
+    </div>
+  )
+}
+
+/** Your Battle Resort record and tower progress. */
+function RecordPanel({ onClose }: { onClose: () => void }) {
+  const save = useResortSave()
+  const { record: r, floorCleared } = save
+  const played = r.wins + r.losses
+  return (
+    <div className="space-y-4 p-[3%] text-[15px]">
+      <PixelBox className="px-4 py-4">
+        <p className="font-display m-0 text-[14px]">TRAINER RECORD</p>
+        <p className="font-display m-0 mt-2 text-[34px] leading-none text-dex-red">{formatRecord(r)}</p>
+        <p className="m-0 mt-2 text-[13px] text-muted">Champion titles · wins · losses at the Battle Resort</p>
+        <dl className="font-display m-0 mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[14px]">
+          <dt className="text-muted">CHAMPION TITLES</dt>
+          <dd className="m-0">{r.titles}</dd>
+          <dt className="text-muted">WINS</dt>
+          <dd className="m-0">{r.wins}</dd>
+          <dt className="text-muted">LOSSES</dt>
+          <dd className="m-0">{r.losses}</dd>
+          <dt className="text-muted">WIN RATE</dt>
+          <dd className="m-0">{played ? `${Math.round((r.wins / played) * 100)}%` : '—'}</dd>
+        </dl>
+      </PixelBox>
+      <PixelBox className="px-4 py-4">
+        <p className="font-display m-0 text-[14px]">BATTLE TOWER · {floorCleared}/5</p>
+        <ol className="m-0 mt-3 list-none space-y-2 p-0">
+          {towerStages.map((st) => (
+            <li key={st.id} className="flex items-center gap-3">
+              <span className={`font-display w-[2ch] text-center ${st.floor <= floorCleared ? 'text-leaf' : 'text-muted'}`}>{st.floor <= floorCleared ? '✓' : st.floor}</span>
+              <span className="min-w-0 flex-1">{st.floor <= floorCleared || st.floor === floorCleared + 1 ? st.title : '?????'}</span>
+              <span className="text-[13px] text-muted">{st.floor <= floorCleared ? 'cleared' : st.floor === floorCleared + 1 ? 'next' : ''}</span>
+            </li>
+          ))}
+        </ol>
+      </PixelBox>
+      <div className="flex flex-wrap justify-end gap-2">
+        <a href="#/battle/hall-of-fame" className="pixel-btn !text-[14px] no-underline">
+          HALL OF FAME
+        </a>
+        <button type="button" className="pixel-btn !text-[14px]" onClick={onClose}>
+          CLOSE
+        </button>
+      </div>
     </div>
   )
 }

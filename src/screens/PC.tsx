@@ -168,7 +168,7 @@ function TextResume() {
   const work = experience.filter((e) => e.kind === 'work')
   const lead = experience.filter((e) => e.kind === 'leadership')
   return (
-    <article className="space-y-4 bg-paper p-[5%] text-[15px] leading-relaxed text-ink">
+    <article className="space-y-6 bg-paper p-[5%] text-[15px] leading-relaxed text-ink">
       <header>
         <h3 className="m-0 text-[22px] font-semibold">{profile.fullName}</h3>
         <p className="m-0 text-muted">
@@ -403,7 +403,7 @@ function CaseStudyView({ project }: { project: Project }) {
         </div>
       }
     >
-      <div className="space-y-3 p-[4%] text-[16px] leading-relaxed">
+      <div className="space-y-7 p-[4%] text-[16px] leading-relaxed">
         <PixelBox className="px-[5%] py-[4%]">
           <p className="font-display m-0 text-[clamp(11px,2.8cqi,15px)] text-dex-red">{project.type.toUpperCase()}</p>
           <p className="m-0 mt-1 text-[19px] leading-tight font-semibold">{project.title}</p>
@@ -502,7 +502,7 @@ function ExperienceLog({ openId }: { openId?: string }) {
         </MonitorTop>
       }
     >
-      <ul className="m-0 list-none space-y-2 p-[3%]">
+      <ul className="m-0 list-none space-y-3 p-[3%]">
         {list.map((e, i) => {
           const isOpen = open === e.id
           return (
@@ -527,10 +527,15 @@ function ExperienceLog({ openId }: { openId?: string }) {
                 </span>
               </button>
               {isOpen && (
-                <div className="space-y-2 bg-[#f4f6fb] px-4 py-3 text-[15px] leading-relaxed shadow-[0_0_0_2px_#b8c0d8]">
+                <div className="space-y-7 bg-[#f4f6fb] px-4 py-5 text-[15px] leading-relaxed shadow-[0_0_0_2px_#b8c0d8]">
                   {(e.team || e.location) && <p className="m-0 text-[14px] text-muted">{[e.team, e.location].filter(Boolean).join(' · ')}</p>}
                   <Bullets items={e.points} />
-                  {e.skills.length > 0 && <Tags items={e.skills} />}
+                  {e.skills.length > 0 && (
+                    <div>
+                      <p className="font-display m-0 mb-3 text-[12px] tracking-wide text-muted">SKILLS</p>
+                      <Tags items={e.skills} />
+                    </div>
+                  )}
                   <Sources ids={e.sources} />
                 </div>
               )}

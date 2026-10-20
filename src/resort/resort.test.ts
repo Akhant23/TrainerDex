@@ -3,7 +3,8 @@ import { maps, isSolidTile, placeVisitors, size, tileAt, warpAt, FLOOR_ARRIVAL, 
 import { tiles, tilePalette, TILE } from './tiles'
 import { structureArt } from './structures'
 import { validate } from '../sprites/pixels'
-import { renderLayers, renderFlat, paletteFor, CHAR_W, CHAR_H } from '../sprites/character'
+import { renderLayers, renderFlat, renderSide, renderBack, atResolution, paletteFor, CHAR_W, CHAR_H, PORTRAIT } from '../sprites/character'
+import { ASSET_SLOTS } from '../content/sprites'
 import { overworldFor, OW_W, OW_H } from '../sprites/overworld'
 import { signature, towerStages } from '../content/aaryan'
 import { SKINS, HAIR_COLOURS, CLOTH_COLOURS, EYE_COLOURS } from '../sprites/character'
@@ -115,8 +116,20 @@ describe('character model', () => {
     for (const a of variants) {
       const pal = paletteFor(a)
       for (const pose of ['idle', 'raised'] as const) for (const layer of Object.values(renderLayers(a, pose))) expect(validate(layer, pal, CHAR_W, CHAR_H), JSON.stringify(a)).toEqual([])
+      for (const turned of [renderSide(a), renderBack(a), renderBack(a, true)]) expect(validate(turned, pal, CHAR_W, CHAR_H), JSON.stringify(a)).toEqual([])
       for (const frames of Object.values(overworldFor(a))) for (const f of frames) expect(validate(f, pal, OW_W, OW_H), JSON.stringify(a)).toEqual([])
     }
+  })
+  it('asset slots document the generated sprite sizes', () => {
+    expect([ASSET_SLOTS['aaryan.front'].width, ASSET_SLOTS['aaryan.front'].height]).toEqual([CHAR_W, CHAR_H])
+    expect([ASSET_SLOTS['aaryan.vs'].width, ASSET_SLOTS['aaryan.victory'].height]).toEqual([CHAR_W, CHAR_H])
+    expect([ASSET_SLOTS['aaryan.portrait'].width, ASSET_SLOTS['aaryan.portrait'].height]).toEqual([PORTRAIT.w, PORTRAIT.h])
+    expect([ASSET_SLOTS['aaryan.overworld'].width, ASSET_SLOTS['aaryan.overworld'].height]).toEqual([OW_W, OW_H])
+    expect(Object.values(overworldFor(signature)).flat()).toHaveLength(ASSET_SLOTS['aaryan.overworld'].frames)
+  })
+  it('2x rasterisation keeps the same design at twice the pixels', () => {
+    const pal = paletteFor(signature)
+    for (const px of atResolution(2, () => [renderFlat(signature), renderSide(signature), renderBack(signature, true)])) expect(validate(px, pal, CHAR_W * 2, CHAR_H * 2)).toEqual([])
   })
   it('signature look is a valid appearance for the backend', () => {
     expect(parseAppearance({ ...signature, accessories: signature.accessories.slice(0, 3) })).not.toBeNull()

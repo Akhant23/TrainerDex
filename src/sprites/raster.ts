@@ -5,6 +5,26 @@
  */
 import type { Pixels } from './pixels.ts'
 
+/** The drawing surface shared by Grid (1×) and HiGrid (k×), so art code can target either. */
+export interface Raster {
+  readonly w: number
+  readonly h: number
+  set(x: number, y: number, ch: string): Raster
+  get(x: number, y: number): string
+  ellipse(cx: number, cy: number, rx: number, ry: number, ch: string, shade?: string, light?: string): Raster
+  rect(x0: number, y0: number, x1: number, y1: number, ch: string): Raster
+  poly(points: Array<[number, number]>, ch: string): Raster
+  line(x0: number, y0: number, x1: number, y1: number, ch: string, thick?: number): Raster
+  stamp(x: number, y: number, rows: string[]): Raster
+  outline(ch?: string): Raster
+  toPixels(): Pixels
+  /**
+   * Paint every output pixel in a box (art coordinates) whose centre `fn` gives a colour for.
+   * `fn` receives continuous art coordinates, so shapes come out smoother on a HiGrid.
+   */
+  sample(x0: number, y0: number, x1: number, y1: number, fn: (x: number, y: number) => string | null): Raster
+}
+
 export class Grid {
   readonly w: number
   readonly h: number
@@ -78,6 +98,15 @@ export class Grid {
   /** Paint exact pixels from strings, starting at (x, y). '.' is skipped. */
   stamp(x: number, y: number, rows: string[]) {
     rows.forEach((r, dy) => [...r].forEach((c, dx) => c !== '.' && this.set(x + dx, y + dy, c)))
+    return this
+  }
+
+  sample(x0: number, y0: number, x1: number, y1: number, fn: (x: number, y: number) => string | null) {
+    for (let y = Math.floor(y0); y <= Math.ceil(y1); y++)
+      for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+        const c = fn(x + 0.5, y + 0.5)
+        if (c) this.set(x, y, c)
+      }
     return this
   }
 
@@ -167,6 +196,15 @@ export class HiGrid {
   }
   mirrorLeft() {
     this.g.mirrorLeft()
+    return this
+  }
+  sample(x0: number, y0: number, x1: number, y1: number, fn: (x: number, y: number) => string | null) {
+    const k = this.k
+    for (let y = Math.floor(y0 * k); y <= Math.ceil(y1 * k); y++)
+      for (let x = Math.floor(x0 * k); x <= Math.ceil(x1 * k); x++) {
+        const c = fn((x + 0.5) / k, (y + 0.5) / k)
+        if (c) this.g.set(x, y, c)
+      }
     return this
   }
   outline(ch = 'K') {

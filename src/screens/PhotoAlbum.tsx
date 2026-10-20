@@ -53,8 +53,9 @@ export default function PhotoAlbum({ path }: { path: string }) {
         </div>
       }
     >
-      <div className="bg-dots min-h-full p-[3%]">
-        <div role="listbox" aria-label="Photo album" className="grid grid-cols-5 gap-[3%]">
+      {/* the grid stretches to fill the whole screen: no empty space under the photos */}
+      <div className="bg-dots flex h-full min-h-full flex-col p-[2%]">
+        <div role="listbox" aria-label="Photo album" className="grid min-h-0 flex-1 grid-cols-5 gap-[2%]" style={{ gridTemplateRows: `repeat(${Math.ceil(slots.length / 5)}, minmax(64px, 1fr))` }}>
           {slots.map((p, i) => (
             <button
               key={i}
@@ -65,7 +66,7 @@ export default function PhotoAlbum({ path }: { path: string }) {
               {...nav.itemProps(i)}
               onMouseEnter={() => nav.setFocus(i)}
               onClick={() => open(i)}
-              className={`relative flex aspect-square cursor-pointer items-center justify-center overflow-hidden border-0 p-0 outline-none ${
+              className={`relative flex h-full min-h-0 cursor-pointer items-center justify-center overflow-hidden border-0 p-0 outline-none ${
                 p ? 'bg-paper' : 'bg-[#c8cede]'
               } ${i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'}`}
             >

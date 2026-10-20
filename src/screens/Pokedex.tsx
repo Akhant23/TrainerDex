@@ -117,7 +117,7 @@ function Detail({ dex }: { dex: DexEntry }) {
 
   return (
     <SectionScreen entry={entry} backTo="/pokedex" title={`No.${pad(dex.no)}`} top={<DexScreen dex={dex} seen />} scrollKey={dex.no}>
-      <div className="space-y-3 p-[4%]">
+      <div className="space-y-6 p-[4%]">
         <PixelBox className="px-[5%] py-[4%]">
           <p className="font-display m-0 text-[clamp(15px,3.9cqi,21px)]">
             {dex.name} <span className="text-[0.75em] text-muted">· {dex.category.toUpperCase()}</span>
@@ -127,8 +127,8 @@ function Detail({ dex }: { dex: DexEntry }) {
               <TypeChip key={t} type={t} />
             ))}
           </div>
-          <Bullets items={dex.entry} className="mt-3 text-[17px]" />
-          <Sources ids={dex.sources} className="mt-3" />
+          <Bullets items={dex.entry} className="mt-4 text-[17px]" />
+          <Sources ids={dex.sources} className="mt-5" />
         </PixelBox>
         <div className="flex justify-between">
           <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>

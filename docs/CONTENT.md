@@ -35,6 +35,12 @@ system messages, and your following creature's reactions and cries — is in one
 - Save as CSV (UTF-8) and either replace the file or send it back to me. `npm test` checks that
   no key the game needs has gone missing.
 
+## Spacing
+
+Text blocks breathe: sections inside a panel use `space-y-6`/`space-y-7`, dot points `space-y-3.5`,
+and SOURCE lines sit under a dashed divider. (Tailwind v4's `space-y` used to lose to a child's
+`m-0`; `styles/index.css` now makes those gaps always apply.)
+
 ## Common edits
 
 **Replace the resume** — overwrite `public/resume/resume.pdf`. The PC shows it inline, with download,
@@ -55,6 +61,11 @@ shown — don't fill them with guesses.
 
 **Rename or recolour a menu tile** — `menu.ts`. `color` is `[main, dark]`.
 
+**Swap in hand-drawn sprites** — run `npm run sprites:export`, edit a PNG from
+`sprites-export/assets/`, save it to `public/assets/` under the same path, and add its slot id to
+`enabledAssets` in `src/content/sprites.ts`. Full steps and sizes: `docs/SPRITES.md` and
+`public/assets/README.md`.
+
 ## Battle tuning
 
 Everything balance-related lives in `src/battle/data.ts`: the type chart, moves (power, accuracy,
@@ -69,6 +80,9 @@ sprites:export` writes PNG previews to `sprites-export/`.
 ## Battle Resort and the tower
 
 - **The town** — `src/resort/maps.ts` (plaza). Each house's door opens a section: HOME → Profile, CARD HALL → Trainer Card, DEX LAB → Pokédex, PC CENTRE → resume + portfolio, GALLERY → Photo Album, PAGER → Poké Pager. BACK in that section walks you back out of the door. The main menu still reaches everything directly.
+- **Sky and weather** — `src/resort/sky.ts`: the resort follows the visitor's local time (dawn, day, dusk, night with stars and glowing lamps) and the weather changes every four minutes (clear, cloudy, breezy, rain).
+- **Life around the plaza** — `src/resort/ambient.ts`: creatures fly across the sky (some carrying trainers), and every half-minute or so a travelling trainer lands on the plaza or surfs in to the beach, stays a minute or two (talk to or challenge them), then leaves. Their arrival lines are `guest.air` / `guest.sea` in dialogue.csv.
+- **Trainer menu** — the resort's lower screen has PARTY, RECORD (titles-wins-losses and tower progress), AVATAR, IDEAS (suggestion box), COMMENT (opens a new Poké Pager message and comes back) and EXIT.
 - **Resort regulars** — `src/resort/regulars.ts`: ten built-in trainers (look, party, record) who keep the plaza lively. Their lines are `regular.<id>` in dialogue.csv. Their profiles say RESORT REGULAR so nobody mistakes them for real visitors.
 - **Records and challenges** — every visitor has a Battle Resort record shown as *Champion titles-wins-losses* (e.g. 1-12-3): tower floors, exhibition matches and challenges all count, and clearing floor 5 adds a title. Walk up to any trainer and choose CHALLENGE THEIR TEAM to battle their latest party (both sides level 28).
 

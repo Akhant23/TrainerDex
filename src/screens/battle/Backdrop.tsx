@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { maps, type MapId } from '../../resort/maps'
 import { cameraFor, drawWorld, RES, VIEW_W } from '../../resort/render'
 import { TILE } from '../../resort/tiles'
+import { skyAt } from '../../resort/sky'
 
 /** Where a battle takes place: a map and the tile the camera looks out from. */
 export interface Arena {
@@ -32,7 +33,7 @@ export function Backdrop({ arena }: { arena: Arena }) {
       // stand a couple of tiles back from the battle spot so the room fills the frame
       const base = cameraFor(m, arena.x * TILE + 8, arena.y * TILE)
       const cam = { x: base.x, y: arena.y * TILE + 8 }
-      drawWorld(ctx, m, cam, [], 0, [], vh)
+      drawWorld(ctx, m, cam, [], performance.now(), [], vh, { sky: skyAt() })
     }
     draw()
     const ro = new ResizeObserver(draw)

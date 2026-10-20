@@ -22,7 +22,7 @@ export default function Profile() {
       scrollKey={page}
       subheader={<PageTabs pages={PAGES} current={page} onChange={setPage} color={entry.color[0]} />}
     >
-      <div className="space-y-4 p-[4%] text-[16px] leading-relaxed">
+      <div className="space-y-7 p-[4%] text-[16px] leading-relaxed">
         {page === 0 && <InfoPage />}
         {page === 1 && <StudiesPage />}
         {page === 2 && <SkillsPage />}
@@ -69,7 +69,7 @@ function TrainerInfo() {
 function InfoPage() {
   return (
     <>
-      <PixelBox className="space-y-4 px-[5%] py-[4%]">
+      <PixelBox className="space-y-5 px-[5%] py-[4%]">
         <Bullets items={profile.bio} />
         <Sources ids={['resume', 'linkedin']} />
       </PixelBox>
@@ -123,7 +123,7 @@ function StudiesPage() {
               </li>
             ))}
           </ul>
-          <Sources ids={ed.sources} className="mt-2" />
+          <Sources ids={ed.sources} className="mt-4" />
         </PixelBox>
       ))}
       <section>
@@ -166,7 +166,7 @@ function SkillsPage() {
 function StatsPage() {
   return (
     <>
-      <PixelBox className="space-y-3 px-[5%] py-[5%]">
+      <PixelBox className="space-y-5 px-[5%] py-[5%]">
         {profile.stats.map((s) => (
           <StatBar key={s.label} label={s.label} value={s.value} />
         ))}
