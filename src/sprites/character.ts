@@ -169,7 +169,7 @@ const mirrorRow = (r: string) => [...r].reverse().join('')
 
 /* ---------------- Layers ---------------- */
 
-export type ArmPose = 'idle' | 'raised'
+export type ArmPose = 'idle' | 'raised' | 'point'
 export interface CharacterLayers {
   hairBack: Pixels
   legs: Pixels
@@ -512,6 +512,23 @@ function arm(a: Appearance, side: 'back' | 'front', pose: ArmPose): Pixels {
     return g.toPixels()
   }
 
+  if (pose === 'point') {
+    // the VS-screen pose: arm thrust out to the side, finger pointing at the challenger
+    const sh: Pt = [51.4, 41]
+    const el: Pt = [61, 44]
+    const wr: Pt = [70, 41]
+    capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
+    capsule(g, el, wr, 3.8, 3.1, lower[0], lower[1])
+    if (tee) capsule(g, sh, [57, 42.5], 5, 4.5, 'A', 'a', 'Q')
+    if (cuff) g.rect(67, 38, 68, 44, cuff)
+    oval(g, 72.5, 40.5, 3.2, 3, 'S', 's', 'T')
+    g.rect(74, 39, 78, 40, 'S')
+    g.outline()
+    g.set(73, 42, 's').set(72, 42, 's')
+    if (a.accessories.includes('watch')) g.rect(67, 38, 68, 44, 'Z').set(67, 40, 'X')
+    return g.toPixels()
+  }
+
   // front arm: hand tucked in the pocket, elbow out
   const sh: Pt = [51.4, 41]
   const el: Pt = [56.4, 53]
@@ -707,4 +724,77 @@ export const LAYER_ORDER: Array<keyof CharacterLayers> = ['hairBack', 'legs', 't
 export function renderFlat(a: Appearance, pose: ArmPose = 'idle'): Pixels {
   const l = renderLayers(a, pose)
   return flatten(LAYER_ORDER.map((k) => l[k]))
+}
+
+/* ---------------- Back view (your trainer at the start of a battle) ---------------- */
+
+/**
+ * The trainer seen from behind, as in BW when you send out your first creature. `throwing`
+ * raises the right arm with a ball in hand.
+ */
+export function renderBack(a: Appearance, throwing = false): Pixels {
+  const g = new Grid(CHAR_W, CHAR_H)
+  const blazer = BLAZERS.has(a.top)
+  const hem = blazer ? 72 : UNTUCKED.has(a.top) ? 68 : 64
+  // neck
+  g.rect(36, 28, 43, 37, 's').rect(36, 28, 39, 37, 'S')
+  // back of the torso
+  if (a.top === 'tank') {
+    g.poly([[31, 37], [49, 37], [51.5, 47], [51.5, hem], [28.5, hem], [28.5, 47]], 'A')
+    oval(g, 29, 41, 4.4, 4.6, 'S', 's')
+    oval(g, 51, 41, 4.4, 4.6, 'S', 's')
+  } else {
+    g.poly([[29, 37], [51, 37], [53, 45], [51.6, 56], [52, hem], [28, hem], [28.4, 56], [27, 45]], 'A')
+    g.poly([[45, 37], [51, 37], [53, 45], [51.6, 56], [52, hem], [46, hem]], 'a')
+    oval(g, 29.2, 41, 4.6, 4.4, 'A', undefined, 'Q')
+    oval(g, 50.8, 41, 4.6, 4.4, 'A', 'a')
+  }
+  if (a.top === 'hoodie') oval(g, 40, 40, 9, 5, 'a', undefined, 'A')
+  g.outline()
+  if (a.top === 'jersey') {
+    // the number 7 across the back
+    g.stamp(35, 44, ['RRRRRRRRRR', 'RRRRRRRRRR', '.......RR.', '......RR..', '.....RR...', '....RR....', '....RR....', '...RR.....', '...RR.....', '...RR.....'])
+    g.line(28, 50, 28, hem - 1, 'R').line(52, 50, 52, hem - 1, 'r')
+  }
+  if (blazer) g.line(40, 60, 40, hem - 1, a.top === 'school' ? 'U' : 'K')
+  if (a.top === 'school') g.line(28, hem - 1, 52, hem - 1, 'U')
+  if (a.accessories.includes('bag')) g.line(49, 38, 32, 59, 'Z', 2)
+
+  // head from behind: all hair, ears showing
+  const head = new Grid(CHAR_W, CHAR_H)
+  oval(head, 30.6, 20.5, 1.9, 2.9, 'S', 's')
+  oval(head, 49.4, 20.5, 1.9, 2.9, 's')
+  const big = a.hair === 'wavy' || a.hair === 'mullet' || a.hair === 'curly' || a.hair === 'curtains'
+  oval(head, 40, 16, big ? 12.5 : 11.5, big ? 13 : 12, a.hair === 'buzz' ? 'j' : 'H', 'j', a.hair === 'buzz' ? undefined : 'h')
+  if (a.hair === 'mullet')
+    head.poly([[31, 20], [49, 20], [50, 30], [49, 38], [46, 35.5], [43, 39.5], [40, 37], [37, 39.5], [34, 35.5], [31, 38], [30, 30]], 'H')
+  if (a.hair === 'long') head.poly([[27, 16], [53, 16], [55, 52], [25, 52]], 'H')
+  if (a.hair === 'bun') oval(head, 40, 5, 5, 4, 'H', 'j', 'h')
+  if (a.hair === 'curly') for (const [x, y] of [[29, 10], [51, 10], [40, 4], [28, 22], [52, 22]]) oval(head, x, y, 4, 4, 'H', 'j')
+  if (a.hair === 'spiky') for (const x of [31, 36, 40, 44, 49]) head.poly([[x - 4, 9], [x + 4, 9], [x, -1]], 'H')
+  clipUnderHat(head, a)
+  hat(head, a)
+  head.outline()
+  if (a.hair !== 'buzz') head.line(37, 8, 35, 24, 'j').line(43, 9, 45, 25, 'j').line(40, 5, 40, 12, 'h')
+  if (a.accessories.includes('earring')) head.set(30, 23, 'X').set(49, 23, 'X')
+
+  // arms: the left one relaxed, the right one relaxed or winding up a throw
+  const left = arm(a, 'back', 'idle')
+  let right: Pixels
+  if (throwing) {
+    const r = new Grid(CHAR_W, CHAR_H)
+    const { upper, lower } = sleeves(a)
+    capsule(r, [51, 41], [60, 33], 4.6, 3.8, upper[0], upper[1])
+    capsule(r, [60, 33], [62, 21], 3.8, 3.1, lower[0], lower[1])
+    if (TEES.has(a.top)) capsule(r, [51, 41], [56, 37], 5, 4.5, 'A', 'a', 'Q')
+    oval(r, 62, 17, 3.6, 3.8, 'S', 's')
+    // the ball, red over white
+    oval(r, 64, 12, 4.6, 4.6, 'G', 'g')
+    r.poly([[59.4, 12], [68.6, 12], [67, 8], [61, 8]], 'R')
+    oval(r, 64, 9.5, 4, 2.8, 'R', 'r')
+    r.outline()
+    r.line(59, 12, 69, 12, 'K').set(64, 12, 'W')
+    right = r.toPixels()
+  } else right = left.map((row) => [...row].reverse().join(''))
+  return flatten([legs(a), g.toPixels(), left, right, head.toPixels()])
 }

@@ -74,7 +74,7 @@ export default function PhotoAlbum({ path }: { path: string }) {
             </button>
           ))}
         </div>
-        {photos.length === 0 && <p className="m-0 mt-4 text-[14px] text-muted">Ten slots, ready for ten photos. See docs/CONTENT.md to add them.</p>}
+        {photos.length === 0 && <p className="m-0 mt-4 text-[14px] text-muted">Fifteen slots, ready for fifteen photos. See docs/CONTENT.md to add them.</p>}
       </div>
       {openIndex !== null && <PhotoViewer index={openIndex} onClose={() => navigate('/album')} />}
     </SectionScreen>

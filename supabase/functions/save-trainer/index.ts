@@ -1,6 +1,6 @@
 // Supabase Edge Function: save-trainer
 //
-// POST { id, secret, name, greeting, appearance, party }
+// POST { id, secret, name, greeting, appearance, party, record: { titles, wins, losses } }
 //   1. CORS + method check
 //   2. Validate (shared rules): uuid id, random secret, filtered name/greeting, known options
 //   3. Existing trainer → the secret must match (sha-256) → update
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
 
   const db = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } })
   const secretHash = await sha256(`trainer:${t.secret}`)
-  const fields = { name: t.name, greeting: t.greeting, appearance: t.appearance, party: t.party, updated_at: new Date().toISOString() }
+  const fields = { name: t.name, greeting: t.greeting, appearance: t.appearance, party: t.party, titles: t.record.titles, wins: t.record.wins, losses: t.record.losses, updated_at: new Date().toISOString() }
 
   const { data: existing, error: readError } = await db.from('trainers').select('id, secret_hash, updated_at').eq('id', t.id).maybeSingle()
   if (readError) {

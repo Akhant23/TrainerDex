@@ -23,6 +23,7 @@ import { DEFAULT_AVATAR } from '../resort/AvatarStudio'
 import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
 import { CreatureSprite, HpBar, useHeightScale } from './BattleBits'
+import { Backdrop, RECEPTION_ARENA, type Arena } from './Backdrop'
 
 const entry = menu.find((m) => m.id === 'battle')!
 
@@ -37,6 +38,8 @@ interface View {
   anim: [Anim, Anim]
   animKey: [number, number]
   trainer: Trainer
+  /** your own trainer, seen from behind until they throw out the first creature */
+  me: 'intro' | 'throw' | 'gone'
   fx: { type: keyof typeof types; target: SideId; key: number } | null
   shake: number
   message: string
@@ -58,13 +61,17 @@ export default function Fight({
   opponent = {},
   mode = 'quick',
   recordWin = null,
+  arena = RECEPTION_ARENA,
   onExit,
 }: {
   setup: BattleSetup
   seed: number
   title: string
   opponent?: FightOpponent
-  mode?: 'quick' | 'tower'
+  /** quick = exhibition vs Aaryan; tower = a tower floor; challenge = another visitor's team */
+  mode?: 'quick' | 'tower' | 'challenge'
+  /** Where the battle happens; its surroundings are drawn behind the battle. */
+  arena?: Arena
   /** Quick battles and the Champion floor record a Hall of Fame entry + badge. */
   recordWin?: Difficulty | null
   onExit: (to: 'setup' | 'hall' | 'resort', won: boolean) => void
@@ -83,6 +90,7 @@ export default function Fight({
     anim: ['', ''],
     animKey: [0, 0],
     trainer: 'intro',
+    me: 'intro',
     fx: null,
     shake: 0,
     message: '',
@@ -208,6 +216,12 @@ export default function Fight({
             })
             break
           case 'switchIn': {
+            if (e.side === 0 && viewRef.current.me !== 'gone') {
+              // your trainer winds up and throws, BW-style
+              patch({ me: 'throw' })
+              await wait(420, false)
+              patch({ me: 'gone' })
+            }
             if (e.side === 1 && viewRef.current.trainer === 'intro') {
               patch({ trainer: 'gone' })
               await wait(380, false)
@@ -247,8 +261,8 @@ export default function Fight({
         if (won) {
           audio.setTrack('victory')
           patch({ trainer: 'defeated' })
-          await say(`You defeated TRAINER AARYAN!`)
-          for (const line of opponent.winLines ?? ['AARYAN: Well played. I didn’t see that coming!']) await say(line)
+          await say(`You defeated TRAINER ${st.foe.toUpperCase()}!`)
+          for (const line of opponent.winLines ?? [`${st.foe.toUpperCase()}: Well played. I didn’t see that coming!`]) await say(line)
           let firstBadge = false
           if (recordWin) {
             firstBadge = progress.winBattle({
@@ -265,8 +279,8 @@ export default function Fight({
         } else {
           audio.setTrack('menu')
           patch({ trainer: 'victorious' })
-          await say(`${name} was defeated by TRAINER AARYAN…`)
-          for (const line of opponent.loseLines ?? ['AARYAN: Good game! The arena’s always open for a rematch.']) await say(line)
+          await say(`${name} was defeated by TRAINER ${st.foe.toUpperCase()}…`)
+          for (const line of opponent.loseLines ?? [`${st.foe.toUpperCase()}: Good game! Rematch any time.`]) await say(line)
           setResult({ won: false, firstBadge: false })
         }
         setPanel('results')
@@ -298,7 +312,8 @@ export default function Fight({
       // BW-style VS screen: both trainers slide in and nod (A / tap skips)
       setVs(true)
       sfx('select')
-      await wait(reducedMotion ? 900 : 2700)
+      await wait(reducedMotion ? 900 : vsSeen() ? 1600 : 2700)
+      markVsSeen()
       if (cancelled) return
       setVs(false)
       await play(openingEvents(battle), battle)
@@ -361,7 +376,7 @@ export default function Fight({
       backKeys={panel !== 'none' && panel !== 'replace'}
       top={
         <>
-          <Scene battle={battle} view={view} encounter={encounter} look={opponent.look} onSkip={() => skipRef.current?.()} />
+          <Scene battle={battle} view={view} encounter={encounter} look={opponent.look} myLook={resortSave.get().avatar ?? DEFAULT_AVATAR} arena={arena} onSkip={() => skipRef.current?.()} />
           {vs && (
             <VsScreen
               me={{ look: resortSave.get().avatar ?? DEFAULT_AVATAR, name: (resortSave.get().name || name).toUpperCase(), tag: 'CHALLENGER' }}
@@ -410,13 +425,15 @@ export default function Fight({
 
 /* ---------------- Top screen ---------------- */
 
-function Scene({ battle, view, encounter, look, onSkip }: { battle: BattleState; view: View; encounter: boolean; look?: Appearance; onSkip: () => void }) {
+function Scene({ battle, view, encounter, look, myLook, arena, onSkip }: { battle: BattleState; view: View; encounter: boolean; look?: Appearance; myLook: Appearance; arena: Arena; onSkip: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   // in 40px units, always even so the 80×80 hi-res art is used
   const oppScale = useHeightScale(ref, 0.3, 80) * 2
   const plyScale = useHeightScale(ref, 0.46, 80) * 2
   // the trainer stands on the far platform, so they must fit in the space above it
   const trainerScale = useHeightScale(ref, 0.4, CHAR_H)
+  // your trainer is closer to the camera, so bigger (and cropped by the bottom edge)
+  const myScale = useHeightScale(ref, 0.62, CHAR_H)
   const opp = battle.sides[1].team[view.active[1]]
   const ply = battle.sides[0].team[view.active[0]]
   const animCls = (side: SideId) => {
@@ -429,6 +446,7 @@ function Scene({ battle, view, encounter, look, onSkip }: { battle: BattleState;
   return (
     <div ref={ref} className="absolute inset-0 flex cursor-pointer flex-col overflow-hidden" onClick={onSkip}>
       <div key={view.shake} className={`battle-field relative flex-1 ${view.shake ? 'screen-shake' : ''}`}>
+        <Backdrop arena={arena} />
         {/* platforms */}
         <div className="platform" style={{ left: '70%', top: '44%', width: '40%', height: '13%' }} />
         <div className="platform" style={{ left: '26%', top: '88%', width: '46%', height: '15%' }} />
@@ -437,6 +455,13 @@ function Scene({ battle, view, encounter, look, onSkip }: { battle: BattleState;
         {(view.trainer === 'intro' || view.trainer === 'defeated' || view.trainer === 'victorious') && (
           <div className={`stand anim-enter`} style={{ left: '72%', top: '46%' }}>
             <TrainerSprite look={look} pose={view.trainer === 'victorious' ? 'victory' : 'idle'} scale={trainerScale} />
+          </div>
+        )}
+
+        {/* you, from behind, until your first creature is out */}
+        {view.me !== 'gone' && (
+          <div className="stand" style={{ left: '24%', top: '122%' }}>
+            <CharacterSprite appearance={myLook} pose={view.me === 'throw' ? 'throw' : 'back'} scale={myScale} alt="You" />
           </div>
         )}
 
@@ -462,7 +487,7 @@ function Scene({ battle, view, encounter, look, onSkip }: { battle: BattleState;
         {view.shown[0] && <InfoBox className="right-[3%] top-[60%]" name={nameOf(ply)} level={ply.level} hp={view.hp[0]} max={ply.maxHp} numbers />}
         {view.trainer === 'intro' && (
           <PixelBox variant="plate" className="absolute top-[5%] left-[3%] px-3 py-2">
-            <p className="font-display m-0 text-[clamp(10px,2.8cqi,17px)]">TRAINER AARYAN</p>
+            <p className="font-display m-0 text-[clamp(10px,2.8cqi,17px)]">TRAINER {battle.foe.toUpperCase()}</p>
             <p className="m-0 mt-1 flex gap-1" aria-label={`${battle.sides[1].team.length} creatures`}>
               {battle.sides[1].team.map((_, i) => (
                 <span key={i} className="inline-block h-[clamp(6px,1.8cqi,10px)] w-[clamp(6px,1.8cqi,10px)] rounded-full bg-dex-red shadow-[0_0_0_2px_var(--color-ink)]" />
@@ -701,7 +726,7 @@ function Results({
   won: boolean
   firstBadge: boolean
   badge: boolean
-  mode: 'quick' | 'tower'
+  mode: 'quick' | 'tower' | 'challenge'
   onAgain: () => void
   onHall: () => void
   onContinue: () => void
@@ -715,7 +740,12 @@ function Results({
   return (
     <div className="flex flex-col gap-3 text-ink">
       <PixelBox className="px-[5%] py-[4%]">
-        {won && !badge ? (
+        {mode === 'challenge' ? (
+          <>
+            <p className="font-display m-0 text-[clamp(14px,3.9cqi,20px)] text-dex-red">{won ? 'YOU WON!' : 'DEFEATED…'}</p>
+            <p className="m-0 mt-1">{won ? `You beat ${battle.foe}’s team. It counts towards your Battle Resort record.` : `${battle.foe}’s team wins this one. It counts towards your record — try again any time.`}</p>
+          </>
+        ) : won && !badge ? (
           <>
             <p className="font-display m-0 text-[clamp(14px,3.9cqi,20px)] text-dex-red">FLOOR CLEARED!</p>
             <p className="m-0 mt-1">You beat this version of Aaryan. The lift to the next floor is open.</p>
@@ -743,7 +773,7 @@ function Results({
           <dd className="m-0">{battle.stats.superEffective}</dd>
         </dl>
       </PixelBox>
-      {mode === 'tower' ? (
+      {mode !== 'quick' ? (
         <div className="flex justify-end">
           <button type="button" autoFocus disabled={!ready} className="pixel-btn pixel-btn--primary !text-[14px]" onClick={onContinue}>
             CONTINUE
@@ -768,6 +798,22 @@ function Results({
 
 /* ---------------- VS screen ---------------- */
 
+const VS_KEY = 'tdx:v1:vs-seen'
+function vsSeen() {
+  try {
+    return sessionStorage.getItem(VS_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function markVsSeen() {
+  try {
+    sessionStorage.setItem(VS_KEY, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
 interface VsSide {
   look: Appearance
   name: string
@@ -785,8 +831,8 @@ function VsScreen({ me, foe, onSkip }: { me: VsSide; foe: VsSide; onSkip: () => 
       }}
     >
       <div className="relative h-full w-[46%] shrink-0">
-        <div className="absolute inset-x-0 top-[8%] flex h-full justify-center">
-          <CharacterSprite appearance={side.look} fill={2.7} nod alt={`${side.name}`} />
+        <div className={`absolute inset-x-0 top-[8%] flex h-full justify-center ${top ? 'flip' : ''}`}>
+          <CharacterSprite appearance={side.look} pose="point" fill={2.7} nod alt={`${side.name}`} />
         </div>
       </div>
       <div className={`flex min-w-0 flex-1 flex-col justify-center gap-1 ${top ? 'items-start pl-[12%]' : 'items-end pr-[12%] text-right'}`}>
@@ -798,8 +844,21 @@ function VsScreen({ me, foe, onSkip }: { me: VsSide; foe: VsSide; onSkip: () => 
   return (
     <div className="absolute inset-0 z-10 cursor-pointer overflow-hidden bg-[#101018] [container-type:inline-size]" onClick={onSkip} role="img" aria-label={`${me.name} versus ${foe.name}`}>
       <div className="absolute inset-0 opacity-30" style={{ background: 'repeating-linear-gradient(115deg,#fff 0 2px,transparent 2px 14px)' }} />
-      {band(foe, true)}
-      {band(me, false)}
+      <div className="vs-impact absolute inset-0">
+        {band(foe, true)}
+        {band(me, false)}
+      </div>
+      <div aria-hidden className="vs-flash pointer-events-none absolute inset-0 bg-white" />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onSkip()
+        }}
+        className="font-display absolute top-[3%] right-[3%] z-10 cursor-pointer border-0 bg-ink/70 px-2 py-1 text-[clamp(10px,2.6cqi,14px)] text-paper"
+      >
+        SKIP ▸▸
+      </button>
       <span className="vs-mark font-logo absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[clamp(28px,10cqi,64px)] text-gold [text-shadow:3px_3px_0_#1c1a24,-2px_-2px_0_#1c1a24]">VS</span>
     </div>
   )

@@ -1,5 +1,5 @@
 /**
- * The Photo Album: 10 moments, chosen from Aaryan's "Photos for Pokedex" set.
+ * The Photo Album: 15 moments, chosen from Aaryan's "Photos for Pokedex" set (plus his LinkedIn headshot).
  * Files live in public/photos/ (1600px, EXIF/GPS stripped) with -thumb.jpg versions for the grid.
  * Originals: content-source/photos-zip/ (git-ignored).
  */
@@ -18,18 +18,18 @@ export interface Photo {
   alt: string
 }
 
-export const ALBUM_SIZE = 10
+export const ALBUM_SIZE = 15
 
 const p = (file: string, width: number, height: number) => ({ src: `/photos/${file}.jpg`, thumb: `/photos/${file}-thumb.jpg`, width, height })
 
 export const photos: Photo[] = [
   {
-    ...p('01-golden-hour', 1066, 1600),
-    title: 'Golden Hour',
-    caption: 'On the sand just after sunset.',
+    ...p('01-headshot', 1194, 1600),
+    title: 'Headshot',
+    caption: 'The professional profile photo — white shirt, big smile.',
     category: 'Portrait',
-    dexEntry: 'Most often sighted at dusk, when the light is doing all the work.',
-    alt: 'Aaryan standing on a beach at sunset in a dark jacket, sea and pastel sky behind him.',
+    dexEntry: 'Its LinkedIn form. Evolves into its casual form after 5 pm.',
+    alt: 'Aaryan smiling in a crisp white button-up shirt, standing in front of tall windows in a bright modern building.',
   },
   {
     ...p('02-law-ball', 1202, 1600),
@@ -104,5 +104,50 @@ export const photos: Photo[] = [
     category: 'Food',
     dexEntry: 'Side quest accepted. Reward: dessert.',
     alt: 'Aaryan in glasses smiling and holding up a plate with a tall stack of fluffy pancakes topped with fruit.',
+  },
+  {
+    ...p('11-with-rehan', 1600, 1200),
+    title: 'Night Out',
+    caption: 'Out with Rehan on a winter night.',
+    category: 'Friends',
+    date: '15 August 2026',
+    dexEntry: 'Travels in pairs after dark. Puffer jackets increase DEFENCE against the cold.',
+    alt: 'Aaryan and his friend Rehan in black jackets posing together outside a lit-up venue at night.',
+  },
+  {
+    ...p('12-gummy-bear', 1600, 1200),
+    title: 'Midnight Snack',
+    caption: 'Just after midnight, holding a giant gummy bear.',
+    category: 'Friends',
+    date: '16 August 2026',
+    dexEntry: 'Recovers HP after midnight by consuming one (1) gummy bear.',
+    alt: 'Aaryan in a black hoodie sitting on a ledge outside a convenience store at night, holding a large gummy bear in a packet, an ice-cream freezer behind him.',
+  },
+  {
+    ...p('13-hike', 1200, 1600),
+    title: 'Trail Shot',
+    caption: 'Stopping mid-hike to photograph a waterfall gully.',
+    category: 'Outdoors',
+    date: '26 September 2026',
+    dexEntry: 'Can’t pass a good view without catching it on camera first.',
+    alt: 'Aaryan in a white T-shirt with a crossbody bag, raising his phone to take a photo in a shaded rainforest gully with sunlight and falling water.',
+  },
+  {
+    ...p('14-front-row', 1600, 1200),
+    title: 'Front Row',
+    caption: 'In the crowd, deep in the night, peace signs up.',
+    category: 'Friends',
+    date: '3 October 2026',
+    dexEntry: 'Thrives in loud crowds. Phone torches raise its SPEED.',
+    alt: 'Two friends posing in a packed, dark crowd under stage lights — one in a white spider-web tee, one in a red sports jersey giving a peace sign.',
+  },
+  {
+    ...p('15-blonde-wig', 1600, 1200),
+    title: 'Golden Era',
+    caption: 'A blonde wig, white gloves and complete commitment to the bit.',
+    category: 'Just for Fun',
+    date: 'October 2024',
+    dexEntry: 'Changes form for special occasions. This one was a big swing.',
+    alt: 'Aaryan in a bright blonde wig, white gloves and a pink-and-white anime jersey, posing under a picnic shelter.',
   },
 ]

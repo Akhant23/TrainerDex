@@ -7,7 +7,7 @@
  * projection, so it shrinks toward the back and overlaps correctly when sorted by depth.
  *
  * Projection (a homography, so straight lines stay straight):
- *   u = wy − camY,  scale = D / (D − u·T),  sx = W/2 + (wx − camX)·scale,  sy = Y0 + u·scale·C
+ *   u = wy − camY,  scale = D / (D − u·T),  sx = W/2 + (wx − camX)·scale,  sy = H·FOCUS + u·scale·C
  */
 import { hexToRgba, type Palette, type Pixels } from '../sprites/pixels'
 import { overworldFor, OW_W, OW_WORLD, type Facing } from '../sprites/overworld'
@@ -19,10 +19,12 @@ import { structureArt } from './structures'
 import { size, tileAt, type ResortMap } from './maps'
 
 export const VIEW_W = 256
+/** Default view height; the actual height follows the screen's shape (taller screens see further). */
 export const VIEW_H = 192
 /** Internal resolution multiplier, so scaled sprites keep crisp pixels. */
 export const RES = 4
-const Y0 = 138
+/** The horizon-ish row where the camera's focus sits, as a fraction of the view height. */
+const FOCUS = 0.72
 const D = 230
 const T = 0.7
 const C = 0.74
@@ -36,10 +38,10 @@ export interface Camera {
   y: number
 }
 
-export function project(cam: Camera, wx: number, wy: number) {
+export function project(cam: Camera, wx: number, wy: number, vh = VIEW_H) {
   const u = wy - cam.y
   const s = D / (D - u * T)
-  return { x: VIEW_W / 2 + (wx - cam.x) * s, y: Y0 + u * s * C, s }
+  return { x: VIEW_W / 2 + (wx - cam.x) * s, y: vh * FOCUS + u * s * C, s }
 }
 
 /* ---------------- pixel art → canvas ---------------- */
@@ -134,18 +136,19 @@ function creatureFrames(id: string, flipped: boolean, breath: number): HTMLCanva
 const CREATURE_WORLD = 0.3
 
 /** Draw one frame of the map with its actors. */
-export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number, creatures: CreatureActor[] = []) {
+export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number, creatures: CreatureActor[] = [], vh = VIEW_H) {
+  const Y0 = vh * FOCUS
   const outdoor = !!m.outdoor
   const { w, h } = size(m)
   ctx.imageSmoothingEnabled = false
   ctx.fillStyle = outdoor ? '#bfe4f8' : '#101018'
-  ctx.fillRect(0, 0, VIEW_W * RES, VIEW_H * RES)
+  ctx.fillRect(0, 0, VIEW_W * RES, vh * RES)
 
   // floor, one screen row at a time (filtered, like a textured 3D floor, so it doesn't shimmer)
   const g = ground(m, Math.floor(now / 600) % 2 === 1 ? 1 : 0)
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'low'
-  for (let sy = 0; sy < VIEW_H * RES; sy++) {
+  for (let sy = 0; sy < vh * RES; sy++) {
     const v = ((sy + 0.5) / RES - Y0) / (C * D)
     const den = 1 + v * T
     if (den <= 0.05) continue
@@ -158,27 +161,27 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   }
   ctx.imageSmoothingEnabled = false
   // a little haze toward the back
-  const haze = ctx.createLinearGradient(0, 0, 0, VIEW_H * RES * 0.45)
+  const haze = ctx.createLinearGradient(0, 0, 0, vh * RES * 0.45)
   haze.addColorStop(0, outdoor ? 'rgba(220,240,255,0.45)' : 'rgba(0,0,0,0.45)')
   haze.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = haze
-  ctx.fillRect(0, 0, VIEW_W * RES, VIEW_H * RES * 0.45)
+  ctx.fillRect(0, 0, VIEW_W * RES, vh * RES * 0.45)
 
   // everything that stands up, sorted back to front
   type Item = { depth: number; draw: () => void }
   const items: Item[] = []
   const sprite = (img: HTMLCanvasElement, bx: number, by: number, anchorX: number, ws = 1) => {
-    const p = project(cam, bx, by)
+    const p = project(cam, bx, by, vh)
     if (p.s <= 0.2) return
     const dw = img.width * ws * p.s * RES
     const dh = img.height * ws * p.s * RES
     const dx = (p.x - anchorX * ws * p.s) * RES
     const dy = p.y * RES - dh
-    if (dx > VIEW_W * RES || dx + dw < 0 || dy > VIEW_H * RES || dy + dh < 0) return
+    if (dx > VIEW_W * RES || dx + dw < 0 || dy > vh * RES || dy + dh < 0) return
     ctx.drawImage(img, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh))
   }
   const shadow = (bx: number, by: number, rx: number) => {
-    const p = project(cam, bx, by)
+    const p = project(cam, bx, by, vh)
     ctx.fillStyle = 'rgba(20,24,40,0.28)'
     ctx.beginPath()
     ctx.ellipse(p.x * RES, p.y * RES, rx * p.s * RES, rx * 0.42 * p.s * C * RES, 0, 0, Math.PI * 2)

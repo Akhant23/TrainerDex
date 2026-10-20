@@ -31,7 +31,7 @@ describe('structures', () => {
       for (const st of m.structures ?? []) {
         expect(structureArt[st.kind][0].length).toBe(st.w * TILE)
         for (let y = st.y; y < st.y + st.d; y++)
-          for (let x = st.x; x < st.x + st.w; x++) expect('#DEF'.includes(tileAt(m, x, y)), `${m.id} ${x},${y}`).toBe(true)
+          for (let x = st.x; x < st.x + st.w; x++) expect('#DEFXL'.includes(tileAt(m, x, y)), `${m.id} ${x},${y}`).toBe(true)
       }
   })
 })
@@ -59,9 +59,16 @@ describe('maps', () => {
     expect(tileAt(maps.reception, RECEPTIONIST.x, RECEPTIONIST.y + 1)).toBe('C')
   })
   it('the tower door leads to reception and back', () => {
-    const w = warpAt(maps.plaza, 13, 4)!
+    const w = warpAt(maps.plaza, 18, 5)!
     expect(w.to).toBe('reception')
     expect(warpAt(maps.reception, 7, 11)!.to).toBe('plaza')
+  })
+  it('every portal is a walkable door tile that opens a real section', () => {
+    for (const p of maps.plaza.portals ?? []) {
+      expect(tileAt(maps.plaza, p.x, p.y), p.name).toBe('D')
+      expect(isSolidTile(maps.plaza, p.x, p.y + 1), `${p.name} front`).toBe(false)
+      expect(['/profile', '/card', '/pokedex', '/pc', '/album', '/pager']).toContain(p.route)
+    }
   })
   it('places visitors on distinct walkable non-path tiles, deterministically', () => {
     const ids = Array.from({ length: 30 }, (_, i) => `t${i}`)

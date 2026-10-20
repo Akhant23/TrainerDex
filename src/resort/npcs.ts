@@ -23,12 +23,12 @@ const base: Appearance = {
 
 export const staff: StaffNpc[] = [
   {
-    id: 'guide', map: 'plaza', x: 11, y: 6, facing: 'down', name: 'RESORT GUIDE',
+    id: 'guide', map: 'plaza', x: 16, y: 8, facing: 'down', name: 'RESORT GUIDE',
     look: { ...base, skin: 'light', hair: 'bun', hairColour: 'auburn', top: 'jacket', topColour: 'green', accentColour: 'white', bottom: 'skirt', bottomColour: 'navy' },
     linesKey: 'staff.guide',
   },
   {
-    id: 'lifeguard', map: 'plaza', x: 21, y: 9, facing: 'right', name: 'LIFEGUARD',
+    id: 'lifeguard', map: 'plaza', x: 29, y: 22, facing: 'right', name: 'LIFEGUARD',
     look: { ...base, skin: 'deep', hair: 'buzz', hairColour: 'black', top: 'tank', topColour: 'red', bottom: 'shorts', bottomColour: 'red', hat: 'cap', hatColour: 'yellow', accessories: ['sunglasses'] },
     linesKey: 'staff.lifeguard',
   },

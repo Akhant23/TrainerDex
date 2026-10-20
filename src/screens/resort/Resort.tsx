@@ -4,7 +4,9 @@ import { menu } from '../../content/menu'
 import { towerStages } from '../../content/aaryan'
 import { anyLine, line, lines } from '../../content/script'
 import { species, type SpeciesId } from '../../battle/data'
-import { floors, floorSetup, unlockedSpecies } from '../../battle/tower'
+import { challengeSetup, floors, floorSetup, unlockedSpecies } from '../../battle/tower'
+import { regulars } from '../../resort/regulars'
+import { formatRecord, type BattleRecord } from '../../../supabase/functions/_shared/trainer'
 import { maps, placeVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, type MapId, type Warp } from '../../resort/maps'
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
@@ -14,8 +16,9 @@ import type { Appearance } from '../../sprites/character'
 import { audio } from '../../systems/audio'
 import { useSettings } from '../../systems/settings'
 import { progress } from '../../systems/progress'
-import { resortSave, useResortSave } from '../../systems/resortSave'
-import { fetchTrainers, saveTrainer, trainersOnline, type OnlineTrainer } from '../../systems/trainers'
+import { recordResult, resortSave, useResortSave } from '../../systems/resortSave'
+import { setReturnTo } from '../../systems/returnTo'
+import { fetchTrainers, saveTrainer, syncTrainer, trainersOnline, type OnlineTrainer } from '../../systems/trainers'
 import { ChoiceMenu } from '../../ui/ChoiceMenu'
 import { DialogueBox } from '../../ui/DialogueBox'
 import { PixelBox } from '../../ui/PixelBox'
@@ -45,6 +48,9 @@ interface Char {
   party?: string[]
   greeting?: string
   message?: string
+  record?: BattleRecord
+  /** built-in resort regular rather than a real visitor */
+  regular?: boolean
 }
 interface Dialogue {
   lines: string[]
@@ -94,11 +100,13 @@ const floorNumber = (m: MapId) => (m.startsWith('floor') ? Number(m.slice(5)) : 
 
 /* ---------------- screen ---------------- */
 
+type FightPlan = { seed: number } & ({ kind: 'tower'; floor: number } | { kind: 'challenge'; trainer: Char })
+
 export default function Resort() {
   const save = useResortSave()
-  const [fight, setFight] = useState<{ floor: number; seed: number } | null>(null)
+  const [fight, setFight] = useState<FightPlan | null>(null)
 
-  if (fight) {
+  if (fight?.kind === 'tower') {
     const stage = towerStages[fight.floor - 1]
     return (
       <Fight
@@ -108,21 +116,49 @@ export default function Resort() {
         title={`FLOOR ${fight.floor} · ${stage.title}`}
         opponent={{ look: stage.look, name: 'AARYAN', tag: `FLOOR ${fight.floor} · ${stage.title}`, winLines: [`AARYAN: ${line(`tower.${stage.id}.defeat`)}`], loseLines: [`AARYAN: ${line('tower.lose')}`] }}
         mode="tower"
+        arena={{ map: `floor${fight.floor}` as MapId, x: FLOOR_BOSS.x, y: FLOOR_BOSS.y + 3 }}
         recordWin={fight.floor === 5 ? 'champion' : null}
         onExit={(_to, won) => {
           if (won) {
             resortSave.update({ floorCleared: Math.max(resortSave.get().floorCleared, fight.floor) })
             if (fight.floor >= 3) progress.unlock('tower-climber')
           }
+          // beating the Champion floor earns a title
+          recordResult(won, fight.floor === 5)
+          void syncTrainer().catch(() => undefined)
           setFight(null)
         }}
       />
     )
   }
-  return <World onBattle={(floor) => setFight({ floor, seed: (Date.now() ^ (Math.random() * 1e9)) | 0 })} />
+  if (fight?.kind === 'challenge') {
+    const t = fight.trainer
+    return (
+      <Fight
+        key={fight.seed}
+        setup={challengeSetup((t.party ?? []) as SpeciesId[], save.party, t.name)}
+        seed={fight.seed}
+        title={`VS ${t.name}`}
+        opponent={{ look: t.look, name: t.name, tag: t.record ? `RECORD ${formatRecord(t.record)}` : 'TRAINER', winLines: [`${t.name}: Good battle! I’ll get you next time.`], loseLines: [`${t.name}: That was close! Rematch whenever you like.`] }}
+        mode="challenge"
+        arena={{ map: 'plaza', x: 12, y: 19 }}
+        onExit={(_to, won) => {
+          recordResult(won)
+          void syncTrainer().catch(() => undefined)
+          setFight(null)
+        }}
+      />
+    )
+  }
+  return (
+    <World
+      onBattle={(floor) => setFight({ kind: 'tower', floor, seed: (Date.now() ^ (Math.random() * 1e9)) | 0 })}
+      onChallenge={(trainer) => setFight({ kind: 'challenge', trainer, seed: (Date.now() ^ (Math.random() * 1e9)) | 0 })}
+    />
+  )
 }
 
-function World({ onBattle }: { onBattle: (floor: number) => void }) {
+function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; onChallenge: (trainer: Char) => void }) {
   const { sfx, reducedMotion } = useSettings()
   const save = useResortSave()
   const [mapId, setMapId] = useState<MapId>(() => world.get().map)
@@ -137,6 +173,21 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
   const [fade, setFade] = useState(false)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // the view gets taller (sees further) when the screen is taller than 4:3
+  const viewH = useRef(VIEW_H)
+  useEffect(() => {
+    const c = canvasRef.current
+    if (!c) return
+    const fit = () => {
+      const aspect = c.clientWidth ? Math.min(1.5, Math.max(0.6, c.clientHeight / c.clientWidth)) : 0.75
+      viewH.current = Math.round(VIEW_W * aspect)
+      c.height = viewH.current * RES
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(c)
+    return () => ro.disconnect()
+  }, [])
   const tagRefs = useRef(new Map<string, HTMLDivElement>())
   const me = useRef({ ...world.get(), moving: null as null | { tx: number; ty: number; t0: number; dur: number }, turnAt: 0, bumpAt: 0 })
   // your lead creature follows one step behind
@@ -154,12 +205,19 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
   /* ----- online visitors ----- */
   useEffect(() => {
     if (!trainersOnline) return
-    fetchTrainers()
-      .then((t) => {
-        setOnline(t.filter((x) => x.id !== resortSave.get().trainerId))
-        setOnlineState('ok')
-      })
-      .catch(() => setOnlineState('error'))
+    // live: refresh who's around every 20 seconds while the tab is visible
+    const load = () => {
+      if (document.visibilityState === 'hidden') return
+      fetchTrainers()
+        .then((t) => {
+          setOnline(t.filter((x) => x.id !== resortSave.get().trainerId))
+          setOnlineState('ok')
+        })
+        .catch(() => setOnlineState('error'))
+    }
+    load()
+    const id = window.setInterval(load, 20_000)
+    return () => window.clearInterval(id)
   }, [])
 
   /* ----- characters on this map ----- */
@@ -167,12 +225,17 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
     const list: Char[] = staff.filter((s) => s.map === mapId).map((s) => ({ id: s.id, x: s.x, y: s.y, facing: s.facing, look: s.look, name: s.name, kind: 'staff' as const, lines: lines(s.linesKey) }))
     const n = floorNumber(mapId)
     if (n) list.push({ id: 'boss', ...FLOOR_BOSS, facing: 'down', look: towerStages[n - 1].look, name: 'AARYAN', kind: 'boss' })
-    if (mapId === 'plaza' && online.length) {
-      const blockedSpots = [...list, maps.plaza.spawn!, { x: me.current.x, y: me.current.y }]
-      const placed = placeVisitors(maps.plaza, online.map((o) => o.id), blockedSpots)
-      for (const o of online) {
+    if (mapId === 'plaza') {
+      // real visitors first, then the resort regulars so the plaza is never empty
+      const everyone: OnlineTrainer[] = [
+        ...online,
+        ...regulars.map((r) => ({ id: `regular-${r.id}`, name: r.name, appearance: r.look, party: r.party, greeting: line(`regular.${r.id}`), record: r.record, regular: true })),
+      ]
+      const blockedSpots = [...list, maps.plaza.spawn!, { x: me.current.x, y: me.current.y }, ...(maps.plaza.portals ?? []).map((p) => ({ x: p.x, y: p.y + 1 }))]
+      const placed = placeVisitors(maps.plaza, everyone.map((o) => o.id), blockedSpots)
+      for (const o of everyone) {
         const p = placed.get(o.id)
-        if (p) list.push({ id: o.id, ...p, look: o.appearance, name: o.name, kind: 'visitor', party: o.party, greeting: o.greeting, message: o.message })
+        if (p) list.push({ id: o.id, ...p, look: o.appearance, name: o.name, kind: 'visitor', party: o.party, greeting: o.greeting, message: o.message, record: o.record, regular: o.regular })
       }
     }
     return list
@@ -182,7 +245,7 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
 
   /* ----- music ----- */
   useEffect(() => {
-    audio.setTrack(map.music === 'battle' ? 'battle' : 'resort')
+    audio.setTrack(map.music ?? 'resort')
   }, [map.music])
   useEffect(() => () => audio.setTrack('menu'), [])
 
@@ -251,14 +314,8 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
     audio.cry(lead)
     const vars = { creature: name, place: PLACE_NAMES[mapId] }
     const cry = `${name}: ${line(`cry.${lead}`)}`
-    if (Math.random() < 0.2)
-      return say({
-        lines: [cry, line('follower.wantsBattle', vars), line('follower.battleAsk', vars)],
-        choices: [
-          { label: 'BATTLE!', action: () => navigate('/battle/quick') },
-          { label: 'NOT NOW', action: () => undefined },
-        ],
-      })
+    // it's raring to go: point the way to the Battle Tower
+    if (Math.random() < 0.2) return say({ lines: [cry, line('follower.wantsBattle', vars), ...lines('follower.battleHint', vars)] })
     say({ lines: [cry, anyLine('follower.react', vars)] })
   }
 
@@ -292,6 +349,16 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
     world.set({ map: m.map, x: m.x, y: m.y, facing: m.facing })
     const w: Warp | undefined = warpAt(maps[m.map], m.x, m.y)
     if (w) return warpTo(w.to, w.tx, w.ty, w.facing)
+    const portal = maps[m.map].portals?.find((p) => p.x === m.x && p.y === m.y)
+    if (portal) {
+      // step back out of the doorway on return, then open that part of the site
+      world.set({ map: m.map, x: m.x, y: m.y + 1, facing: 'down' })
+      setReturnTo('/battle')
+      setFade(true)
+      sfx('open')
+      window.setTimeout(() => navigate(portal.route), reducedMotion ? 0 : 220)
+      return
+    }
     // nearest visitor within 2 tiles
     let best: Char | null = null
     let bd = 3
@@ -419,16 +486,16 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
         const fy = pt.moving ? pt.moving.fy + (pt.moving.ty - pt.moving.fy) * pk : pt.y
         creatures.push({ id: lead, facing: pt.facing, x: fx * TILE + 8, y: fy * TILE + 13, hop: pt.moving ? Math.sin(pk * Math.PI) * 3 : 0, breath: pt.moving ? 0 : Math.floor(now / 520) % 2 })
       }
-      drawWorld(ctx, mp, cam, actors, now, creatures)
+      drawWorld(ctx, mp, cam, actors, now, creatures, viewH.current)
 
       // name tags + bubbles follow their owners
       const k2 = canvas.clientWidth / VIEW_W
       for (const c of charsRef.current) {
         const el = tagRefs.current.get(c.id)
         if (!el) continue
-        const p = project(cam, c.x * TILE + 8, c.y * TILE + 14)
+        const p = project(cam, c.x * TILE + 8, c.y * TILE + 14, viewH.current)
         el.style.transform = `translate(${p.x * k2}px, ${(p.y - 40 * p.s) * k2}px) translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.1, p.s))})`
-        el.style.opacity = p.y < 0 || p.y > VIEW_H + 20 ? '0' : '1'
+        el.style.opacity = p.y < 0 || p.y > viewH.current + 20 ? '0' : '1'
       }
     }
     raf = requestAnimationFrame(loop)
@@ -448,7 +515,7 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
     const s = { ...resortSave.get(), ...patch }
     if (!trainersOnline || !s.avatar) return
     setSyncNote('Saving online…')
-    saveTrainer({ id: s.trainerId, secret: s.secret, name: s.name, greeting: s.greeting, appearance: s.avatar, party: s.party })
+    saveTrainer({ id: s.trainerId, secret: s.secret, name: s.name, greeting: s.greeting, appearance: s.avatar, party: s.party, record: s.record })
       .then(() => setSyncNote('Saved — other visitors can see you now.'))
       .catch((e) => setSyncNote((e as Error).message))
   }
@@ -567,7 +634,16 @@ function World({ onBattle }: { onBattle: (floor: number) => void }) {
       ) : panel === 'suggest' ? (
         <SuggestionBox onClose={() => setPanel('none')} />
       ) : panel === 'profile' && profile ? (
-        <TrainerProfile trainer={profile} onClose={() => setPanel('none')} />
+        <TrainerProfile
+          trainer={profile}
+          onClose={() => setPanel('none')}
+          onChallenge={() => {
+            sfx('start')
+            setPanel('none')
+            world.set({ map: mapId, x: me.current.x, y: me.current.y, facing: me.current.facing })
+            onChallenge(profile)
+          }}
+        />
       ) : panel === 'lift' ? (
         <Lift
           cleared={save.floorCleared}
@@ -661,7 +737,12 @@ function Controls({
         <PixelBox className="flex items-center gap-3 px-3 py-2">
           <CharacterSprite appearance={avatar} pose="portrait" scale={1} alt="Your avatar" />
           <div className="min-w-0 flex-1 text-[14px]">
-            <p className="font-display m-0 text-[15px]">{name || 'YOU'}</p>
+            <p className="font-display m-0 flex items-baseline gap-2 text-[15px]">
+              {name || 'YOU'}
+              <span className="text-[13px] text-dex-red" title="Champion titles · wins · losses">
+                {formatRecord(resortSave.get().record)}
+              </span>
+            </p>
             <p className="m-0 flex gap-1">
               {party.map((p) => (
                 <span key={p} title={species[p].name} className="rounded-full bg-[#e8ecf4]">
@@ -670,7 +751,7 @@ function Controls({
               ))}
             </p>
             <p className="m-0 truncate text-muted">
-              {onlineState === 'off' && 'Offline mode — no other visitors.'}
+              {onlineState === 'off' && 'Offline mode — just the resort regulars around.'}
               {onlineState === 'loading' && 'Looking for other visitors…'}
               {onlineState === 'ok' && (visitors ? `${visitors} other visitor${visitors === 1 ? '' : 's'} here. Walk up to say hi.` : 'No other visitors yet — you’re the first!')}
               {onlineState === 'error' && 'Couldn’t reach the resort server right now.'}
@@ -798,7 +879,8 @@ function Lift({ cleared, onPick, onClose }: { cleared: number; onPick: (n: numbe
 }
 
 /** A visitor's trainer profile: their animated battle sprite, message and party. */
-function TrainerProfile({ trainer, onClose }: { trainer: Char; onClose: () => void }) {
+function TrainerProfile({ trainer, onClose, onChallenge }: { trainer: Char; onClose: () => void; onChallenge: () => void }) {
+  const rec = trainer.record ?? { titles: 0, wins: 0, losses: 0 }
   return (
     <div className="space-y-3 p-[3%]">
       <PixelBox className="flex items-end gap-4 px-4 py-3">
@@ -806,11 +888,18 @@ function TrainerProfile({ trainer, onClose }: { trainer: Char; onClose: () => vo
           <CharacterSprite appearance={trainer.look} fill={0.98} alt={`${trainer.name}’s avatar`} />
         </div>
         <div className="min-w-0 flex-1 pb-1">
-          <p className="font-display m-0 text-[13px] text-muted">TRAINER</p>
+          <p className="font-display m-0 text-[13px] text-muted">{trainer.regular ? 'RESORT REGULAR' : 'TRAINER'}</p>
           <p className="font-display m-0 text-[20px] text-dex-red">{trainer.name}</p>
           <p className="m-0 mt-2 text-[15px] break-words">“{trainer.message ?? trainer.greeting ?? 'Hi!'}”</p>
           {trainer.message && <p className="m-0 mt-1 text-[13px] text-muted">From the Poké Pager</p>}
         </div>
+      </PixelBox>
+      <PixelBox className="px-4 py-3">
+        <p className="font-display m-0 text-[14px]">BATTLE RECORD</p>
+        <p className="font-display m-0 mt-1 text-[26px] leading-tight text-dex-red" aria-label={`${rec.titles} Champion titles, ${rec.wins} wins, ${rec.losses} losses`}>
+          {formatRecord(rec)}
+        </p>
+        <p className="m-0 text-[13px] text-muted">Champion titles · wins · losses at the Battle Resort</p>
       </PixelBox>
       <PixelBox className="px-4 py-3">
         <p className="font-display m-0 text-[14px]">PARTY</p>
@@ -823,11 +912,17 @@ function TrainerProfile({ trainer, onClose }: { trainer: Char; onClose: () => vo
           ))}
         </ul>
       </PixelBox>
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {(trainer.party ?? []).length > 0 && (
+          <button type="button" className="pixel-btn pixel-btn--primary !text-[14px]" onClick={onChallenge}>
+            ⚔ CHALLENGE THEIR TEAM
+          </button>
+        )}
         <button type="button" className="pixel-btn !text-[14px]" onClick={onClose}>
           CLOSE
         </button>
       </div>
+      <p className="m-0 text-[13px] text-muted">▸ You’ll face their most recent party, both sides at level 28. Wins and losses count towards your record.</p>
     </div>
   )
 }

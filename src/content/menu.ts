@@ -62,7 +62,7 @@ export const menu: readonly MenuEntry[] = [
     route: '/album',
     icon: 'album',
     color: ['#e05890', '#8a2850'],
-    blurb: 'Ten memories, each with its own entry.',
+    blurb: 'Fifteen memories, each with its own entry.',
     phase: 3,
     planned: ['10 photo entries', 'Expanded Dex-style view', 'Keyboard + swipe navigation'],
   },

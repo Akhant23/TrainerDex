@@ -5,6 +5,7 @@
 import { pagerConfigured } from './pager'
 import type { Appearance } from '../sprites/character'
 import { parseAppearance, parseParty } from '../../supabase/functions/_shared/appearance'
+import { parseRecord, type BattleRecord } from '../../supabase/functions/_shared/trainer'
 
 const URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 const ANON = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? ''
@@ -17,6 +18,9 @@ export interface OnlineTrainer {
   party: string[]
   greeting: string
   message?: string
+  record: BattleRecord
+  /** A resort regular (built-in), not a real visitor. */
+  regular?: boolean
 }
 
 export const trainersOnline = pagerConfigured
@@ -24,7 +28,7 @@ export const trainersOnline = pagerConfigured
 export async function fetchTrainers(limit = 40): Promise<OnlineTrainer[]> {
   if (!trainersOnline) return []
   const [tRes, mRes] = await Promise.all([
-    fetch(`${URL}/rest/v1/trainers?select=id,name,appearance,party,greeting,updated_at&order=updated_at.desc&limit=${limit}`, { headers: headers() }),
+    fetch(`${URL}/rest/v1/trainers?select=id,name,appearance,party,greeting,titles,wins,losses,updated_at&order=updated_at.desc&limit=${limit}`, { headers: headers() }),
     fetch(`${URL}/rest/v1/messages?select=trainer_id,message,created_at&trainer_id=not.is.null&order=created_at.desc&limit=200`, { headers: headers() }),
   ])
   if (!tRes.ok) throw new Error(`Couldn’t load trainers (${tRes.status}).`)
@@ -36,11 +40,11 @@ export async function fetchTrainers(limit = 40): Promise<OnlineTrainer[]> {
     const appearance = parseAppearance(r.appearance)
     const party = parseParty(r.party)
     if (!appearance || !party || typeof r.id !== 'string' || typeof r.name !== 'string') return []
-    return [{ id: r.id, name: r.name, appearance, party, greeting: typeof r.greeting === 'string' ? r.greeting : 'Hi!', message: latest.get(r.id) }]
+    return [{ id: r.id, name: r.name, appearance, party, greeting: typeof r.greeting === 'string' ? r.greeting : 'Hi!', message: latest.get(r.id), record: parseRecord(r) }]
   })
 }
 
-export async function saveTrainer(body: { id: string; secret: string; name: string; greeting: string; appearance: Appearance; party: string[] }): Promise<void> {
+export async function saveTrainer(body: { id: string; secret: string; name: string; greeting: string; appearance: Appearance; party: string[]; record: BattleRecord }): Promise<void> {
   if (!trainersOnline) return
   const res = await fetch(`${URL}/functions/v1/save-trainer`, {
     method: 'POST',
@@ -56,4 +60,12 @@ export async function saveTrainer(body: { id: string; secret: string; name: stri
     /* keep default */
   }
   throw new Error(msg)
+}
+
+/** Push this visitor's current avatar, party and record online (no-op offline or without an avatar). */
+export async function syncTrainer(): Promise<void> {
+  const { resortSave } = await import('./resortSave')
+  const s = resortSave.get()
+  if (!trainersOnline || !s.avatar) return
+  await saveTrainer({ id: s.trainerId, secret: s.secret, name: s.name, greeting: s.greeting, appearance: s.avatar, party: s.party, record: s.record })
 }

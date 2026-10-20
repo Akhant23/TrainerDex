@@ -11,9 +11,9 @@ The interactive, Gen IV/V-style personal site of **Aaryan Khan**, a Law / Biotec
 |---|---|---|
 | 1. Planning | ✅ | [docs/PLANNING.md](docs/PLANNING.md) |
 | 2. Design foundation | ✅ | DS shell, intro, dialogue engine, main menu, navigation, settings + save, sprite prototype, audio, play time |
-| 3. Personal content | ✅ | Profile, Pokédex (15 entries), Trainer Card + 8 badges + polishing, PC (resume viewer, 11 portfolio case studies, 27-entry experience log), Photo Album (10 memories) |
+| 3. Personal content | ✅ | Profile, Pokédex (15 entries), Trainer Card + 8 badges + polishing, PC (resume viewer, 11 portfolio case studies, 27-entry experience log), Photo Album (15 memories) |
 | 4. Interactive | ✅ | Battle simulator (15 original creatures, 3 difficulties, TRAINERDEX BADGE, Hall of Fame), 19 visitor medals + Medal Box, Easter eggs, walking sprite |
-| 4b. Battle Resort | ✅ | BW-style animated sprites, a 2.5D walkable resort (plaza → tower reception → 5 floors of Aaryan's life stages → Champion), VS intro screens, avatar studio (camera / upload colour-matching, randomise), your lead creature follows you (talk to it), a party screen, other visitors' avatars, profiles + speech bubbles, a creature suggestion box (online features once Supabase is set up) |
+| 4b. Battle Resort | ✅ | BW-style animated sprites, a 2.5D walkable town whose houses open every section of the site, the Battle Tower (5 themed floors of Aaryan's life stages with their own music → Champion), VS intro screens, battles drawn in the place they happen, resort regulars and visitors you can challenge (records shown as titles-wins-losses), avatar studio (camera / upload colour-matching, randomise), your lead creature follows you (talk to it), a party screen, other visitors' avatars, profiles + speech bubbles, a creature suggestion box (online features once Supabase is set up) |
 | 5. Backend | ◐ | Poké Pager UI, admin dashboard (#/admin: messages + resort avatars), Supabase schema + RLS, Edge Functions (`submit-message`, `save-trainer`, `forget-me`) with validation / Turnstile / rate limiting — **built; needs your Supabase project to go live** ([docs/BACKEND.md](docs/BACKEND.md)) |
 | 6. Testing & launch | ⏳ | a11y, Lighthouse, deploy |
 

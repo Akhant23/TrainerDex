@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderLayers, type Appearance, type ArmPose, type CharacterLayers } from '../sprites/character'
+import { CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderBack, renderLayers, type Appearance, type ArmPose, type CharacterLayers } from '../sprites/character'
 import { crop, type Pixels } from '../sprites/pixels'
 import { pixelsToDataUrl } from '../sprites/render'
 import { useSettings } from '../systems/settings'
@@ -41,7 +41,16 @@ function useFitScale(fill: number | undefined, units: number, ref: React.RefObje
   return scale
 }
 
-export type CharacterPose = 'idle' | 'victory' | 'portrait'
+/** idle / victory / point face the viewer; back and throw show the trainer from behind (battle start). */
+export type CharacterPose = 'idle' | 'victory' | 'point' | 'portrait' | 'back' | 'throw'
+
+const backCache = new Map<string, string>()
+function backUrl(a: Appearance, throwing: boolean) {
+  const key = JSON.stringify(a) + throwing
+  let url = backCache.get(key)
+  if (!url) backCache.set(key, (url = pixelsToDataUrl(renderBack(a, throwing), paletteFor(a))))
+  return url
+}
 
 interface Props {
   appearance: Appearance
@@ -88,7 +97,7 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
     return () => window.clearTimeout(t)
   }, [animate])
 
-  const { layers, palette } = layersFor(appearance, pose === 'victory' ? 'raised' : 'idle')
+  const { layers, palette } = layersFor(appearance, pose === 'victory' ? 'raised' : pose === 'point' ? 'point' : 'idle')
   const urls = useMemo(
     () => ({
       hairBack: pixelsToDataUrl(layers.hairBack, palette),
@@ -113,6 +122,13 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
 
   const w = CHAR_W * scale
   const h = CHAR_H * scale
+  if (pose === 'back' || pose === 'throw') {
+    return (
+      <div ref={ref} role="img" aria-label={alt} className={`relative ${className}`} style={{ width: w, height: h, ['--px' as string]: `${scale}px`, ...style }}>
+        <img src={backUrl(appearance, pose === 'throw')} width={w} height={h} alt="" aria-hidden draggable={false} className={`pixelated absolute inset-0 ${animate ? 'bw-breathe' : ''}`} />
+      </div>
+    )
+  }
   const layer = (src: string, cls: string) => <img src={src} width={w} height={h} alt="" aria-hidden draggable={false} className={`pixelated absolute inset-0 ${animate ? cls : ''}`} />
 
   return (
@@ -121,7 +137,7 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
       {layer(urls.legs, '')}
       {layer(urls.torso, 'bw-breathe')}
       {layer(urls.armBack, 'bw-arm-a')}
-      {layer(urls.armFront, pose === 'victory' ? 'bw-pump' : 'bw-breathe')}
+      {layer(urls.armFront, pose === 'victory' ? 'bw-pump' : pose === 'point' ? '' : 'bw-breathe')}
       {layer(blink ? urls.headBlink : urls.head, nod ? 'bw-nod' : 'bw-head')}
     </div>
   )

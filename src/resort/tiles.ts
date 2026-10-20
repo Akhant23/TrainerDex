@@ -48,6 +48,9 @@ export const tilePalette: Palette = {
   i: '#48d0e0', I: '#2aa8bc',
   h: '#ffffff', z: '#5c6474', Z: '#b0b8c8', '9': '#3a404e',
   k: '#e070a0', j: '#f8d8e8',
+  // roofs
+  H: '#3a9a96', J: '#256e6c', L: '#62c4bc',
+  V: '#7a6ab8', U: '#564890', F: '#a294e0',
 }
 
 const grid = (w = TILE, h = TILE) => new Grid(w, h)
@@ -175,12 +178,79 @@ function suggestionBox(): Prop {
   return { px: g.outline().toPixels(), anchorX: 8 }
 }
 
-const WALL_H = 44
+/** BW's round town tree: a short trunk under a big layered canopy. */
+function roundTree(): Prop {
+  const g = grid(32, 46)
+  g.rect(13, 32, 18, 45, 't').rect(16, 32, 18, 45, 'u')
+  g.ellipse(15.5, 20, 15, 14, 'e', '3', 'E')
+  g.ellipse(9, 14, 7, 6, 'E', 'e').ellipse(22, 13, 7, 6, 'e', '3').ellipse(15, 8, 8, 6, 'E', 'e')
+  g.ellipse(15.5, 28, 12, 5, '3', 'N')
+  return { px: g.outline().toPixels(), anchorX: 16 }
+}
+
+function fence(): Prop {
+  const g = grid(16, 14)
+  g.rect(0, 4, 15, 5, 'h').rect(0, 9, 15, 10, 'h')
+  for (const x of [1, 7, 13]) g.rect(x, 1, x + 2, 13, 'h').rect(x + 2, 1, x + 2, 13, 'x').set(x + 1, 0, 'h')
+  return { px: g.outline().toPixels(), anchorX: 8 }
+}
+
+function trophyCabinet(): Prop {
+  const g = grid(16, 32)
+  g.rect(0, 2, 15, 31, 't').rect(2, 4, 13, 28, '7').rect(3, 5, 12, 27, 'b').rect(3, 5, 5, 27, 'h')
+  for (const [x, y] of [[6, 8], [9, 15], [6, 22]]) g.rect(x, y, x + 2, y + 2, 'y').set(x + 1, y + 3, 'Y').rect(x, y + 4, x + 2, y + 4, 'Y')
+  g.rect(3, 13, 12, 13, 't').rect(3, 20, 12, 20, 't')
+  return { px: g.outline().toPixels(), anchorX: 8 }
+}
+
+function balloons(): Prop {
+  const g = grid(16, 36)
+  g.line(8, 35, 5, 14, 'z').line(8, 35, 11, 12, 'z').line(8, 35, 8, 8, 'z')
+  g.ellipse(4.5, 10, 4, 5, 'q', 'Q', '5').ellipse(11.5, 9, 4, 5, 'b', 'B', 'h').ellipse(8, 4, 4, 4.5, 'y', 'Y', 'h')
+  g.rect(6, 33, 10, 35, 'z')
+  return { px: g.outline().toPixels(), anchorX: 8 }
+}
+
+function merchRack(): Prop {
+  const g = grid(16, 30)
+  g.rect(1, 2, 2, 29, '9').rect(13, 2, 14, 29, '9').rect(1, 2, 14, 3, '9')
+  for (const [x, c, d] of [[3, 'F', 'V'], [8, 'h', 'x']] as const) {
+    g.poly([[x, 5], [x + 5, 5], [x + 6, 19], [x - 1, 19]], c).rect(x + 4, 5, x + 5, 19, d)
+    g.rect(x + 1, 13, x + 4, 16, d)
+  }
+  g.rect(0, 27, 15, 29, 'z')
+  return { px: g.outline().toPixels(), anchorX: 8 }
+}
+
+function toteBags(): Prop {
+  const g = grid(16, 18)
+  for (const [x, y] of [[1, 8], [7, 9], [4, 3]]) {
+    g.rect(x, y, x + 8, y + 8, 'o').rect(x + 6, y, x + 8, y + 8, 'O')
+    g.rect(x + 2, y + 3, x + 5, y + 5, 'y')
+    g.line(x + 2, y, x + 4, y - 3, 'O').line(x + 6, y, x + 4, y - 3, 'O')
+  }
+  return { px: g.outline().toPixels(), anchorX: 8 }
+}
+
+function pillar(): Prop {
+  const g = grid(16, 44)
+  g.rect(3, 4, 12, 39, 'h').rect(10, 4, 12, 39, 'x').rect(5, 6, 5, 37, 'x')
+  g.rect(1, 0, 14, 4, 'a').rect(1, 39, 14, 43, 'a').rect(1, 3, 14, 4, 'A').rect(1, 42, 14, 43, 'A')
+  return { px: g.outline().toPixels(), anchorX: 8 }
+}
+
+/** Interior walls are tall, like BW rooms, so the room fills even a tall screen. */
+const WALL_H = 88
+/** Fixtures (PC, lift) sit at the bottom of the wall; this is how far down they start. */
+const LOW = WALL_H - 44
 function wallBase(): Grid {
   const g = grid(16, WALL_H)
+  // wallpaper with a picture rail, then wainscoting and a skirting board
   g.rect(0, 0, 15, WALL_H - 1, 'x')
   g.rect(0, 0, 15, 3, 'X')
-  for (let y = 6; y < WALL_H - 6; y += 8) g.rect(0, y, 15, y, 'Z')
+  for (let y = 8; y < LOW; y += 10) g.rect(0, y, 15, y, 'Z')
+  g.rect(0, LOW, 15, LOW + 1, 'X')
+  for (let y = LOW + 6; y < WALL_H - 6; y += 8) g.rect(0, y, 15, y, 'Z')
   g.rect(0, WALL_H - 6, 15, WALL_H - 1, '8').rect(0, WALL_H - 6, 15, WALL_H - 6, 'z')
   return g
 }
@@ -190,17 +260,17 @@ function wall(): Prop {
 function pcWall(): Prop {
   const g = wallBase()
   // a terminal standing against the wall
-  g.rect(1, 14, 14, 43, '9').rect(2, 15, 13, 42, 'z')
-  g.rect(3, 17, 12, 27, 'K').rect(4, 18, 11, 26, 'B').rect(5, 19, 8, 20, 'b')
-  g.rect(4, 31, 11, 33, 'Z').rect(4, 36, 11, 37, 'K')
-  g.set(11, 31, 'r')
+  g.rect(1, LOW + 14, 14, LOW + 43, '9').rect(2, LOW + 15, 13, LOW + 42, 'z')
+  g.rect(3, LOW + 17, 12, LOW + 27, 'K').rect(4, LOW + 18, 11, LOW + 26, 'B').rect(5, LOW + 19, 8, LOW + 20, 'b')
+  g.rect(4, LOW + 31, 11, LOW + 33, 'Z').rect(4, LOW + 36, 11, LOW + 37, 'K')
+  g.set(11, LOW + 31, 'r')
   return { px: g.toPixels(), anchorX: 8 }
 }
 function liftWall(): Prop {
   const g = wallBase()
-  g.rect(0, 6, 15, WALL_H - 1, '9').rect(1, 8, 14, WALL_H - 1, 'Z')
-  g.rect(7, 8, 8, WALL_H - 1, 'K').rect(2, 10, 5, 12, 'h')
-  g.rect(5, 2, 10, 4, 'y')
+  g.rect(0, LOW + 6, 15, WALL_H - 1, '9').rect(1, LOW + 8, 14, WALL_H - 1, 'Z')
+  g.rect(7, LOW + 8, 8, WALL_H - 1, 'K').rect(2, LOW + 10, 5, LOW + 12, 'h')
+  g.rect(5, LOW + 2, 10, LOW + 4, 'y')
   return { px: g.toPixels(), anchorX: 8 }
 }
 
@@ -247,6 +317,19 @@ export const tiles: Record<string, TileDef> = {
   C: { px: fill('T').toPixels(), prop: counter(), solid: true },
   t: { px: floor().toPixels(), prop: plant(), solid: true },
   k: { px: floor().toPixels(), prop: suggestionBox(), solid: true },
+  // town extras
+  O: { px: grass().toPixels(), prop: roundTree(), solid: true },
+  n: { px: grass().toPixels(), prop: fence(), solid: true },
+  // tower floor themes (1 school pitch · 2 colour run · 3 ballroom · 4 tours · 5 = gold carpet 'a')
+  '!': { px: (() => { const g = fill('g'); for (let x = 0; x < 16; x += 8) g.rect(x, 0, x + 3, 15, 'G'); return g.rect(0, 15, 15, 15, 'h').toPixels() })(), solid: false },
+  '@': { px: dots(fill('h'), [[2, 3], [10, 2], [6, 9], [13, 12], [3, 13]], 'q').stamp(12, 6, ['b']).stamp(7, 4, ['y']).stamp(1, 8, ['e']).stamp(9, 14, ['b']).toPixels(), solid: false },
+  '$': { px: (() => { const g = fill('M'); g.rect(0, 0, 15, 0, 'm').rect(0, 0, 0, 15, 'm'); return dots(g, [[7, 7], [8, 8], [7, 8], [8, 7]], 'y').toPixels() })(), solid: false },
+  '%': { px: fill('y').rect(0, 15, 15, 15, 'Y').rect(15, 0, 15, 15, 'Y').toPixels(), solid: false },
+  '&': { px: floor().toPixels(), prop: trophyCabinet(), solid: true },
+  '+': { px: floor().toPixels(), prop: balloons(), solid: true },
+  '*': { px: floor().toPixels(), prop: merchRack(), solid: true },
+  '^': { px: floor().toPixels(), prop: toteBags(), solid: true },
+  '|': { px: floor().toPixels(), prop: pillar(), solid: true },
   d: { px: (() => floor().rect(2, 2, 13, 13, 'z').rect(3, 3, 12, 12, 'Z').rect(5, 6, 10, 6, 'K').rect(6, 7, 9, 7, 'K').rect(7, 8, 8, 8, 'K'))().toPixels(), solid: false },
   m: { px: (() => floor().rect(1, 3, 14, 12, 'M').rect(2, 4, 13, 11, 'm'))().toPixels(), solid: false },
 }

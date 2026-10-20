@@ -3,6 +3,7 @@ import { load, save } from './storage'
 import type { Appearance } from '../sprites/character'
 import type { SpeciesId } from '../battle/data'
 import { STARTER_PARTY } from '../battle/tower'
+import type { BattleRecord } from '../../supabase/functions/_shared/trainer'
 
 /**
  * The visitor's resort save: their avatar, party and tower progress. Kept in this browser.
@@ -15,6 +16,8 @@ export interface ResortSave {
   greeting: string
   party: SpeciesId[]
   floorCleared: number
+  /** Battle Resort record, shown as titles-wins-losses (e.g. 1-12-3). */
+  record: BattleRecord
   trainerId: string
   secret: string
 }
@@ -36,10 +39,11 @@ function uuid(): string {
   }
 }
 
-const fresh = (): ResortSave => ({ avatar: null, name: '', greeting: 'Hi!', party: [...STARTER_PARTY], floorCleared: 0, trainerId: uuid(), secret: randomId(24) })
+const fresh = (): ResortSave => ({ avatar: null, name: '', greeting: 'Hi!', party: [...STARTER_PARTY], floorCleared: 0, record: { titles: 0, wins: 0, losses: 0 }, trainerId: uuid(), secret: randomId(24) })
 
 let state: ResortSave = load('resort', fresh())
 if (!state.trainerId || !state.secret) state = { ...state, ...fresh(), avatar: state.avatar, name: state.name }
+if (!state.record) state = { ...state, record: { titles: 0, wins: 0, losses: 0 } }
 const listeners = new Set<() => void>()
 
 export const resortSave = {
@@ -49,6 +53,12 @@ export const resortSave = {
     save('resort', state)
     listeners.forEach((l) => l())
   },
+}
+
+/** Count a Battle Resort result: a win, a loss, or a win that earns a Champion title. */
+export function recordResult(won: boolean, champion = false) {
+  const r = state.record
+  resortSave.update({ record: { titles: r.titles + (won && champion ? 1 : 0), wins: r.wins + (won ? 1 : 0), losses: r.losses + (won ? 0 : 1) } })
 }
 
 export function useResortSave(): ResortSave {

@@ -4,6 +4,7 @@ import { navigate } from '../app/router'
 import type { MenuEntry } from '../content/menu'
 import { useSettings } from '../systems/settings'
 import { useGameKeys } from '../systems/input'
+import { takeReturnTo } from '../systems/returnTo'
 import { PixelIcon } from '../ui/PixelIcon'
 
 interface Props {
@@ -27,13 +28,14 @@ interface Props {
 }
 
 /** Shared frame for every section: coloured title card on top, header bar + content below. */
-export function SectionScreen({ entry, top, children, onBack, backTo = '/', title, subheader, scrollKey, backKeys = true, compactTop = true }: Props) {
+export function SectionScreen({ entry, top, children, onBack, backTo, title, subheader, scrollKey, backKeys = true, compactTop = true }: Props) {
   const { sfx } = useSettings()
   const back =
     onBack ??
     (() => {
       sfx('back')
-      navigate(backTo)
+      // sections opened from a resort door go back out of that door
+      navigate(backTo ?? takeReturnTo() ?? '/')
     })
 
   useGameKeys((k, e) => {

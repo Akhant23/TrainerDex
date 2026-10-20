@@ -15,7 +15,7 @@ export const medals = [
   { id: 'first-encounter', name: 'First Encounter', description: 'Opened the TrainerDex.', tier: 'bronze' },
   { id: 'researcher', name: 'Pokédex Researcher', description: 'Visited every section on the main menu.', tier: 'silver' },
   { id: 'dex-complete', name: 'Dex Complete', description: 'Read all 15 Pokédex entries.', tier: 'gold' },
-  { id: 'memory-collector', name: 'Memory Collector', description: 'Viewed all 10 photos in the album.', tier: 'silver' },
+  { id: 'memory-collector', name: 'Memory Collector', description: 'Viewed all 15 photos in the album.', tier: 'silver' },
   { id: 'challenger', name: 'Challenger', description: 'Started a battle against Trainer Aaryan.', tier: 'bronze' },
   { id: 'champion', name: 'Champion', description: 'Defeated Trainer Aaryan.', tier: 'silver' },
   { id: 'true-champion', name: 'True Champion', description: 'Defeated Trainer Aaryan on CHAMPION difficulty.', tier: 'gold' },

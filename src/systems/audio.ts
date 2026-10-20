@@ -17,7 +17,7 @@ export function noteToFreq(note: string): number {
 
 const tokens = (bars: string[]) => bars.join(' ').split(/\s+/)
 
-export type Track = 'menu' | 'battle' | 'victory' | 'resort'
+export type Track = 'menu' | 'battle' | 'victory' | 'resort' | 'floor1' | 'floor2' | 'floor3' | 'floor4' | 'floor5'
 
 interface TrackData {
   lead: string[]
@@ -71,6 +71,67 @@ const TRACKS: Record<Track, TrackData> = {
       'A5 . G5 . E5 . D5 . C5 - - - - - . .',
     ]),
     bass: [['C3', 'G3'], ['G2', 'D3'], ['A2', 'E3'], ['F2', 'C3']],
+  },
+  // Battle Tower floors: each a little faster and busier than the last
+  // "School Run" — floor 1, SBHS
+  floor1: {
+    bpm: 120,
+    loop: true,
+    lead: tokens([
+      'C5 . E5 . G5 . E5 . C5 . D5 . E5 - - .',
+      'F5 . E5 . D5 . C5 . D5 - - - G4 - - .',
+      'C5 . E5 . G5 . A5 . G5 . E5 . C5 . E5 .',
+      'D5 . B4 . G4 . B4 . C5 - - - . . . .',
+    ]),
+    bass: [['C3', 'G3'], ['F2', 'C3'], ['C3', 'G3'], ['G2', 'D3']],
+  },
+  // "Colour Run" — floor 2, first year
+  floor2: {
+    bpm: 132,
+    loop: true,
+    lead: tokens([
+      'F5 . A5 . C6 . A5 . G5 . F5 . D5 . F5 .',
+      'E5 . G5 . C6 - - . A5 . G5 . F5 - - .',
+      'D5 . F5 . A5 . F5 . G5 . A5 . A#5 . A5 .',
+      'G5 . E5 . C5 . E5 . F5 - - - . . F5 .',
+    ]),
+    bass: [['F2', 'C3'], ['C3', 'G3'], ['D3', 'A3'], ['C3', 'G3']],
+  },
+  // "Ballroom Blitz" — floor 3, Law Ball and merch
+  floor3: {
+    bpm: 144,
+    loop: true,
+    lead: tokens([
+      'D5 - F5 . A5 . D6 . C6 . A5 . F5 . A5 .',
+      'G5 - A#5 . A5 . G5 . F5 . E5 . D5 - - .',
+      'D5 - F5 . A5 . D6 . E6 . D6 . C6 . A5 .',
+      'A#5 . A5 . G5 . E5 . D5 - - - C#5 - D5 .',
+    ]),
+    bass: [['D3', 'A3'], ['G2', 'D3'], ['D3', 'A3'], ['A2', 'E3']],
+  },
+  // "Tour Guide March" — floor 4, Yellow Shirts
+  floor4: {
+    bpm: 156,
+    loop: true,
+    lead: tokens([
+      'G4 . G4 . B4 . D5 . G5 - - . D5 . B4 .',
+      'C5 . E5 . G5 . E5 . D5 . C5 . B4 . A4 .',
+      'G4 . B4 . D5 . G5 . A5 . B5 . A5 . G5 .',
+      'F#5 . D5 . A4 . F#5 . G5 - - - G5 . . .',
+    ]),
+    bass: [['G2', 'D3'], ['C3', 'G3'], ['G2', 'D3'], ['D3', 'A3']],
+  },
+  // "Champion’s Rooftop" — floor 5
+  floor5: {
+    bpm: 172,
+    loop: true,
+    lead: tokens([
+      'E5 . E5 G5 . E5 B5 . A5 . G5 . F#5 . E5 .',
+      'C5 . C5 E5 . C5 A5 . G5 - - - F#5 - G5 .',
+      'E5 . G5 B5 . G5 E6 . D6 . B5 . G5 . B5 .',
+      'A5 . F#5 . D#5 . F#5 . B5 - - - B4 . B5 .',
+    ]),
+    bass: [['E2', 'B2'], ['C3', 'G3'], ['E2', 'B2'], ['B2', 'F#3']],
   },
   // victory fanfare (plays once)
   victory: {

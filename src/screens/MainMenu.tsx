@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { clearReturnTo } from '../systems/returnTo'
 import { DSShell } from '../app/DSShell'
 import { navigate } from '../app/router'
 import { menu, type MenuEntry } from '../content/menu'
@@ -21,6 +22,7 @@ const COLS = 2
 let lastFocus = 0
 
 export default function MainMenu() {
+  useEffect(clearReturnTo, [])
   const [focus, setFocusState] = useState(lastFocus)
   const setFocus = (i: number) => {
     lastFocus = i

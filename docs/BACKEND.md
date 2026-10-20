@@ -144,6 +144,7 @@ Restart `npm run dev`. The Poké Pager's "NO SIGNAL" notice disappears.
 - [x] Messages render as plain text (React escapes everything; no `dangerouslySetInnerHTML`).
 - [x] No admin password or secret in the frontend.
 - [x] Resort avatars: only listed options are accepted (server re-parses every field), names and greetings run the same link + profanity filter, each avatar can only be edited with the random secret kept in its creator's browser (stored as a SHA-256 hash), 5 new avatars per IP per day, and admins can hide or delete. Hidden avatars stay hidden when edited.
+- [x] Battle records (titles, wins, losses) are saved with each avatar. They're reported by the visitor's own browser, so treat them as for-fun, not proof; values are capped and checked as whole numbers.
 - [x] Suggestions are stored as `kind = 'suggestion'` and RLS never returns them to visitors.
 - [x] "Forget me": every message carries a SHA-256 of a random secret held only by the sender's browser (never readable by visitors); `forget-me` deletes those messages and the matching avatar.
 - [x] "Match my photo" runs entirely in the browser — the photo is never uploaded or stored.

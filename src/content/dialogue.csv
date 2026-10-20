@@ -40,9 +40,6 @@ staff.receptionist.champion,RECEPTIONIST,"Tower reception, after clearing all 5"
 staff.receptionist.tips,RECEPTIONIST,"Tower reception, after the progress line",▸ Use the PC on the left to set your party of up to three.
 staff.receptionist.tips,RECEPTIONIST,"Tower reception, after the progress line",▸ Got an idea for a new creature or type? Drop it in the red suggestion box.
 staff.receptionist.tips,RECEPTIONIST,"Tower reception, after the progress line",▸ The lift on the right takes you up. Fancy a quick exhibition match instead?
-sign.resort,SIGN,"Plaza sign, west",BATTLE RESORT
-sign.resort,SIGN,"Plaza sign, west","▸ North: the Battle Tower — five floors, five versions of Aaryan."
-sign.resort,SIGN,"Plaza sign, west",▸ West: the Avatar Studio — change your look any time.
 sign.guestboard,SIGN,"Plaza sign, east",GUEST BOARD
 sign.guestboard,SIGN,"Plaza sign, east",▸ Everyone you see here made an avatar on the TrainerDex.
 sign.guestboard,SIGN,"Plaza sign, east",▸ Walk up to them to see their party and say hi.
@@ -60,7 +57,6 @@ follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place
 follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is humming to itself.
 follower.react,SYSTEM,"Talking to the creature following you ({creature}, {place}); one is picked at random",{creature} is keeping a close eye on the other trainers.
 follower.wantsBattle,SYSTEM,"Talking to the creature following you, sometimes ({creature})",{creature} wants a battle!
-follower.battleAsk,SYSTEM,After it says it wants a battle,Fancy a quick battle?
 cry.byterat,BYTERAT,This creature’s signature noise,Skree-bit!
 cry.beakerbun,BEAKERBUN,This creature’s signature noise,Bloop-bun!
 cry.riffin,RIFFIN,This creature’s signature noise,Riff-riff!
@@ -76,3 +72,26 @@ cry.megaphawk,MEGAPHAWK,This creature’s signature noise,KREE-ee-ee!
 cry.stitchick,STITCHICK,This creature’s signature noise,Cheep-stitch!
 cry.diplomoth,DIPLOMOTH,This creature’s signature noise,Flutter-motion!
 cry.datadillo,DATADILLO,This creature’s signature noise,Bleep-roll!
+sign.resort,SIGN,Plaza sign by the tower,BATTLE RESORT
+sign.resort,SIGN,Plaza sign by the tower,"▸ North: the Battle Tower — five floors, five versions of Aaryan."
+sign.resort,SIGN,Plaza sign by the tower,▸ Every door in town opens a part of the TrainerDex. Walk in to visit.
+sign.home,SIGN,Sign outside Aaryan’s house (Profile),AARYAN’S HOUSE
+sign.home,SIGN,Sign outside Aaryan’s house (Profile),"▸ Step inside for his trainer profile: bio, studies, skills and more."
+sign.pc,SIGN,Sign outside the PC Centre (resume + portfolio),PC CENTRE
+sign.pc,SIGN,Sign outside the PC Centre (resume + portfolio),▸ Aaryan’s resume and portfolio live on the PC inside.
+sign.gallery,SIGN,Sign outside the Gallery (photo album),GALLERY
+sign.gallery,SIGN,Sign outside the Gallery (photo album),▸ Fifteen memories on the walls. Step in for a look.
+sign.studio,SIGN,Sign outside the Avatar Studio,AVATAR STUDIO
+sign.studio,SIGN,Sign outside the Avatar Studio,▸ Change your look any time — face the door and press A.
+follower.battleHint,SYSTEM,After your creature says it wants a battle,▸ Head north to the Battle Tower and talk to the receptionist.
+follower.battleHint,SYSTEM,After your creature says it wants a battle,▸ Take the lift up to face Aaryan — or challenge another trainer here in town.
+regular.hamish,HAMISH,Resort regular in the plaza (speech bubble + when you talk to them),These boots have walked every route in town. The Battle Tower’s next.
+regular.bea,BEA,Resort regular in the plaza (speech bubble + when you talk to them),I make a mean flat white. Battling’s my second-best skill.
+regular.priya,PRIYA,Resort regular in the plaza (speech bubble + when you talk to them),Two Champion titles. That Marketing floor still gives me nightmares.
+regular.tom,TOM,Resort regular in the plaza (speech bubble + when you talk to them),Eleven losses so far. That’s eleven lessons!
+regular.mei,MEI,Resort regular in the plaza (speech bubble + when you talk to them),Have you been to the Gallery? There’s a gummy bear in there bigger than my head.
+regular.gerald,GERALD,Resort regular in the plaza (speech bubble + when you talk to them),Motion to battle? Seconded.
+regular.sol,SOL,Resort regular in the plaza (speech bubble + when you talk to them),"Twelve wins, twelve losses. Perfectly balanced."
+regular.ana,ANA,Resort regular in the plaza (speech bubble + when you talk to them),The Avatar Studio sells a paint tee. I may have bought five.
+regular.sam,SAM,Resort regular in the plaza (speech bubble + when you talk to them),Peer review says Helixor is the strongest. I was the peer.
+regular.kai,KAI,Resort regular in the plaza (speech bubble + when you talk to them),First time here. The guide says the tower has FIVE Aaryans?!

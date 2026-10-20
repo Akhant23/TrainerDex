@@ -81,3 +81,10 @@ grant select (kind) on public.messages to authenticated;
 -- Never readable by visitors.
 alter table public.messages add column if not exists owner_hash text;
 create index if not exists messages_owner_idx on public.messages (owner_hash);
+
+-- ---------- Battle Resort records (titles-wins-losses) ----------
+-- Reported by the visitor's own browser, so they are for fun, not proof.
+alter table public.trainers add column if not exists titles integer not null default 0 check (titles between 0 and 99999);
+alter table public.trainers add column if not exists wins integer not null default 0 check (wins between 0 and 99999);
+alter table public.trainers add column if not exists losses integer not null default 0 check (losses between 0 and 99999);
+grant select (titles, wins, losses) on public.trainers to anon, authenticated;

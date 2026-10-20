@@ -42,6 +42,18 @@ export function floorSetup(floor: number, party: SpeciesId[]): BattleSetup {
   }
 }
 
+/** Challenging another trainer: both sides at level 28, their most recent party against yours. */
+export function challengeSetup(theirs: SpeciesId[], mine: SpeciesId[], foe: string): BattleSetup {
+  return {
+    ai: 'standard',
+    player: mine.map((species) => ({ species, level: 28 })),
+    opponent: theirs.map((species) => ({ species, level: 28 })),
+    playerPotions: 2,
+    aiPotions: 1,
+    foe,
+  }
+}
+
 /** Creatures available in the PC after clearing `cleared` floors. */
 export function unlockedSpecies(cleared: number): SpeciesId[] {
   return [...STARTER_PARTY, ...floors.slice(0, cleared).flatMap((f) => f.unlocks)]

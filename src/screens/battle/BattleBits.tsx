@@ -3,6 +3,8 @@ import { creatureArt, creatureArtHi, CREATURE_SIZE } from '../../sprites/creatur
 import { pixelsToDataUrl } from '../../sprites/render'
 import type { Pixels } from '../../sprites/pixels'
 import { useSettings } from '../../systems/settings'
+import { spriteOverrides } from '../../content/sprites'
+import { OverrideSprite } from '../../ui/OverrideSprite'
 import type { SpeciesId } from '../../battle/data'
 
 /** BW-style breathing: the upper body rises by `d` pixels and the waist stretches to follow. */
@@ -35,6 +37,8 @@ export function CreatureSprite({ id, scale, flip = false, still = false, classNa
   const size = CREATURE_SIZE * scale
   const url = useMemo(() => idleStrip(id, hi), [id, hi])
   const animate = !still && !reducedMotion
+  const art = spriteOverrides.creatures[id]
+  if (art) return <OverrideSprite art={art} scale={Math.max(1, Math.round(size / art.width))} alt={id} flip={flip} className={className} fallback={null} />
   return (
     <span
       role="img"

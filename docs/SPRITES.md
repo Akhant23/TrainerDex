@@ -24,6 +24,24 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
 - **Colours** — the colour tables (`SKINS`, `HAIR_COLOURS`, `CLOTH_COLOURS`, `EYE_COLOURS`) are at the
   top of `character.ts`. Each entry is `[base, shade, light]`.
 
+## Poses and scales
+
+| Context | What's used | Size |
+|---|---|---|
+| Map (walking) | overworld walker, 4 directions × 3 frames | 48×64 art, shown at 24×32 |
+| Profile, menu, Trainer Card | battle sprite, idle (breathing, blinking) | 80×120 |
+| VS screen | battle sprite, `point` pose, nodding, cropped to a bust | 80×120 at 2–4× |
+| Start of a battle | your trainer from behind (`back`), then `throw` with a ball | 80×120, cropped by the screen edge |
+| Win | `victory` (fist pump) | 80×120 |
+| Creatures | 80×80 hi-res (battle, party) or 40×40 (icons) | |
+
+## Replacing art with hand-drawn sprites
+
+Everything is generated in code, but `src/content/sprites.ts` has an asset manifest: set
+`aaryanFront`, `aaryanPortrait` or `creatures.<id>` to a PNG in `public/assets/…` (transparent
+background, the sizes above, facing as noted) and the site uses it instead — if the file fails to
+load it falls back to the generated sprite. No other code changes needed.
+
 ## Changing Aaryan
 
 All of Aaryan's looks are in `src/content/aaryan.ts`:

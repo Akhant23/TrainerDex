@@ -38,6 +38,8 @@ export interface BattleState {
   winner: SideId | null
   aiSwitches: number
   stats: { crits: number; superEffective: number; damageDealt: number }
+  /** The opposing trainer's name, as shown in battle text (Aaryan unless you challenge a visitor). */
+  foe: string
 }
 
 export type Action =
@@ -94,6 +96,8 @@ export interface BattleSetup {
   opponent: Array<{ species: SpeciesId; level: number }>
   playerPotions: number
   aiPotions: number
+  /** Opposing trainer's name (defaults to Aaryan). */
+  foe?: string
 }
 
 export function createBattleFrom(setup: BattleSetup, seed: number): BattleState {
@@ -109,6 +113,7 @@ export function createBattleFrom(setup: BattleSetup, seed: number): BattleState 
     winner: null,
     aiSwitches: 0,
     stats: { crits: 0, superEffective: 0, damageDealt: 0 },
+    foe: setup.foe ?? 'Aaryan',
   }
 }
 
@@ -299,14 +304,14 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, ev: Ba
 function switchIn(state: BattleState, side: SideId, index: number, ev: BattleEvent[], voluntary: boolean) {
   const s = state.sides[side]
   if (voluntary) {
-    ev.push({ t: 'text', text: side === 0 ? `${nameOf(active(state, 0))}, come back!` : `Aaryan withdrew ${nameOf(active(state, 1))}!` })
+    ev.push({ t: 'text', text: side === 0 ? `${nameOf(active(state, 0))}, come back!` : `${state.foe} withdrew ${nameOf(active(state, 1))}!` })
     ev.push({ t: 'switchOut', side })
   }
   // stat stages reset on switching out
   active(state, side).stages = { atk: 0, def: 0, spe: 0, acc: 0, crit: 0 }
   s.active = index
   ev.push({ t: 'switchIn', side, index, hp: s.team[index].hp })
-  ev.push({ t: 'text', text: side === 0 ? `Go! ${nameOf(active(state, 0))}!` : `Aaryan sent out ${nameOf(active(state, 1))}!` })
+  ev.push({ t: 'text', text: side === 0 ? `Go! ${nameOf(active(state, 0))}!` : `${state.foe} sent out ${nameOf(active(state, 1))}!` })
 }
 
 /** Resolve one full turn from the visitor's action (the AI picks its own). */
@@ -335,7 +340,7 @@ export function takeTurn(prev: BattleState, action: Action, aiAction?: Action): 
     if (a.kind === 'switch') switchIn(state, side, a.index, ev, true)
     if (a.kind === 'potion') {
       state.sides[side].potions--
-      ev.push({ t: 'text', text: side === 0 ? 'You used a POTION!' : 'Aaryan used a POTION!' })
+      ev.push({ t: 'text', text: side === 0 ? 'You used a POTION!' : `${state.foe} used a POTION!` })
       heal(state, side, active(state, side).maxHp / 2, ev)
     }
   }
@@ -399,9 +404,9 @@ export function replace(prev: BattleState, index: number): { state: BattleState;
 /** Opening lines and first send-outs. */
 export function openingEvents(state: BattleState): BattleEvent[] {
   return [
-    { t: 'text', text: 'TRAINER AARYAN wants to battle!' },
+    { t: 'text', text: `TRAINER ${state.foe.toUpperCase()} wants to battle!` },
     { t: 'switchIn', side: 1, index: state.sides[1].active, hp: active(state, 1).hp },
-    { t: 'text', text: `TRAINER AARYAN sent out ${nameOf(active(state, 1))}!` },
+    { t: 'text', text: `TRAINER ${state.foe.toUpperCase()} sent out ${nameOf(active(state, 1))}!` },
     { t: 'switchIn', side: 0, index: state.sides[0].active, hp: active(state, 0).hp },
     { t: 'text', text: `Go! ${nameOf(active(state, 0))}!` },
   ]

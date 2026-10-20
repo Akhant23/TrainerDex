@@ -30,11 +30,13 @@ export interface ResortMap {
   warps: Warp[]
   /** Interactable tiles (signs, PC, lift, studio door): id + optional text. */
   things: Array<Spot & { id: string; /** dialogue.csv key for signs */ textKey?: string }>
+  /** Doors into the rest of the site: step on the tile to open that section. */
+  portals?: Array<Spot & { route: string; name: string }>
   /** Buildings standing on solid footprint tiles (x, y = back-left tile; w × d tiles). */
   structures?: Array<{ kind: StructureKind; x: number; y: number; w: number; d: number }>
   /** Tiles where online visitors may stand. */
   visitorArea?: { x0: number; y0: number; x1: number; y1: number }
-  music?: 'resort' | 'battle'
+  music?: 'resort' | 'floor1' | 'floor2' | 'floor3' | 'floor4' | 'floor5'
   /** Outdoors the map edges extend into the distance; indoors it fades to black. */
   outdoor?: boolean
 }
@@ -43,43 +45,71 @@ const plaza: ResortMap = {
   id: 'plaza',
   name: 'BATTLE RESORT',
   rows: [
-    'hhhhhhhhhhhhhhhhhhhhhhhhhhhh',
-    'hY,,,,,,,##########,,,,,,,Yh',
-    'h,,,,,,,,##########,,,,,,,,h',
-    'h,ff,,,,,##########,,,,,ff,h',
-    'h,,,,,,,,####DD####,,,,,,,,h',
-    'h,,l,,::::::::::::::::,,l,,h',
-    'h,####::::::::::::::::::,,,h',
-    'h,####::::::::::::::::::pp,h',
-    'h,#E##:::::::FF:::::::::pp,h',
-    'h,,:,,:::::::FF:::::::::pp,h',
-    'h,,::::::::::::::::::::,,,,h',
-    'h,b,,,::::::::::::::::,u,u,h',
-    'h,,,,,::::::::::::::::,,,,,h',
-    'h,f,s,::::::::::::::::,,s,fh',
-    'h_____::::::::::::::::_____h',
-    'h__T__l::::::::::::::l__T__h',
-    'h__________________________h',
-    '~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
-    'wwwwwwwwwwwwwwwwwwwwwwwwwwww',
-    'wwwwwwwwwwwwwwwwwwwwwwwwwwww',
+    'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh',
+    'h,,,,,,,,,,OO,,,,,,,,,,,,O,,,,,,,,,,,h',
+    'h,######,,,,,,##########,,,,,,,######h',
+    'h,######,,,,,,##########,#####,######h',
+    'h,######,O,,,,##########,#####,######h',
+    'h,###D##,,,,,,####DD####,##D##,##D###h',
+    'h:::::::s:::::::::::::::s::::::::::::h',
+    'h::::::::::::::::::::::::::::::::::::h',
+    'hO,,,,,,O:l::::::::::::::::l:O,,,,,,Oh',
+    'h,,,,,,,,::::O::::::::::O::::,,,,,,,,h',
+    'h,#####,,::::::::::::::::::::,,#####,h',
+    'h,#####,,::::::::::::::::::::,,#####,h',
+    'h,##D##,,::::::::::::::::::::,,##D##,h',
+    'h::::::s::::::::::FF::::::::::s::::::h',
+    'h:::::::::::::::::FF:::::::::::::::::h',
+    'hO,,,,,,,::::::::::::::::::::,,,,,,,,h',
+    'h,,,,,,,O::::::::::::::::::::O,,,,,,Oh',
+    'h,####,,,::::::::::::::::::::,,,####,h',
+    'h,####,,,::::::::::::::::::::,,,####,h',
+    'h,#E##,,,::::::::::::::::::::,,,#D##,h',
+    'h:::::s::::::::::::::::::::::::s:::::h',
+    'h:::::::::l::::::::::::::::l:::::::::h',
+    'h,ffffff,,,,b,,,,,,,,,,,,b,,,,pppppp,h',
+    'h,nnnnnn,,,,,,f,f,,,,f,f,,,,,,pppppp,h',
+    '______________________________________',
+    '_____T____u________________u____T_____',
+    '______________________________________',
+    '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
+    'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
   ],
   structures: [
-    { kind: 'tower', x: 9, y: 1, w: 10, d: 4 },
-    { kind: 'studio', x: 2, y: 6, w: 4, d: 3 },
-    { kind: 'fountain', x: 13, y: 8, w: 2, d: 2 },
+    { kind: 'tower', x: 14, y: 2, w: 10, d: 4 },
+    { kind: 'home', x: 2, y: 2, w: 6, d: 4 },
+    { kind: 'card', x: 25, y: 3, w: 5, d: 3 },
+    { kind: 'lab', x: 31, y: 2, w: 6, d: 4 },
+    { kind: 'pc', x: 2, y: 10, w: 5, d: 3 },
+    { kind: 'gallery', x: 31, y: 10, w: 5, d: 3 },
+    { kind: 'studio', x: 2, y: 17, w: 4, d: 3 },
+    { kind: 'post', x: 32, y: 17, w: 4, d: 3 },
+    { kind: 'fountain', x: 18, y: 13, w: 2, d: 2 },
   ],
-  spawn: { x: 13, y: 15, facing: 'up' },
+  spawn: { x: 18, y: 19, facing: 'up' },
   warps: [
-    { x: 13, y: 4, to: 'reception', tx: 7, ty: 10, facing: 'up' },
-    { x: 14, y: 4, to: 'reception', tx: 8, ty: 10, facing: 'up' },
+    { x: 18, y: 5, to: 'reception', tx: 7, ty: 10, facing: 'up' },
+    { x: 19, y: 5, to: 'reception', tx: 8, ty: 10, facing: 'up' },
+  ],
+  portals: [
+    { x: 5, y: 5, route: '/profile', name: 'HOME' },
+    { x: 27, y: 5, route: '/card', name: 'CARD HALL' },
+    { x: 33, y: 5, route: '/pokedex', name: 'DEX LAB' },
+    { x: 4, y: 12, route: '/pc', name: 'PC CENTRE' },
+    { x: 33, y: 12, route: '/album', name: 'GALLERY' },
+    { x: 33, y: 19, route: '/pager', name: 'PAGER' },
   ],
   things: [
-    { x: 3, y: 8, id: 'studio' },
-    { x: 4, y: 13, id: 'sign', textKey: 'sign.resort' },
-    { x: 24, y: 13, id: 'sign', textKey: 'sign.guestboard' },
+    { x: 3, y: 19, id: 'studio' },
+    { x: 8, y: 6, id: 'sign', textKey: 'sign.home' },
+    { x: 24, y: 6, id: 'sign', textKey: 'sign.resort' },
+    { x: 7, y: 13, id: 'sign', textKey: 'sign.pc' },
+    { x: 30, y: 13, id: 'sign', textKey: 'sign.gallery' },
+    { x: 6, y: 20, id: 'sign', textKey: 'sign.studio' },
+    { x: 31, y: 20, id: 'sign', textKey: 'sign.guestboard' },
   ],
-  visitorArea: { x0: 1, y0: 9, x1: 26, y1: 16 },
+  visitorArea: { x0: 1, y0: 8, x1: 36, y1: 26 },
   music: 'resort',
   outdoor: true,
 }
@@ -102,8 +132,8 @@ const reception: ResortMap = {
     'XXXXXXXmmXXXXXXX',
   ],
   warps: [
-    { x: 7, y: 11, to: 'plaza', tx: 13, ty: 5, facing: 'down' },
-    { x: 8, y: 11, to: 'plaza', tx: 14, ty: 5, facing: 'down' },
+    { x: 7, y: 11, to: 'plaza', tx: 18, ty: 6, facing: 'down' },
+    { x: 8, y: 11, to: 'plaza', tx: 19, ty: 6, facing: 'down' },
   ],
   things: [
     { x: 1, y: 1, id: 'pc' },
@@ -114,32 +144,46 @@ const reception: ResortMap = {
   music: 'resort',
 }
 
+/** Each floor is themed to a stage of Aaryan's life: floor texture, decor, banners and music. */
+const FLOOR_THEMES = [
+  { floor: '!', deco: '&', banner: 'bannerSchool', year: 'yearSchool' },
+  { floor: '@', deco: '+', banner: 'bannerFirstYear', year: 'yearFirstYear' },
+  { floor: '$', deco: '*', banner: 'bannerMarketing', year: 'yearMarketing' },
+  { floor: '%', deco: '^', banner: 'bannerTours', year: 'yearTours' },
+  { floor: 'a', deco: '|', banner: 'bannerChampion', year: 'yearChampion' },
+] as const
+
 function floorMap(n: number): ResortMap {
-  const carpet = n === 5 ? 'a' : 'c'
+  const t = FLOOR_THEMES[n - 1]
+  const band = `Xoo${t.floor.repeat(10)}ooX`
   return {
     id: `floor${n}` as MapId,
     name: n === 5 ? 'CHAMPION’S FLOOR' : `TOWER · FLOOR ${n}`,
     rows: [
-      'XXXXXXXXXXXX',
-      'XXXXXLLXXXXX',
-      'XtooooooootX',
-      `Xoo${carpet.repeat(7)}oX`,
-      `Xoo${carpet.repeat(7)}oX`,
-      `Xoo${carpet.repeat(7)}oX`,
-      `Xoo${carpet.repeat(7)}oX`,
-      `Xoo${carpet.repeat(7)}oX`,
-      'XooooooooooX',
-      'XXXXXddXXXXX',
+      'XXXXXXXXXXXXXXXX',
+      'XXXXXXXLLXXXXXXX',
+      `X${t.deco}oooooooooooo${t.deco}X`,
+      band,
+      band,
+      band,
+      band,
+      band,
+      `X${t.deco}oooooooooooo${t.deco}X`,
+      'XXXXXXXddXXXXXXX',
+    ],
+    structures: [
+      { kind: t.banner, x: 1, y: 1, w: 5, d: 1 },
+      { kind: t.year, x: 10, y: 1, w: 5, d: 1 },
     ],
     warps: [
-      { x: 5, y: 9, to: 'reception', tx: 12, ty: 2, facing: 'down' },
-      { x: 6, y: 9, to: 'reception', tx: 13, ty: 2, facing: 'down' },
+      { x: 7, y: 9, to: 'reception', tx: 12, ty: 2, facing: 'down' },
+      { x: 8, y: 9, to: 'reception', tx: 13, ty: 2, facing: 'down' },
     ],
     things: [
-      { x: 5, y: 1, id: 'lift-up' },
-      { x: 6, y: 1, id: 'lift-up' },
+      { x: 7, y: 1, id: 'lift-up' },
+      { x: 8, y: 1, id: 'lift-up' },
     ],
-    music: 'battle',
+    music: `floor${n}` as ResortMap['music'],
   }
 }
 
@@ -154,8 +198,8 @@ export const maps: Record<MapId, ResortMap> = {
 }
 
 /** Where you arrive on a tower floor, and where Aaryan stands. */
-export const FLOOR_ARRIVAL = { x: 5, y: 8, facing: 'up' as Facing }
-export const FLOOR_BOSS = { x: 5, y: 3 }
+export const FLOOR_ARRIVAL = { x: 7, y: 8, facing: 'up' as Facing }
+export const FLOOR_BOSS = { x: 7, y: 3 }
 export const RECEPTIONIST = { x: 6, y: 2 }
 
 export const size = (m: ResortMap) => ({ w: m.rows[0].length, h: m.rows.length })

@@ -15,8 +15,11 @@ import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
 import { CreatureSprite } from './BattleBits'
 import Fight from './Fight'
+import { Backdrop, RECEPTION_ARENA } from './Backdrop'
 import Resort from '../resort/Resort'
 import { presetSetup } from '../../battle/engine'
+import { recordResult } from '../../systems/resortSave'
+import { syncTrainer } from '../../systems/trainers'
 
 const entry = menu.find((m) => m.id === 'battle')!
 const DIFFS: Difficulty[] = ['casual', 'standard', 'champion']
@@ -39,7 +42,10 @@ function QuickBattle({ path }: { path: string }) {
         seed={fight.seed}
         title={`VS AARYAN · ${fight.difficulty.toUpperCase()}`}
         recordWin={fight.difficulty}
-        onExit={(to) => {
+        onExit={(to, won) => {
+          // exhibition matches in the reception count towards the Battle Resort record too
+          recordResult(won)
+          void syncTrainer().catch(() => undefined)
           setFight(null)
           if (to === 'hall') navigate('/battle/hall-of-fame')
         }}
@@ -68,9 +74,11 @@ function Setup({ onStart }: { onStart: (d: Difficulty, s: SpeciesId) => void }) 
       }}
       scrollKey={step}
       top={
-        <div className="bg-stripes absolute inset-0 flex flex-col" style={{ ['--s1' as string]: entry.color[0], ['--s2' as string]: entry.color[1] }}>
-          <div className="relative flex min-h-0 flex-1 items-end justify-center gap-[6%] pb-[2%]">
-            <div className="h-[86%]">
+        <div className="absolute inset-0 flex flex-col">
+          {/* exhibition matches happen in the tower reception */}
+          <Backdrop arena={RECEPTION_ARENA} />
+          <div className="relative flex min-h-0 flex-1 items-end justify-center gap-[6%] pb-[4%]">
+            <div className="h-[80%]">
               <TrainerSprite fill={0.98} />
             </div>
             {hasBadge && (

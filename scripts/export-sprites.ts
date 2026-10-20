@@ -9,7 +9,7 @@ import { deflateSync } from 'node:zlib'
 import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
 import { creatureArt, creatureArtHi, trainerdexBadge } from '../src/sprites/creatures.ts'
 import { overworldFor } from '../src/sprites/overworld.ts'
-import { renderFlat, paletteFor } from '../src/sprites/character.ts'
+import { renderFlat, renderBack, paletteFor } from '../src/sprites/character.ts'
 import { signature, shinySignature, towerStages } from '../src/content/aaryan.ts'
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
@@ -98,6 +98,7 @@ writeFileSync('sprites-export/bw-lineup@3x.png', lineup(towerStages.map((st) => 
 writeFileSync('sprites-export/ow-lineup@3x.png', lineup(towerStages.flatMap((st) => { const o = overworldFor(st.look); return [o.down[0], o.left[1], o.up[0]].map((f) => [f, paletteFor(st.look)] as [Pixels, Palette]) }), 3))
 writeFileSync('sprites-export/creatures-hi@2x.png', lineup(Object.values(creatureArtHi).slice(0, 8).map((c) => [c.pixels, c.palette]), 2))
 writeFileSync('sprites-export/creatures-hi-2@2x.png', lineup(Object.values(creatureArtHi).slice(8).map((c) => [c.pixels, c.palette]), 2))
+writeFileSync('sprites-export/bw-poses@3x.png', sheet([renderFlat(signature), renderFlat(signature, 'point'), renderFlat(signature, 'raised'), renderBack(signature), renderBack(signature, true)], paletteFor(signature), 3))
 writeFileSync('sprites-export/bw-shiny@4x.png', sheet([renderFlat(shinySignature)], paletteFor(shinySignature), 4))
 writeFileSync('sprites-export/trainerdex-badge@6x.png', sheet([trainerdexBadge.pixels], trainerdexBadge.palette, 6))
 // all creatures in one strip, sharing one palette per sprite is not possible, so stitch per creature
