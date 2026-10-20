@@ -16,7 +16,7 @@ import type { Palette, Pixels } from './pixels.ts'
 export const CHAR_W = 80
 export const CHAR_H = 120
 /** Head-and-shoulders crop used for portraits and avatar icons. */
-export const PORTRAIT = { x: 20, y: 0, w: 40, h: 46 } as const
+export const PORTRAIT = { x: 20, y: 2, w: 40, h: 46 } as const
 
 /* ---------------- Options ---------------- */
 
@@ -700,15 +700,27 @@ function head(a: Appearance, blink: boolean): Pixels {
   return g.toPixels()
 }
 
+/**
+ * BW trainers carry their heads low: the chin tucks almost onto the collar, so only a sliver of
+ * neck shows under the jaw's shadow. The head, hair and hat layers are drawn in a shared space
+ * and dropped this many pixels onto the shoulders (scaled with the resolution).
+ */
+export const NECK_DROP = 3
+function seat(px: Pixels): Pixels {
+  const n = NECK_DROP * K
+  const blank = '.'.repeat(px[0].length)
+  return [...Array.from({ length: n }, () => blank), ...px.slice(0, px.length - n)]
+}
+
 export function renderLayers(a: Appearance, pose: ArmPose = 'idle'): CharacterLayers {
   return {
-    hairBack: hairBack(a),
+    hairBack: seat(hairBack(a)),
     legs: legs(a),
     torso: torso(a),
     armBack: arm(a, 'back', 'idle'),
     armFront: arm(a, 'front', pose),
-    head: head(a, false),
-    headBlink: head(a, true),
+    head: seat(head(a, false)),
+    headBlink: seat(head(a, true)),
   }
 }
 
@@ -803,7 +815,7 @@ export function renderBack(a: Appearance, throwing = false): Pixels {
     r.line(59, 12, 69, 12, 'K').set(64, 12, 'W')
     right = r.toPixels()
   } else right = left.map((row) => [...row].reverse().join(''))
-  return flatten([legs(a), g.toPixels(), left, right, head.toPixels()])
+  return flatten([legs(a), g.toPixels(), left, right, seat(head.toPixels())])
 }
 
 /* ---------------- Side view ---------------- */
@@ -924,5 +936,5 @@ export function renderSide(a: Appearance): Pixels {
   if (a.accessories.includes('sunglasses')) h.rect(45, 17, 52, 21, 'K').line(41, 18, 45, 17, 'K').set(47, 18, 'l')
   if (a.accessories.includes('headphones')) oval(h, 39.5, 21, 3.5, 4, 'Z', 'z')
 
-  return flatten([legs.toPixels(), body.toPixels(), armG.toPixels(), h.toPixels()])
+  return flatten([legs.toPixels(), body.toPixels(), armG.toPixels(), seat(h.toPixels())])
 }

@@ -250,11 +250,23 @@ function up(a: Appearance, step: Step): Pixels {
 
 /* ---------------- facing left ---------------- */
 
-function left(a: Appearance, step: Step): Pixels {
+function left(a: Appearance, step: Step, ride = false): Pixels {
   const g = new Grid(OW_W, OW_H)
   const cx = 23
-  // legs in stride
-  const legs: Array<[number, number]> = step === 0 ? [[cx + 1, cx]] : step === 1 ? [[cx - 3, cx - 5], [cx + 5, cx + 6]] : [[cx - 1, cx - 2], [cx + 3, cx + 3]]
+  // legs in stride (or, riding, one leg bent over the mount's back: thigh forward, shin down)
+  const legs: Array<[number, number]> = ride ? [] : step === 0 ? [[cx + 1, cx]] : step === 1 ? [[cx - 3, cx - 5], [cx + 5, cx + 6]] : [[cx - 1, cx - 2], [cx + 3, cx + 3]]
+  if (ride) {
+    const knee: Pt = [cx - 6, 47]
+    const ankle: Pt = [cx - 6.5, 53]
+    if (bareLegs(a)) {
+      capsule(g, [cx + 1, 45.5], knee, 3.6, 3.2, 'B', 'b')
+      capsule(g, knee, ankle, 2.6, 2.4, 'S', 's')
+    } else {
+      capsule(g, [cx + 1, 45.5], knee, 3.8, 3.4, 'B', 'b', 'P')
+      capsule(g, knee, ankle, 3.2, 3, 'B', 'b')
+    }
+    oval(g, ankle[0] - 1.5, 56, 4.4, 2.6, 'F', 'f', 'e')
+  }
   for (const [kx, fx] of legs) {
     if (bareLegs(a)) {
       capsule(g, [cx + 1, 46], [kx, 50], 3.6, 3.4, 'B', 'b')
@@ -302,9 +314,12 @@ function left(a: Appearance, step: Step): Pixels {
   const swing = step === 1 ? -4 : step === 2 ? 4 : 0
   const sleeveCol = a.top === 'tank' ? 'S' : 'A'
   const forearmCol = TEES.has(a.top) || a.top === 'tank' ? 'S' : 'A'
-  capsule(arm, [cx + 1, 35], [cx + 1 + swing * 0.5, 40], 2.8, 2.5, sleeveCol, sleeveCol === 'A' ? 'a' : 's')
-  capsule(arm, [cx + 1 + swing * 0.5, 40], [cx + 1 + swing, 44], 2.5, 2.2, forearmCol, forearmCol === 'A' ? 'a' : 's')
-  oval(arm, cx + 1 + swing, 45.5, 2.4, 2.4, 'S', 's')
+  // riding, the arm reaches forward to hold on
+  const elbow: Pt = ride ? [cx - 3, 40] : [cx + 1 + swing * 0.5, 40]
+  const hand: Pt = ride ? [cx - 8, 42.5] : [cx + 1 + swing, 45.5]
+  capsule(arm, [cx + 1, 35], elbow, 2.8, 2.5, sleeveCol, sleeveCol === 'A' ? 'a' : 's')
+  capsule(arm, elbow, [hand[0] + (ride ? 1 : 0), hand[1] - (ride ? 0 : 1.5)], 2.5, 2.2, forearmCol, forearmCol === 'A' ? 'a' : 's')
+  oval(arm, hand[0], hand[1], 2.4, 2.4, 'S', 's')
   arm.outline()
   return overlay(g.toPixels(), arm.toPixels())
 }
@@ -327,6 +342,13 @@ export function overworldFor(a: Appearance): Record<Facing, [Pixels, Pixels, Pix
     right: l.map(flipX) as [Pixels, Pixels, Pixels],
   }
 }
+
+/** A trainer sitting astride a mount, facing left (mirror for right): one leg bent over its back, a hand forward holding on. */
+export function riderFor(a: Appearance): Pixels {
+  return left(a, 0, true)
+}
+/** Where the rider's hips are in the riding sprite (art pixels): this point sits on the mount's saddle. */
+export const RIDER_HIP: [number, number] = [24, 46]
 
 /** Walk cycle order: stand, step A, stand, step B. */
 export const WALK_CYCLE = [0, 1, 0, 2] as const

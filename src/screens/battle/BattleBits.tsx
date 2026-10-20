@@ -13,14 +13,15 @@ function breathe(px: Pixels, d: number): Pixels {
   return px.map((row, y) => (y + d < split ? px[y + d] : y < split ? px[split] : row))
 }
 const stripCache = new Map<string, string>()
-function idleStrip(id: SpeciesId, hi: boolean): string {
-  const key = `${id}:${hi}`
+function idleStrip(id: SpeciesId, hi: boolean, view: 'front' | 'back'): string {
+  const key = `${id}:${hi}:${view}`
   let url = stripCache.get(key)
   if (!url) {
     const art = (hi ? creatureArtHi : creatureArt)[id]
+    const px = view === 'back' ? art.back : art.pixels
     // rest → up → further up → up (looping)
     const lift = hi ? [0, 2, 3, 2] : [0, 1, 1, 1]
-    const frames = lift.map((d) => breathe(art.pixels, d))
+    const frames = lift.map((d) => breathe(px, d))
     url = pixelsToDataUrl(frames[0].map((_, y) => frames.map((f) => f[y]).join('')), art.palette)
     stripCache.set(key, url)
   }
@@ -29,16 +30,17 @@ function idleStrip(id: SpeciesId, hi: boolean): string {
 
 /**
  * A battle creature with a looping idle animation. `scale` is in 40-pixel units; at even
- * scales the 80×80 hi-res art is used, so big sprites get the finer linework.
+ * scales the 80×80 hi-res art is used, so big sprites get the finer linework. `view="back"`
+ * shows it from behind, as your own creature appears in a BW battle.
  */
-export function CreatureSprite({ id, scale, flip = false, still = false, className = '' }: { id: SpeciesId; scale: number; flip?: boolean; still?: boolean; className?: string }) {
+export function CreatureSprite({ id, scale, flip = false, still = false, view = 'front', className = '' }: { id: SpeciesId; scale: number; flip?: boolean; still?: boolean; view?: 'front' | 'back'; className?: string }) {
   const { reducedMotion } = useSettings()
   const hi = scale % 2 === 0
   const size = CREATURE_SIZE * scale
-  const url = useMemo(() => idleStrip(id, hi), [id, hi])
+  const url = useMemo(() => idleStrip(id, hi, view), [id, hi, view])
   const animate = !still && !reducedMotion
   useAssetLoads()
-  const handDrawn = creatureOverrideUrl(id)
+  const handDrawn = view === 'front' ? creatureOverrideUrl(id) : null
   if (handDrawn) return <img src={handDrawn} width={size} height={size} alt={id} draggable={false} className={`pixelated inline-block align-bottom ${flip ? 'flip' : ''} ${className}`} />
   return (
     <span

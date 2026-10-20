@@ -17,10 +17,43 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
   the resort and the Medal Box room. The art is 48×64 and shown at half size, so walkers keep the
   same fine detail as the battle sprites.
   The idle animation is only for the battle/profile sprite — walkers stand still like in BW.
+- **Proportions** — BW trainers carry their heads low: the head, hair and hat layers are dropped
+  `NECK_DROP` (3 px) onto the shoulders, so the chin tucks onto the collar and only a sliver of neck
+  shows under the jaw (front, side and back views alike). Walkers have no visible neck.
 - **Hats** always sit on top: any hair above the brim is clipped away before the hat is drawn.
 - **Creatures** — `src/sprites/creatures.ts` builds each creature from shapes, rendered twice: 40×40
   for small icons and 80×80 (`creatureArtHi`, finer outlines) for battles, the party screen and the
-  creature that follows you. They breathe in a 4-frame idle loop like BW sprites.
+  creature that follows you. Every species has two views: the **front** (the foe in battle) and a
+  **back** view (your own creature, seen over its shoulder toward the foe, as in Gen V). They
+  breathe in a 4-frame idle loop like BW sprites.
+- **BW outlines** — `src/sprites/bwstyle.ts` gives creatures Gen V "selective outlining": instead of
+  one flat black line, each outline pixel is a dark shade of the colour it borders, a little lighter
+  on the lit upper-left side and darkest along the bottom and right. Eyes and mouths stay pure ink.
+- **Held items** — `src/sprites/held.ts` draws the gavel, flag, pennant, guitar, cricket bat,
+  needle, placard and ball in their own local space around a grip point. `HOLDS` places each
+  species' item per view (front, back, flight) — position, rotation, scale, flip, behind/in front —
+  and the builder draws the holder's paw, wing tip, flipper or leg over the grip afterwards, so the
+  item is held rather than pasted on. A test checks every grip point is covered by the creature.
+
+  | Creature | Item | Held by |
+  |---|---|---|
+  | Gavelion | gavel | right paw |
+  | Hootour | flag | right wing tip (in flight: talons, streaming behind) |
+  | Riffin | guitar | right flipper (in flight: slung across its back) |
+  | Wicketoad | cricket bat | right hand, blade over the shoulder |
+  | Campfly | pennant | a foreleg |
+  | Stitchick | needle and thread | right wing |
+  | Diplomoth | placard | front legs (in flight: hanging below) |
+  | Strikaroo | ball | resting against its right foot |
+- **Flying** — `src/sprites/flight.ts` draws the five flyers side-on in three layers per frame (far
+  wing, body, near wing) over a four-frame cycle, with the body bobbing against the stroke:
+  Megaphawk, Hootour and Riffin flap feathered wings (birds glide between bursts), Diplomoth
+  flutters its fore- and hindwings, and Campfly buzzes with a pulsing glow.
+- **Riding** — Megaphawk, Hootour and Diplomoth are big enough to carry a trainer. Each frame has a
+  saddle point; the rider (`riderFor` in `overworld.ts`: seated, one leg bent over the mount, a hand
+  forward holding on) is drawn between the body and the near wing, so the wing sweeps over their
+  legs and the pair move as one. Surfers (Riffin, Subwoof, Wicketoad) carry a seated rider behind
+  their head, low in the water. `npm run sprites:export` writes `flight-<id>.png` previews.
 - **Side view** — `renderSide` draws the same appearance in profile (hair falling down the back,
   glasses arm, one shoe forward). The back view (`renderBack`) and ball throw are used at the start
   of battles.
@@ -42,11 +75,32 @@ whole device pixels: at even scales, or at any scale on a high-density screen.
 | VS screen | `point`, nodding, cropped to a bust by the band | 80×120 at 2–4× |
 | Start of a battle | your trainer from behind (`back`), then `throw` with a ball | 80×120, cropped by the screen edge |
 | Win | `victory` (fist pump) | 80×120 |
-| Creatures | 80×80 hi-res (battle, party) or 40×40 (icons) | |
+| Creatures | front (foe, party, icons) or back (your creature in battle); 80×80 hi-res or 40×40 | |
 
 `side` is a true profile facing right (`renderSide` in `character.ts`); mirror it for left.
 All sprites are drawn at whole-number scales with `image-rendering: pixelated`, never smoothed.
 The idle animation is only for the large sprites; map walkers stand still, as in BW.
+
+## Battle move animations
+
+Each of the 39 moves has its own animation recipe in `src/battle/fx.ts`, played by
+`src/screens/battle/BattleFx.tsx` on a pixel canvas over the battle field (176 px wide, scaled up
+crisp). A recipe is a set of timed layers — anticipation at the attacker, travel, impact, aftermath —
+built from shared painters (projectiles, beams, rings, bursts, rain, orbits, stamps, barriers),
+plus the moment the hit lands (`impact`) and the attacker's body motion (lunge, jump, dive or cast).
+
+- The battle waits for `impact` before showing damage, so the HP bar drops as the hit connects.
+- A miss is known in advance: contact layers are dropped, the shot flies past and puffs, and the
+  target sidesteps.
+- Only one effect plays at a time (a new one ends the last), and timers back up the animation
+  frames, so nothing lingers or stalls in a background tab.
+- With reduced motion on, a move shows only a static hit marker: no travel, flashes or shakes.
+- Moves share a look per type (LAW: gavels and paper; SCIENCE: flasks and helices; TECH: data and
+  barriers; MUSIC: notes and sound waves; CREATIVE: stars, sketches and confetti; SPORT: balls and
+  speed lines; LEADER: flags, gold and warmth) but each has its own identity — a test fails if two
+  moves draw the same thing.
+
+`npm run sprites:fx` renders every move frame by frame to `sprites-export/fx-<type>.png` for review.
 
 ## Replacing art with hand-drawn sprites
 

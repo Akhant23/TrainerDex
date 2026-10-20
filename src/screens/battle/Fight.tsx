@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { navigate } from '../../app/router'
 import { menu } from '../../content/menu'
 import { types } from '../../content/pokedex'
@@ -24,12 +24,13 @@ import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
 import { CreatureSprite, HpBar, useHeightScale } from './BattleBits'
 import { Backdrop, RECEPTION_ARENA, type Arena } from './Backdrop'
+import { useBattleFx } from './BattleFx'
 
 const entry = menu.find((m) => m.id === 'battle')!
 
 type Panel = 'none' | 'command' | 'fight' | 'party' | 'replace' | 'bag' | 'run' | 'results'
 type Trainer = 'intro' | 'gone' | 'defeated' | 'victorious'
-type Anim = '' | 'enter' | 'lunge' | 'hit' | 'faint' | 'statUp' | 'statDown' | 'heal' | 'out'
+type Anim = '' | 'enter' | 'lunge' | 'jump' | 'dive' | 'cast' | 'dodge' | 'hit' | 'faint' | 'statUp' | 'statDown' | 'heal' | 'out'
 
 interface View {
   active: [number, number]
@@ -40,7 +41,6 @@ interface View {
   trainer: Trainer
   /** your own trainer, seen from behind until they throw out the first creature */
   me: 'intro' | 'throw' | 'gone'
-  fx: { type: keyof typeof types; target: SideId; key: number } | null
   shake: number
   message: string
 }
@@ -91,13 +91,13 @@ export default function Fight({
     animKey: [0, 0],
     trainer: 'intro',
     me: 'intro',
-    fx: null,
     shake: 0,
     message: '',
   }))
   const viewRef = useRef(view)
   viewRef.current = view
   const skipRef = useRef<(() => void) | null>(null)
+  const fx = useBattleFx(reducedMotion)
   const alivePlayback = useRef(true)
 
   /* ---------- playback helpers ---------- */
@@ -158,22 +158,26 @@ export default function Fight({
 
   const play = useCallback(
     async (events: BattleEvent[], st: BattleState) => {
-      for (const e of events) {
+      for (let i = 0; i < events.length; i++) {
+        const e = events[i]
         if (!alivePlayback.current) return
         switch (e.t) {
           case 'text':
             await say(e.text)
             break
           case 'move': {
+            // the move's own animation; the battle carries on when the hit lands
             const mv = moves[e.move]
-            animate(e.side, 'lunge')
+            const missed = events[i + 1]?.t === 'miss'
+            const run = fx.play(e.move, e.side, missed)
+            if (run.motion !== 'none') animate(e.side, run.motion)
             sfx(mv.power ? 'select' : 'cursor')
-            if (mv.power) patch((v) => ({ fx: { type: mv.type, target: e.side === 0 ? 1 : 0, key: (v.fx?.key ?? 0) + 1 } }))
-            await wait(mv.power ? 520 : 300, false)
+            await run.impact
             break
           }
           case 'miss':
             sfx('miss')
+            animate(e.side === 0 ? 1 : 0, 'dodge')
             await wait(300, false)
             break
           case 'damage': {
@@ -183,7 +187,6 @@ export default function Fight({
             if (e.crit || e.eff > 1) patch((v) => ({ shake: v.shake + 1 }))
             await tweenHp(e.side, e.hp)
             await wait(250, false)
-            patch({ fx: null })
             break
           }
           case 'heal':
@@ -248,10 +251,9 @@ export default function Fight({
       patch({
         active: [st.sides[0].active, st.sides[1].active],
         hp: [active(st, 0).hp, active(st, 1).hp],
-        fx: null,
       })
     },
-    [animate, patch, say, sfx, tweenHp, wait],
+    [animate, fx, patch, say, sfx, tweenHp, wait],
   )
 
   const afterTurn = useCallback(
@@ -376,7 +378,7 @@ export default function Fight({
       backKeys={panel !== 'none' && panel !== 'replace'}
       top={
         <>
-          <Scene battle={battle} view={view} encounter={encounter} look={opponent.look} myLook={resortSave.get().avatar ?? DEFAULT_AVATAR} arena={arena} onSkip={() => skipRef.current?.()} />
+          <Scene battle={battle} view={view} encounter={encounter} look={opponent.look} myLook={resortSave.get().avatar ?? DEFAULT_AVATAR} arena={arena} fxCanvas={fx.canvasRef} onSkip={() => skipRef.current?.()} />
           {vs && (
             <VsScreen
               me={{ look: resortSave.get().avatar ?? DEFAULT_AVATAR, name: (resortSave.get().name || name).toUpperCase(), tag: 'CHALLENGER' }}
@@ -425,7 +427,7 @@ export default function Fight({
 
 /* ---------------- Top screen ---------------- */
 
-function Scene({ battle, view, encounter, look, myLook, arena, onSkip }: { battle: BattleState; view: View; encounter: boolean; look?: Appearance; myLook: Appearance; arena: Arena; onSkip: () => void }) {
+function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip }: { battle: BattleState; view: View; encounter: boolean; look?: Appearance; myLook: Appearance; arena: Arena; fxCanvas: RefObject<HTMLCanvasElement | null>; onSkip: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   // in 40px units, always even so the 80×80 hi-res art is used
   const oppScale = useHeightScale(ref, 0.3, 80) * 2
@@ -438,7 +440,9 @@ function Scene({ battle, view, encounter, look, myLook, arena, onSkip }: { battl
   const ply = battle.sides[0].team[view.active[0]]
   const animCls = (side: SideId) => {
     const a = view.anim[side]
-    if (a === 'lunge') return side === 0 ? 'anim-lunge-right' : 'anim-lunge-left'
+    // your creature attacks toward the upper right, the foe's toward the lower left
+    if (a === 'lunge' || a === 'jump' || a === 'dive') return `anim-${a}-${side === 0 ? 'right' : 'left'}`
+    if (a === 'dodge') return side === 0 ? 'anim-dodge-left' : 'anim-dodge-right'
     if (a === 'out') return 'anim-slide-out'
     return a ? `anim-${a}` : ''
   }
@@ -471,14 +475,15 @@ function Scene({ battle, view, encounter, look, myLook, arena, onSkip }: { battl
             <CreatureSprite id={opp.species} scale={oppScale} />
           </div>
         )}
-        {/* player creature (seen side-on, facing the foe) */}
+        {/* your creature, seen from behind as in BW */}
         {view.shown[0] && (
           <div key={`p${view.animKey[0]}`} className={`stand ${animCls(0)}`} style={{ left: '26%', top: '91%' }}>
-            <CreatureSprite id={ply.species} scale={plyScale} flip />
+            <CreatureSprite id={ply.species} scale={plyScale} view="back" />
           </div>
         )}
 
-        {view.fx && <Fx key={view.fx.key} type={view.fx.type} at={view.fx.target === 1 ? { x: 70, y: 32 } : { x: 26, y: 72 }} />}
+        {/* move animations, pixel-drawn over the field */}
+        <canvas ref={fxCanvas} aria-hidden className="pixelated pointer-events-none absolute inset-0 z-[5] h-full w-full" />
 
         {/* info boxes */}
         {view.trainer === 'gone' && view.shown[1] && (
@@ -527,43 +532,6 @@ function InfoBox({ name, level, hp, max, numbers = false, team, className }: { n
         </p>
       )}
     </PixelBox>
-  )
-}
-
-const FX_GLYPH: Partial<Record<keyof typeof types, string>> = { MUSIC: '♪', CREATIVE: '✦', LEADER: '★', SCIENCE: '●', TECH: '■' }
-
-function Fx({ type, at }: { type: keyof typeof types; at: { x: number; y: number } }) {
-  const color = types[type].color
-  const glyph = FX_GLYPH[type]
-  const n = 8
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0">
-      {type === 'LAW' && (
-        <div className="fx-slam" style={{ left: `${at.x}%`, top: `${at.y}%`, width: '12%', height: '7%', background: '#8a5a2a', boxShadow: '0 0 0 3px #1c1a24' }} />
-      )}
-      {Array.from({ length: n }, (_, i) => {
-        const ang = (i / n) * Math.PI * 2
-        return (
-          <span
-            key={i}
-            className="fx-particle flex items-center justify-center text-[clamp(10px,3cqi,20px)] font-bold"
-            style={{
-              left: `${at.x}%`,
-              top: `${at.y}%`,
-              color,
-              background: glyph ? 'transparent' : type === 'SPORT' ? '#fff' : color,
-              borderRadius: type === 'SPORT' || type === 'SCIENCE' ? '50%' : 0,
-              boxShadow: glyph ? 'none' : '0 0 0 2px #1c1a24',
-              ['--dx' as string]: `${Math.cos(ang) * 260}%`,
-              ['--dy' as string]: `${Math.sin(ang) * 260}%`,
-              textShadow: '1px 1px 0 #1c1a24',
-            }}
-          >
-            {glyph}
-          </span>
-        )
-      })}
-    </div>
   )
 }
 

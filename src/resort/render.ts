@@ -48,6 +48,18 @@ export function project(cam: Camera, wx: number, wy: number, vh = VIEW_H) {
   return { x: VIEW_W / 2 + (wx - cam.x) * s, y: vh * FOCUS + u * s * C, s }
 }
 
+/** Largest scale anything is drawn at; past this the point is practically under the camera. */
+const MAX_SCALE = 4
+/**
+ * Whether a projected ground point can be drawn. The projection is a perspective divide: points
+ * more than D/T (~288px) south of the camera have a negative or exploding scale, so anything
+ * standing there (a regular on the beach while you're up by the tower) must be skipped rather
+ * than drawn with a negative size.
+ */
+export function inView(p: { y: number; s: number }, vh = VIEW_H): boolean {
+  return p.s > 0.2 && p.s < MAX_SCALE && p.y < vh + 60
+}
+
 /* ---------------- pixel art → canvas ---------------- */
 
 const canvasCache = new Map<string, HTMLCanvasElement>()
@@ -146,8 +158,16 @@ const CREATURE_WORLD = 0.3
 export interface WorldExtras {
   /** sky, weather and time of day (outdoor maps) */
   sky?: SkyState
-  /** drawn after the world but under the weather/night overlay (flyers, surfers…) */
-  overlay?: (ctx: CanvasRenderingContext2D, proj: (wx: number, wy: number) => { x: number; y: number; s: number }) => void
+  /** drawn in the sky band, in front of clouds and hills but behind everything standing on the map (creatures flying overhead) */
+  skyLayer?: (ctx: CanvasRenderingContext2D, horizonY: number) => void
+  /** extra things that stand on the map and depth-sort with buildings and people (trainers landing or surfing in) */
+  items?: (proj: (wx: number, wy: number) => { x: number; y: number; s: number }) => WorldItem[]
+}
+
+/** Something drawn in the depth-sorted pass: `depth` is its world y on the ground. */
+export interface WorldItem {
+  depth: number
+  draw: (ctx: CanvasRenderingContext2D) => void
 }
 
 export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number, creatures: CreatureActor[] = [], vh = VIEW_H, extras: WorldExtras = {}) {
@@ -165,6 +185,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
     const hy = hz.s > 0 ? Math.round(hz.y * RES) : 0
     drawSky(ctx, VIEW_W * RES, hy, now, sky, RES)
     drawHorizon(ctx, VIEW_W * RES, hy, sky, RES)
+    extras.skyLayer?.(ctx, hy)
   }
 
   // floor, one screen row at a time (filtered, like a textured 3D floor, so it doesn't shimmer)
@@ -197,7 +218,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   const items: Item[] = []
   const sprite = (img: HTMLCanvasElement, bx: number, by: number, anchorX: number, ws = 1) => {
     const p = project(cam, bx, by, vh)
-    if (p.s <= 0.2) return
+    if (!inView(p, vh)) return
     const dw = img.width * ws * p.s * RES
     const dh = img.height * ws * p.s * RES
     const dx = (p.x - anchorX * ws * p.s) * RES
@@ -207,8 +228,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   }
   const shadow = (bx: number, by: number, rx: number) => {
     const p = project(cam, bx, by, vh)
-    // behind the camera (or far below the screen) the projection flips or explodes
-    if (p.s <= 0.2 || p.y > vh + 40) return
+    if (!inView(p, vh)) return
     ctx.fillStyle = 'rgba(20,24,40,0.28)'
     ctx.beginPath()
     ctx.ellipse(p.x * RES, p.y * RES, rx * p.s * RES, rx * 0.42 * p.s * C * RES, 0, 0, Math.PI * 2)
@@ -234,7 +254,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
       const img = pixelCanvas(prop.px, tilePalette, `prop:${tileAt(m, tx, ty)}`)
       const bx = tx * TILE + 8
       const by = (ty + 1) * TILE
-      if (tileAt(m, tx, ty) === 'l') lamps.push([bx, by])
+      if (tileAt(m, tx, ty) === 'l' && inView(project(cam, bx, by, vh), vh)) lamps.push([bx, by])
       items.push({ depth: by, draw: () => (!def.wall && shadow(bx, by - 2, 7), sprite(img, bx, by, prop.anchorX)) })
     }
   for (const st of m.structures ?? []) {
@@ -243,36 +263,42 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
     const by = (st.y + st.d) * TILE
     items.push({ depth: by, draw: () => sprite(img, st.x * TILE, by, 0) })
   }
+  const onMap = (x: number, y: number) => inView(project(cam, x, y, vh), vh)
   for (const a of actors) {
+    if (!onMap(a.x, a.y)) continue
     const img = characterFrames(a.look)[a.facing][a.frame]
     items.push({ depth: a.y, draw: () => (shadow(a.x, a.y, 7), sprite(img, a.x, a.y + 1, OW_W / 2, OW_WORLD)) })
   }
   for (const c of creatures) {
-    if (!creatureArtHi[c.id]) continue
+    if (!creatureArtHi[c.id] || !onMap(c.x, c.y)) continue
     const img = creatureFrames(c.id, c.facing === 'right', c.breath)
     items.push({ depth: c.y, draw: () => (shadow(c.x, c.y, 6), sprite(img, c.x, c.y + 2 - c.hop, img.width / 2, CREATURE_WORLD)) })
   }
-  items.sort((p, q) => p.depth - q.depth).forEach((i) => i.draw())
+  for (const it of extras.items?.((wx, wy) => project(cam, wx, wy, vh)) ?? []) items.push({ depth: it.depth, draw: () => it.draw(ctx) })
 
-  extras.overlay?.(ctx, (wx, wy) => project(cam, wx, wy, vh))
-
-  // time of day + weather over everything, then lamps glowing through the dark
-  if (sky) {
-    const glow = drawWeatherOverlay(ctx, VIEW_W * RES, vh * RES, now, sky, RES)
-    if (glow > 0) {
-      ctx.globalCompositeOperation = 'lighter'
-      for (const [bx, by] of lamps) {
-        const p = project(cam, bx, by, vh)
-        const x = p.x * RES
-        const y = (p.y - 36 * p.s) * RES
-        const r = 26 * p.s * RES
-        const gr = ctx.createRadialGradient(x, y, 0, x, y, r)
-        gr.addColorStop(0, `rgba(255,220,120,${0.55 * glow})`)
-        gr.addColorStop(1, 'rgba(255,220,120,0)')
-        ctx.fillStyle = gr
-        ctx.fillRect(x - r, y - r, r * 2, r * 2)
+  try {
+    items.sort((p, q) => p.depth - q.depth).forEach((i) => i.draw())
+  } finally {
+    // time of day + weather over everything, then lamps glowing through the dark. This pass
+    // always runs, so one bad sprite can never leave a frame without its night lighting.
+    ctx.globalCompositeOperation = 'source-over'
+    if (sky) {
+      const glow = drawWeatherOverlay(ctx, VIEW_W * RES, vh * RES, now, sky, RES)
+      if (glow > 0) {
+        ctx.globalCompositeOperation = 'lighter'
+        for (const [bx, by] of lamps) {
+          const p = project(cam, bx, by, vh)
+          const x = p.x * RES
+          const y = (p.y - 36 * p.s) * RES
+          const r = 26 * p.s * RES
+          const gr = ctx.createRadialGradient(x, y, 0, x, y, r)
+          gr.addColorStop(0, `rgba(255,220,120,${0.55 * glow})`)
+          gr.addColorStop(1, 'rgba(255,220,120,0)')
+          ctx.fillStyle = gr
+          ctx.fillRect(x - r, y - r, r * 2, r * 2)
+        }
+        ctx.globalCompositeOperation = 'source-over'
       }
-      ctx.globalCompositeOperation = 'source-over'
     }
   }
 }

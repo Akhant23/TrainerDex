@@ -608,11 +608,88 @@ body {
 .anim-faint {
   animation: b-faint 520ms steps(6) forwards;
 }
+/* BW faint: the creature sinks straight down through its platform */
 @keyframes b-faint {
   to {
-    translate: 0 60%;
-    opacity: 0;
+    translate: 0 100%;
     clip-path: inset(0 0 100% 0);
+  }
+}
+/* attacker motions (each move's recipe picks one) */
+.anim-cast {
+  animation: b-cast 360ms steps(6);
+}
+@keyframes b-cast {
+  35% {
+    translate: 0 -6%;
+  }
+}
+.anim-jump-right {
+  animation: b-jump-r 640ms steps(10);
+}
+@keyframes b-jump-r {
+  35% {
+    translate: 28% -45%;
+  }
+  65% {
+    translate: 48% -18%;
+  }
+}
+.anim-jump-left {
+  animation: b-jump-l 640ms steps(10);
+}
+@keyframes b-jump-l {
+  35% {
+    translate: -20% -40%;
+  }
+  65% {
+    translate: -42% 14%;
+  }
+}
+.anim-dive-right {
+  animation: b-dive-r 900ms steps(14);
+}
+@keyframes b-dive-r {
+  30%,
+  48% {
+    translate: 20% -220%;
+  }
+  62% {
+    translate: 52% -30%;
+  }
+  80% {
+    translate: 12% 0;
+  }
+}
+.anim-dive-left {
+  animation: b-dive-l 900ms steps(14);
+}
+@keyframes b-dive-l {
+  30%,
+  48% {
+    translate: -20% -220%;
+  }
+  62% {
+    translate: -46% 22%;
+  }
+  80% {
+    translate: -12% 0;
+  }
+}
+.anim-dodge-left {
+  animation: b-dodge-l 320ms steps(5);
+}
+@keyframes b-dodge-l {
+  40% {
+    translate: -16% 0;
+  }
+}
+.anim-dodge-right {
+  animation: b-dodge-r 320ms steps(5);
+}
+@keyframes b-dodge-r {
+  40% {
+    translate: 16% 0;
   }
 }
 .anim-statUp {
@@ -673,41 +750,6 @@ body {
     translate: 1% 1%;
   }
 }
-.fx-particle {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 10%;
-  aspect-ratio: 1;
-  translate: -50% -50%;
-  animation: fx-burst 620ms steps(8) forwards;
-}
-@keyframes fx-burst {
-  0% {
-    transform: translate(0, 0) scale(0.4);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--dx), var(--dy)) scale(1);
-    opacity: 0;
-  }
-}
-.fx-slam {
-  position: absolute;
-  animation: fx-slam 520ms steps(6) forwards;
-}
-@keyframes fx-slam {
-  0% {
-    transform: translate(-50%, -260%) rotate(-30deg);
-  }
-  55% {
-    transform: translate(-50%, -60%) rotate(0deg);
-  }
-  100% {
-    transform: translate(-50%, -60%) rotate(0deg);
-    opacity: 0;
-  }
-}
 .encounter {
   position: absolute;
   inset: 0;
@@ -738,10 +780,15 @@ body {
 [data-motion='reduced'] .anim-enter,
 [data-motion='reduced'] .anim-lunge-right,
 [data-motion='reduced'] .anim-lunge-left,
+[data-motion='reduced'] .anim-cast,
+[data-motion='reduced'] .anim-jump-right,
+[data-motion='reduced'] .anim-jump-left,
+[data-motion='reduced'] .anim-dive-right,
+[data-motion='reduced'] .anim-dive-left,
+[data-motion='reduced'] .anim-dodge-left,
+[data-motion='reduced'] .anim-dodge-right,
 [data-motion='reduced'] .anim-hit,
 [data-motion='reduced'] .screen-shake,
-[data-motion='reduced'] .fx-particle,
-[data-motion='reduced'] .fx-slam,
 [data-motion='reduced'] .anim-statUp,
 [data-motion='reduced'] .anim-statDown,
 [data-motion='reduced'] .anim-heal {

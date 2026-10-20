@@ -9,7 +9,8 @@ import { dirname } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
 import { creatureArt, creatureArtHi, trainerdexBadge } from '../src/sprites/creatures.ts'
-import { overworldFor } from '../src/sprites/overworld.ts'
+import { overworldFor, riderFor, RIDER_HIP } from '../src/sprites/overworld.ts'
+import { flightArt, FLYERS } from '../src/sprites/flight.ts'
 import { renderFlat, renderBack, renderSide, paletteFor, atResolution, PORTRAIT } from '../src/sprites/character.ts'
 import { crop } from '../src/sprites/pixels.ts'
 import { ASSET_SLOTS, CREATURE_SPEC, enabledAssets, enabledCreatures, type AssetSlot } from '../src/content/sprites.ts'
@@ -101,10 +102,55 @@ writeFileSync('sprites-export/bw-lineup@3x.png', lineup(towerStages.map((st) => 
 writeFileSync('sprites-export/ow-lineup@3x.png', lineup(towerStages.flatMap((st) => { const o = overworldFor(st.look); return [o.down[0], o.left[1], o.up[0]].map((f) => [f, paletteFor(st.look)] as [Pixels, Palette]) }), 3))
 writeFileSync('sprites-export/creatures-hi@2x.png', lineup(Object.values(creatureArtHi).slice(0, 8).map((c) => [c.pixels, c.palette]), 2))
 writeFileSync('sprites-export/creatures-hi-2@2x.png', lineup(Object.values(creatureArtHi).slice(8).map((c) => [c.pixels, c.palette]), 2))
+writeFileSync('sprites-export/creatures-back@2x.png', lineup(Object.values(creatureArtHi).slice(0, 8).map((c) => [c.back, c.palette]), 2))
+writeFileSync('sprites-export/creatures-back-2@2x.png', lineup(Object.values(creatureArtHi).slice(8).map((c) => [c.back, c.palette]), 2))
 writeFileSync('sprites-export/bw-poses@3x.png', sheet([renderFlat(signature), renderFlat(signature, 'point'), renderFlat(signature, 'raised'), renderBack(signature), renderBack(signature, true)], paletteFor(signature), 3))
 writeFileSync('sprites-export/bw-hi-poses@2x.png', sheet(atResolution(2, () => [renderFlat(signature), renderSide(signature), renderFlat(signature, 'point'), renderBack(signature), renderBack(signature, true), renderFlat(signature, 'raised')]), paletteFor(signature), 2))
 writeFileSync('sprites-export/bw-shiny@4x.png', sheet([renderFlat(shinySignature)], paletteFor(shinySignature), 4))
 writeFileSync('sprites-export/trainerdex-badge@6x.png', sheet([trainerdexBadge.pixels], trainerdexBadge.palette, 6))
+
+/*
+ * Flight cycles: each flyer's four frames side by side (far wing, body, rider, near wing),
+ * drawn at 4 output pixels per world pixel so mounts and riders keep their true relative size.
+ */
+{
+  const OUT = 4
+  const fw = 76 * OUT
+  const fh = 62 * OUT
+  const rider = riderFor(signature)
+  const rpal = paletteFor(signature)
+  for (const id of FLYERS) {
+    const art = flightArt[id]
+    const w = fw * 4
+    const rgba = new Uint8Array(w * fh * 4)
+    const blit = (px: Pixels, pal: Palette, ox: number, oy: number, s: number) => {
+      const sw = px[0].length
+      const sh = px.length
+      for (let y = Math.max(0, Math.floor(oy)); y < Math.min(fh, Math.ceil(oy + sh * s)); y++)
+        for (let x = Math.max(0, Math.floor(ox)); x < Math.ceil(ox + sw * s); x++) {
+          const sx = Math.floor((x - ox) / s)
+          const sy = Math.floor((y - oy) / s)
+          const ch = px[sy]?.[sx]
+          if (!ch || ch === '.') continue
+          rgba.set(hexToRgba(pal[ch]), (y * w + x) * 4)
+        }
+    }
+    art.frames.forEach((fr, i) => {
+      const s = art.world * OUT
+      const ox = i * fw + (fw - 112 * s) / 2
+      const oy = fh - 80 * s - 8
+      blit(fr.far, art.palette, ox, oy, s)
+      blit(fr.body, art.palette, ox, oy, s)
+      if (art.saddle) {
+        const rs = 0.5 * OUT
+        const [sx, sy] = art.saddle[i]
+        blit(rider, rpal, ox + sx * s - RIDER_HIP[0] * rs, oy + sy * s - RIDER_HIP[1] * rs, rs)
+      }
+      blit(fr.near, art.palette, ox, oy, s)
+    })
+    writeFileSync(`sprites-export/flight-${id}.png`, encodePng(w, fh, rgba))
+  }
+}
 
 /*
  * Editable starting points for hand-drawn replacements: every asset slot at its real size (and

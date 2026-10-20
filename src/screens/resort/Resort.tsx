@@ -11,7 +11,7 @@ import { maps, placeVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, 
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { skyAt, skyLabel } from '../../resort/sky'
-import { drawAmbient, FLYERS, newAmbient, SURFERS, tickFlyers, type AmbientState } from '../../resort/ambient'
+import { ambientItems, drawSkyFlyers, MOUNTS, newAmbient, SURFERS, tickFlyers, type AmbientState } from '../../resort/ambient'
 import { staff } from '../../resort/npcs'
 import { WALK_CYCLE, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
@@ -157,7 +157,7 @@ function tickGuests(a: AmbientState, now: number, mp: ResortMap, chars: Char[], 
   if (!spots.length) return
   const [tx, ty] = rnd(spots)
   const fromX = Math.random() < 0.5 ? -3 : 41
-  a.trips.push({ id: `guest-${Math.floor(now)}`, mode, species: rnd(mode === 'air' ? FLYERS : SURFERS), look: randomAvatar(), tx, ty, t0: now, dur: mode === 'air' ? 2600 : 4000 + Math.abs(tx - fromX) * 120, leaving: false, seaY: 28, fromX })
+  a.trips.push({ id: `guest-${Math.floor(now)}`, mode, species: rnd(mode === 'air' ? MOUNTS : SURFERS), look: randomAvatar(), tx, ty, t0: now, dur: mode === 'air' ? 2600 : 4000 + Math.abs(tx - fromX) * 120, leaving: false, seaY: 28, fromX })
 }
 
 /* ---------------- screen ---------------- */
@@ -235,6 +235,11 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const guestsRef = useRef(guests)
   guestsRef.current = guests
   const ambient = useRef(newAmbient(performance.now()))
+  // dev only: lets QA park a flyer or trigger a traveller (window.__resortAmbient)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    ;(window as unknown as { __resortAmbient?: AmbientState }).__resortAmbient = ambient.current
+  }, [])
   const sky = useRef(skyAt())
   const [skyStatus, setSkyStatus] = useState(() => skyLabel(sky.current))
   useEffect(() => {
@@ -577,7 +582,8 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
       }
       drawWorld(ctx, mp, cam, actors, now, creatures, viewH.current, {
         sky: sky.current,
-        overlay: mp.id === 'plaza' ? (c, proj) => drawAmbient(c, amb, now, proj, Math.max(0, proj(0, -TILE).y * RES)) : undefined,
+        skyLayer: mp.id === 'plaza' ? (c, horizonY) => drawSkyFlyers(c, amb, now, horizonY) : undefined,
+        items: mp.id === 'plaza' ? (proj) => ambientItems(amb, now, proj, viewH.current) : undefined,
       })
 
       // name tags + bubbles follow their owners
