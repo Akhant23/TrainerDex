@@ -13,10 +13,10 @@ The interactive, Gen IV/V-style personal site of **Aaryan Khan**, a Law / Biotec
 | 2. Design foundation | ✅ | DS shell, intro, dialogue engine, main menu, navigation, settings + save, sprite prototype, audio, play time |
 | 3. Personal content | ✅ | Profile, Pokédex (15 entries), Trainer Card + 8 badges + polishing, PC (resume viewer, 11 portfolio case studies, 27-entry experience log), Photo Album (10 memories) |
 | 4. Interactive | ✅ | Battle simulator (9 original creatures, 3 difficulties, TRAINERDEX BADGE, Hall of Fame), 16 visitor medals + Medal Box, Easter eggs, walking sprite |
-| 5. Backend | ⏳ | Poké Pager guestbook + moderation (Supabase) |
+| 5. Backend | ◐ | Poké Pager UI, admin dashboard (#/admin), Supabase schema + RLS, Edge Function with validation / Turnstile / rate limiting — **built; needs your Supabase project to go live** ([docs/BACKEND.md](docs/BACKEND.md)) |
 | 6. Testing & launch | ⏳ | a11y, Lighthouse, deploy |
 
-The Poké Pager opens an "under construction" screen that says so and lists what's planned.
+Until Supabase is configured the Poké Pager shows a "NO SIGNAL" notice instead of pretending to work.
 See [docs/CONTENT.md](docs/CONTENT.md#open-questions) for facts still waiting on confirmation.
 
 ## Running it
@@ -48,7 +48,8 @@ src/app/          App, hash router, DS shell, system bar
 public/sprites/   drop-in sprite sheets (override the prototype)
 public/resume/    resume.pdf
 content-source/   original uploads — git-ignored, never shipped
-docs/             PLANNING.md, CONTENT.md, SPRITES.md
+docs/             PLANNING.md, CONTENT.md, SPRITES.md, BACKEND.md
+supabase/         database migration (tables, RLS) + submit-message Edge Function
 ```
 
 - Updating text and details: [docs/CONTENT.md](docs/CONTENT.md)
@@ -58,4 +59,4 @@ docs/             PLANNING.md, CONTENT.md, SPRITES.md
 
 Content questions are all settled (see [docs/CONTENT.md](docs/CONTENT.md#open-questions)). More portfolio results or numbers would always strengthen the case studies.
 
-**Needed for Phase 5–6:** a free **Supabase** project and **Cloudflare Turnstile** site (I'll walk you through both), and a **Vercel** or Netlify account. Optional custom domain.
+**Needed now:** a free Supabase project and Cloudflare Turnstile widget — step-by-step in [docs/BACKEND.md](docs/BACKEND.md). **For Phase 6:** a Vercel or Netlify account, optional custom domain.

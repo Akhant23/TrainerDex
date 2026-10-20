@@ -20,11 +20,14 @@ const loaders = {
   album: () => import('../screens/PhotoAlbum'),
   battle: () => import('../screens/battle/Battle'),
   medals: () => import('../screens/MedalBox'),
+  pager: () => import('../screens/PokePager'),
+  admin: () => import('../screens/Admin'),
 }
 const Intro = lazy(() => import('../screens/Intro'))
 const SettingsScreen = lazy(loaders.settings)
 const ComingSoon = lazy(loaders.comingSoon)
 const MedalBox = lazy(loaders.medals)
+const Admin = lazy(loaders.admin)
 const sections: Record<string, LazyExoticComponent<ComponentType<{ path: string }>>> = {
   profile: lazy(loaders.profile),
   pokedex: lazy(loaders.pokedex),
@@ -32,13 +35,14 @@ const sections: Record<string, LazyExoticComponent<ComponentType<{ path: string 
   pc: lazy(loaders.pc),
   album: lazy(loaders.album),
   battle: lazy(loaders.battle),
+  pager: lazy(loaders.pager),
 }
 
 /** Once the menu is up, quietly fetch section code so opening one never shows a loader. */
 function usePrefetchSections(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return
-    const run = () => void Promise.all(Object.values(loaders).map((l) => l())).catch(() => {})
+    const run = () => void Promise.all(Object.entries(loaders).filter(([k]) => k !== 'admin').map(([, l]) => l())).catch(() => {})
     if ('requestIdleCallback' in window) {
       const id = window.requestIdleCallback(run, { timeout: 3000 })
       return () => window.cancelIdleCallback(id)
@@ -70,9 +74,10 @@ function Game() {
   // Unknown routes fall back to the menu.
   const entry = menuEntryForRoute(shown)
   const isMedals = shown === '/medals'
+  const isAdmin = shown === '/admin'
   useEffect(() => {
-    if (shown !== '/' && !entry && !isMedals) navigate('/')
-  }, [shown, entry, isMedals])
+    if (shown !== '/' && !entry && !isMedals && !isAdmin) navigate('/')
+  }, [shown, entry, isMedals, isAdmin])
 
   // medals: first visit, section visits, late-night visits
   useEffect(() => {
@@ -94,6 +99,7 @@ function Game() {
 
   let screen
   if (isMedals) screen = <MedalBox />
+  else if (isAdmin) screen = <Admin />
   else if (shown === '/' || !entry) screen = <MainMenu />
   else if (entry.id === 'settings') screen = <SettingsScreen />
   else if (sections[entry.id]) {

@@ -20,6 +20,7 @@ export const medals = [
   { id: 'champion', name: 'Champion', description: 'Defeated Trainer Aaryan.', tier: 'silver' },
   { id: 'true-champion', name: 'True Champion', description: 'Defeated Trainer Aaryan on CHAMPION difficulty.', tier: 'gold' },
   { id: 'social-trainer', name: 'Social Trainer', description: 'Opened the Poké Pager.', tier: 'bronze' },
+  { id: 'pen-pal', name: 'Pen Pal', description: 'Sent Aaryan a message on the Poké Pager.', tier: 'silver' },
   { id: 'polisher', name: 'Elbow Grease', description: 'Polished a badge until it sparkled.', tier: 'bronze' },
   { id: 'spotless', name: 'Spotless', description: 'Polished all eight badges until they sparkled.', tier: 'gold' },
   { id: 'recruiter', name: 'Paper Trail', description: 'Opened the resume.', tier: 'bronze' },

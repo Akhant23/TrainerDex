@@ -1,0 +1,127 @@
+# Poké Pager backend (Supabase + Cloudflare Turnstile)
+
+The guestbook needs three things: a **Supabase** project (database + admin login + one Edge
+Function), a **Cloudflare Turnstile** widget (free bot check), and a few environment variables.
+Everything is on free tiers. Budget about 20 minutes.
+
+```
+browser ──read approved──▶ Supabase REST (RLS: approved rows, public columns only)
+browser ──send──▶ Edge Function submit-message ──▶ validate · Turnstile · rate limit ──▶ insert as "pending"
+you (#/admin) ──sign in──▶ Supabase Auth ──▶ approve / reject / spam / delete (RLS: admins only)
+```
+
+What's public vs secret:
+
+| Value | Where it goes | Secret? |
+|---|---|---|
+| Supabase project URL | `.env.local` → `VITE_SUPABASE_URL` | no |
+| Supabase **anon** key | `.env.local` → `VITE_SUPABASE_ANON_KEY` | no (RLS protects the data) |
+| Turnstile **site** key | `.env.local` → `VITE_TURNSTILE_SITE_KEY` | no |
+| Turnstile **secret** key | `supabase secrets set` | **yes** |
+| Rate-limit salt | `supabase secrets set` | **yes** |
+| Supabase **service role** key | never — Supabase injects it into the Edge Function | **yes** |
+
+Never put a secret in a `VITE_` variable: anything `VITE_` ships to every visitor.
+
+---
+
+## 1. Create the Supabase project
+
+1. Sign up at **supabase.com** → **New project**.
+2. Name it `trainerdex`, set a strong database password (save it in your password manager),
+   region **Sydney (ap-southeast-2)**.
+3. When it's ready: **Project Settings → API**. Copy the **Project URL** and the **anon public** key.
+
+## 2. Create the database tables
+
+1. In the dashboard open **SQL Editor → New query**.
+2. Paste the whole of `supabase/migrations/20261020000000_poke_pager.sql` and **Run**.
+3. Check **Table Editor**: you should see `messages` and `admins`, both marked "RLS enabled".
+
+## 3. Lock down sign-ups and create your admin login
+
+1. **Authentication → Sign In / Providers → Email**: keep Email enabled, and turn **off**
+   "Allow new users to sign up" (so only accounts you create exist).
+2. **Authentication → Users → Add user → Create new user**: your email + a strong password,
+   tick **Auto Confirm User**.
+3. Make that user an admin — in the **SQL Editor** run (with your email):
+
+   ```sql
+   insert into public.admins (user_id)
+   select id from auth.users where email = 'you@example.com';
+   ```
+
+Being signed in isn't enough to moderate — only users in `admins` can see pending messages or change
+anything. That's enforced in the database, not the website.
+
+## 4. Create the Turnstile widget
+
+1. Sign in at **dash.cloudflare.com** (free account) → **Turnstile → Add widget**.
+2. Name `TrainerDex`; hostnames: `localhost` now, and your real domain later (e.g. `aaryankhan.dev`,
+   plus the Vercel preview domain if you use one). Widget mode: **Managed**.
+3. Copy the **Site key** (public) and the **Secret key** (secret).
+
+## 5. Deploy the Edge Function
+
+Run these in your own terminal — the login and secrets steps should be typed by you, not pasted into
+chat.
+
+```bash
+brew install supabase/tap/supabase
+```
+
+```bash
+cd ~/Documents/trainerdex && supabase login
+```
+
+```bash
+supabase init
+```
+
+(If `supabase init` asks about VS Code / IntelliJ settings, answer **N**. It only adds `supabase/config.toml`.)
+
+```bash
+supabase link --project-ref YOUR_PROJECT_REF
+```
+
+The project ref is the `xxxx` in `https://xxxx.supabase.co`.
+
+```bash
+supabase secrets set TURNSTILE_SECRET_KEY=your-turnstile-secret RATE_LIMIT_SALT=$(openssl rand -hex 24) ALLOWED_ORIGINS=http://localhost:5173
+```
+
+When the site is live, run the same command again with your real origin added, comma-separated:
+`ALLOWED_ORIGINS=http://localhost:5173,https://your-domain`.
+
+```bash
+supabase functions deploy submit-message
+```
+
+## 6. Point the website at it
+
+Create `.env.local` in the project root (it's git-ignored):
+
+```
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_TURNSTILE_SITE_KEY=0x4AAAA...
+```
+
+Restart `npm run dev`. The Poké Pager's "NO SIGNAL" notice disappears.
+
+## 7. Test it end to end
+
+1. Open **Poké Pager → Compose**, send a message. You should see "MESSAGE SENT!".
+2. The inbox should **not** show it yet (it's pending).
+3. Go to `/#/admin`, sign in, approve it under **PENDING**.
+4. Back in the Pager, **Refresh** — it's there.
+5. Try a message with a link or a swear word → friendly error. Send 4 in an hour → rate-limit error.
+
+### Security checklist
+
+- [x] Browser can't insert or update (no RLS insert policy; column grants limit reads to public columns).
+- [x] Only `admins` can read pending messages or moderate (RLS + `is_admin()`).
+- [x] Validation, honeypot, link + profanity filter, Turnstile and rate limiting all run server-side.
+- [x] IPs are never stored — only a salted SHA-256 hash, visible to the service role only.
+- [x] Messages render as plain text (React escapes everything; no `dangerouslySetInnerHTML`).
+- [x] No admin password or secret in the frontend.
