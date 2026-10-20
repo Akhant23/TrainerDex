@@ -1,48 +1,48 @@
-# The trainer sprite
+# Sprites
 
-## What exists now
+Every character on the site is drawn in code from a small set of options, so Aaryan, the resort
+staff and every visitor's avatar share one Black & White–style model. Nothing is a ripped asset.
 
-`src/sprites/trainerData.ts` holds a **hand-placed 32×48 pixel-art prototype** built from the
-mirror selfie in `content-source/trainer-reference/`. It's drawn as text — one character per pixel —
-so it's fully editable and versionable.
+## How it works
 
-| Pose | Status |
-|---|---|
-| Front idle (2-frame breathing) + blink | ✅ prototype |
-| Victory (fist up) | ✅ prototype |
-| Back (battle) | ✅ prototype, derived from the front |
-| Trainer Card portrait | ✅ crop of the front |
-| Shiny palette (platinum hair, black-and-gold kit) | ✅ |
-| Walking (4-direction) | ⏳ Phase 4 |
+- **Battle / portrait sprite** — `src/sprites/character.ts` draws an 80×120 figure from an
+  `Appearance` (skin, hair style + colour, eyes, face, top + trim/tie, hat, bottoms, shoes, up to
+  three accessories), with BW proportions: tapered arms with elbows and hands (one relaxed, one in
+  a pocket), three-tone shading lit from the upper left. It is built in separate layers (back hair, legs, torso, back arm, front arm, head,
+  blinking head) so `src/ui/CharacterSprite.tsx` can animate them like BW: breathing, a head bob,
+  hair sway, swinging arms, random blinks, a fist-pump victory pose, and a nod on the VS screen. Animation is off when the
+  visitor turns on reduced motion.
+- **Overworld walker** — `src/sprites/overworld.ts` draws a 24×32 chibi (big head, outlined, shaded)
+  from the same appearance: 4 directions × 3 frames, used in the resort and the Medal Box room.
+  The idle animation is only for the battle/profile sprite — walkers stand still like in BW.
+- **Colours** — the colour tables (`SKINS`, `HAIR_COLOURS`, `CLOTH_COLOURS`, `EYE_COLOURS`) are at the
+  top of `character.ts`. Each entry is `[base, shade, light]`.
 
-**Limitations, honestly:** no image-generation tool was used. This is a careful manual pixel
-translation of one photo, so it captures the distinctive features (wavy dark hair with a fringe,
-black rectangular glasses, light moustache, stud earring, chain, the white #7 jersey with red
-stripes and flame print, black drawstring trousers, watch) but it is a prototype, not a
-professional likeness. The photo was a mirror selfie; left/right have been un-mirrored.
+## Changing Aaryan
 
-## Option A — tweak the built-in art
+All of Aaryan's looks are in `src/content/aaryan.ts`:
 
-1. `npm run sprites:export` → PNGs appear in `sprites-export/` (1× for editing, 4× for viewing).
-2. Edit the character grid in `trainerData.ts` directly (palette keys are listed at the top), **or**
-   edit the 1× PNG in Aseprite / Piskel / LibreSprite and use Option B.
-3. `npm test` checks every frame is still 32×48 and uses only known colours.
+- `signature` — the everyday look (main menu, Trainer Card, Champion floor). Wavy black hair, slim
+  clear glasses, white jersey with red trim, black joggers and sneakers; silver chain, a stud in
+  each ear, a watch on one wrist, bracelets on the other, and a belt chain. No beard.
+- `shinySignature` — the 1-in-128 shiny colours.
+- `towerStages` — one look per Battle Tower floor, taken from photos of each period (outfits only):
+  SBHS uniform → first-year shirt and tie → Marketing Director suit → Yellow Shirts tours → Champion.
 
-## Option B — drop in your own sprite sheets (no code changes)
+Change any field to another option id (the lists are in `supabase/functions/_shared/appearance.ts`)
+and the battle sprite, portrait and walker all update. `npm run sprites:export` writes PNG previews
+of every stage to `sprites-export/` so you can check them side by side.
 
-1. Make a PNG with a **transparent background**, frames laid out **left-to-right in one row**, every
-   frame the same size. Keep it small (pixel size, e.g. 32×48 or 64×64 per frame) — the site scales
-   it up with nearest-neighbour so pixels stay crisp.
-2. Put it in `public/sprites/`, e.g. `public/sprites/trainer-front.png`.
-3. In `src/content/sprites.ts` fill in the matching entry:
+## Adding an avatar option
 
-   ```ts
-   front: { src: '/sprites/trainer-front.png', frameWidth: 32, frameHeight: 48, frames: 2, fps: 2 },
-   ```
+1. Add the id to the list in `supabase/functions/_shared/appearance.ts` (the studio and the server
+   both read this list — the server rejects anything not on it).
+2. Draw it in `character.ts` (the layer it belongs to) and in `overworld.ts`.
+3. If it's a colour, add it to the matching colour table.
+4. Run `npm test` — it renders every option and fails on unknown colours or wrong sizes.
 
-   Entries: `front` (idle loop), `back`, `victory`, `portrait`. Anything left `null` keeps using the
-   prototype, so you can replace one pose at a time.
+## Visitors' avatars
 
-A commissioned pixel artist, or an image model followed by manual clean-up in Aseprite, are both good
-routes. Ask for: "Gen IV / Gen V trainer sprite style, transparent PNG, 1× pixel scale,
-nearest-neighbour, limited palette, poses: front idle (2 frames), back, victory".
+The Avatar Studio (Battle → AVATAR) lets visitors pick from the same options. **Match my photo**
+reads a photo in the browser only, samples the skin, hair and clothing colours, and picks the
+nearest options; the photo is never uploaded or kept. The code is `src/systems/photoColours.ts`.

@@ -52,10 +52,10 @@ export function SectionScreen({ entry, top, children, onBack, backTo = '/', titl
       bottom={
         <div className="flex h-full flex-1 flex-col bg-[#e8ecf4] text-ink">
           <div className="flex items-center justify-between gap-2 px-[2%] py-[1%]" style={{ background: entry.color[1] }}>
-            <button type="button" onClick={back} className="pixel-btn !text-[10px]" aria-label={backTo === '/' && !onBack ? 'Back to main menu' : 'Back'}>
+            <button type="button" onClick={back} className="pixel-btn !text-[14px]" aria-label={backTo === '/' && !onBack ? 'Back to main menu' : 'Back'}>
               ◀ BACK
             </button>
-            <h2 className="font-display text-outline m-0 truncate pr-2 text-[clamp(11px,2.8cqi,16px)] text-paper">{title ?? entry.label}</h2>
+            <h2 className="font-display text-outline m-0 truncate pr-2 text-[clamp(15px,3.9cqi,22px)] text-paper">{title ?? entry.label}</h2>
           </div>
           {subheader}
           <div key={scrollKey} className="ds-bottom-scroll">
@@ -78,8 +78,8 @@ export function TitleCard({ entry, subtitle }: { entry: MenuEntry; subtitle?: st
           <PixelIcon name={entry.icon} scale={3} />
         </span>
       </span>
-      <h1 className="font-display text-outline m-0 text-center text-[clamp(16px,6cqi,40px)] text-paper">{entry.label}</h1>
-      {subtitle && <p className="font-display text-outline m-0 text-center text-[clamp(9px,2.4cqi,14px)] text-gold">{subtitle}</p>}
+      <h1 className="font-display text-outline m-0 text-center text-[clamp(22px,8.4cqi,56px)] text-paper">{entry.label}</h1>
+      {subtitle && <p className="font-display text-outline m-0 text-center text-[clamp(13px,3.4cqi,20px)] text-gold">{subtitle}</p>}
     </div>
   )
 }

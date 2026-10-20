@@ -1,16 +1,16 @@
 /**
- * Writes the built-in prototype sprites to sprites-export/ as PNGs (1× for editing in
- * Aseprite/Piskel/LibreSprite, 4× for previewing). Frames of an animation are laid out
- * left-to-right — the same layout src/content/sprites.ts expects for overrides.
+ * Writes the built-in sprites to sprites-export/ as PNGs for reviewing: Aaryan at every tower
+ * stage (idle + victory), the shiny palette, the overworld walk sheet and the creatures.
  *
  *   npm run sprites:export
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
-import { trainerFrames, trainerPalette, shinyPalette } from '../src/sprites/trainerData.ts'
 import { creatureArt, trainerdexBadge } from '../src/sprites/creatures.ts'
-import { overworldFrames } from '../src/sprites/overworld.ts'
+import { overworldFor } from '../src/sprites/overworld.ts'
+import { renderFlat, paletteFor } from '../src/sprites/character.ts'
+import { signature, shinySignature, towerStages } from '../src/content/aaryan.ts'
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   let c = n
@@ -71,27 +71,33 @@ function sheet(frames: readonly Pixels[], palette: Palette, scale: number): Buff
   return encodePng(w, h, rgba)
 }
 
-mkdirSync('sprites-export', { recursive: true })
-const sets: Array<[string, readonly Pixels[]]> = [
-  ['trainer-front', trainerFrames.idle],
-  ['trainer-blink', trainerFrames.blink],
-  ['trainer-victory', trainerFrames.victory],
-  ['trainer-back', trainerFrames.back],
-  ['trainer-portrait', trainerFrames.portrait],
-]
-for (const [name, frames] of sets) {
-  for (const scale of [1, 4]) {
-    writeFileSync(`sprites-export/${name}@${scale}x.png`, sheet(frames, trainerPalette, scale))
-  }
-  writeFileSync(`sprites-export/${name}-shiny@4x.png`, sheet(frames, shinyPalette, 4))
+/** Different sprites (each with its own palette) side by side, for reviewing. */
+function lineup(items: Array<[Pixels, Palette]>, scale: number): Buffer {
+  const fw = items[0][0][0].length
+  const fh = items[0][0].length
+  const w = fw * items.length * scale
+  const h = fh * scale
+  const rgba = new Uint8Array(w * h * 4)
+  items.forEach(([frame, palette], i) =>
+    frame.forEach((row, y) =>
+      [...row].forEach((ch, x) => {
+        if (ch === '.') return
+        const c = hexToRgba(palette[ch])
+        for (let dy = 0; dy < scale; dy++) for (let dx = 0; dx < scale; dx++) rgba.set(c, ((y * scale + dy) * w + (i * fw + x) * scale + dx) * 4)
+      }),
+    ),
+  )
+  return encodePng(w, h, rgba)
 }
-// One overview image with every pose side by side, for quick review.
-writeFileSync(
-  'sprites-export/overview@6x.png',
-  sheet([...trainerFrames.idle, ...trainerFrames.blink, ...trainerFrames.victory, ...trainerFrames.back], trainerPalette, 6),
-)
+
+mkdirSync('sprites-export', { recursive: true })
 for (const [id, art] of Object.entries(creatureArt)) writeFileSync(`sprites-export/creature-${id}@4x.png`, sheet([art.pixels], art.palette, 4))
-writeFileSync('sprites-export/overworld@6x.png', sheet([...overworldFrames.down, ...overworldFrames.up, ...overworldFrames.left, ...overworldFrames.right], trainerPalette, 6))
+{ const o = overworldFor(signature); writeFileSync('sprites-export/overworld@6x.png', sheet([...o.down, ...o.up, ...o.left, ...o.right], paletteFor(signature), 6)) }
+for (const st of towerStages) writeFileSync(`sprites-export/bw-${st.floor}-${st.id}@4x.png`, sheet([renderFlat(st.look), renderFlat(st.look, 'raised')], paletteFor(st.look), 4))
+writeFileSync('sprites-export/bw-lineup@3x.png', lineup(towerStages.map((st) => [renderFlat(st.look), paletteFor(st.look)]), 3))
+writeFileSync('sprites-export/ow-lineup@6x.png', lineup(towerStages.flatMap((st) => { const o = overworldFor(st.look); return [o.down[0], o.left[1], o.up[0]].map((f) => [f, paletteFor(st.look)] as [Pixels, Palette]) }), 6))
+writeFileSync('sprites-export/creatures-new@4x.png', lineup(['wicketoad', 'campfly', 'megaphawk', 'stitchick', 'diplomoth', 'datadillo'].map((id) => [creatureArt[id].pixels, creatureArt[id].palette]), 4))
+writeFileSync('sprites-export/bw-shiny@4x.png', sheet([renderFlat(shinySignature)], paletteFor(shinySignature), 4))
 writeFileSync('sprites-export/trainerdex-badge@6x.png', sheet([trainerdexBadge.pixels], trainerdexBadge.palette, 6))
 // all creatures in one strip, sharing one palette per sprite is not possible, so stitch per creature
 console.log('Wrote sprites to sprites-export/')

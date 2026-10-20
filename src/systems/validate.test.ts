@@ -6,7 +6,12 @@ const ok = { name: 'Misty', message: 'Loved the battle!', avatar: 'riffin' }
 describe('guestbook validation', () => {
   it('accepts a normal message and cleans it', () => {
     const r = validateSubmission({ ...ok, name: '  Misty  ', message: 'Hi​ there   friend' })
-    expect(r).toEqual({ ok: true, value: { name: 'Misty', message: 'Hi there friend', avatar: 'riffin' } })
+    expect(r).toEqual({ ok: true, value: { name: 'Misty', message: 'Hi there friend', avatar: 'riffin', kind: 'message' } })
+  })
+  it('accepts creature suggestions and rejects unknown kinds', () => {
+    const r = validateSubmission({ ...ok, kind: 'suggestion' })
+    expect(r.ok && r.value.kind).toBe('suggestion')
+    expect(validateSubmission({ ...ok, kind: 'admin' }).ok).toBe(false)
   })
   it('enforces lengths', () => {
     expect(validateSubmission({ ...ok, name: '' }).ok).toBe(false)

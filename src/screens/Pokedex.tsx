@@ -10,7 +10,7 @@ import { useSettings } from '../systems/settings'
 import { useGameKeys } from '../systems/input'
 import { DexArtView } from '../ui/PixelArt'
 import { PixelBox } from '../ui/PixelBox'
-import { Sources, TypeChip } from '../ui/bits'
+import { Bullets, Sources, TypeChip } from '../ui/bits'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 
@@ -39,7 +39,7 @@ function List() {
       title={`SEEN ${dexSeen.length}/${pokedex.length}`}
       top={<DexScreen dex={focused} seen={dexSeen.includes(focused.no)} />}
     >
-      <ul role="listbox" aria-label="Pokédex entries" className="m-0 list-none space-y-1 p-[3%]">
+      <ul role="listbox" aria-label="Pokédex entries" className="m-0 list-none space-y-2 p-[3%]">
         {pokedex.map((d, i) => {
           const seen = dexSeen.includes(d.no)
           const on = i === nav.focus
@@ -54,15 +54,15 @@ function List() {
                 onClick={() => open(d)}
                 className={`flex w-full cursor-pointer items-center gap-3 border-0 px-3 py-1.5 text-left outline-none ${on ? 'bg-dex-red text-paper shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'bg-paper text-ink'}`}
               >
-                <span className="font-display text-[11px]">{pad(d.no)}</span>
+                <span className="font-display text-[15px]">{pad(d.no)}</span>
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8ecf4] shadow-[0_0_0_2px_var(--color-ink)]">
                   <DexArtView art={d.art} scale={1} />
                 </span>
-                <span className="font-display min-w-0 flex-1 truncate text-[clamp(10px,2.4cqi,13px)]">{d.name}</span>
+                <span className="font-display min-w-0 flex-1 truncate text-[clamp(14px,3.4cqi,18px)]">{d.name}</span>
                 {seen ? (
                   <span className="text-[13px] opacity-80">SEEN</span>
                 ) : (
-                  <span aria-label="new" className="font-display text-[9px] text-gold">
+                  <span aria-label="new" className="font-display text-[13px] text-gold">
                     NEW
                   </span>
                 )}
@@ -119,7 +119,7 @@ function Detail({ dex }: { dex: DexEntry }) {
     <SectionScreen entry={entry} backTo="/pokedex" title={`No.${pad(dex.no)}`} top={<DexScreen dex={dex} seen />} scrollKey={dex.no}>
       <div className="space-y-3 p-[4%]">
         <PixelBox className="px-[5%] py-[4%]">
-          <p className="font-display m-0 text-[clamp(11px,2.8cqi,15px)]">
+          <p className="font-display m-0 text-[clamp(15px,3.9cqi,21px)]">
             {dex.name} <span className="text-[0.75em] text-muted">· {dex.category.toUpperCase()}</span>
           </p>
           <div className="mt-2 flex gap-2">
@@ -127,14 +127,14 @@ function Detail({ dex }: { dex: DexEntry }) {
               <TypeChip key={t} type={t} />
             ))}
           </div>
-          <p className="m-0 mt-3 text-[17px] leading-snug">{dex.entry}</p>
+          <Bullets items={dex.entry} className="mt-3 text-[17px]" />
           <Sources ids={dex.sources} className="mt-3" />
         </PixelBox>
         <div className="flex justify-between">
-          <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(-1)}>
+          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
             ◀ PREV
           </button>
-          <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(1)}>
+          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(1)}>
             NEXT ▶
           </button>
         </div>
@@ -152,7 +152,7 @@ function DexScreen({ dex, seen }: { dex: DexEntry; seen: boolean }) {
           className="relative flex flex-1 items-center justify-center overflow-hidden shadow-[0_0_0_var(--u)_var(--color-ink),inset_0_0_0_var(--u)_#ffffff55]"
           style={{ background: `radial-gradient(circle at 50% 60%, #ffffff 0%, ${main}55 45%, #1c2030 100%)` }}
         >
-          <span className="font-display absolute top-[5%] left-[5%] text-[clamp(9px,2.4cqi,14px)] text-paper text-outline">No.{pad(dex.no)}</span>
+          <span className="font-display absolute top-[5%] left-[5%] text-[clamp(13px,3.4cqi,20px)] text-paper text-outline">No.{pad(dex.no)}</span>
           <div className={seen ? '' : 'brightness-0'}>
             <span className="hidden sm:inline">
               <DexArtView art={dex.art} scale={8} />
@@ -164,7 +164,7 @@ function DexScreen({ dex, seen }: { dex: DexEntry; seen: boolean }) {
         </div>
       </div>
       <PixelBox variant="plate" className="mt-[3%] flex items-center justify-between gap-2 px-[4%] py-[2%]">
-        <span className="font-display text-[clamp(10px,3cqi,18px)]">{seen ? dex.name : '?????'}</span>
+        <span className="font-display text-[clamp(14px,4.2cqi,25px)]">{seen ? dex.name : '?????'}</span>
         <span className="flex gap-1.5">{seen && dex.types.map((t) => <TypeChip key={t} type={t} />)}</span>
       </PixelBox>
     </div>

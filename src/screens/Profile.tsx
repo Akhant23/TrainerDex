@@ -6,7 +6,7 @@ import { PixelBox } from '../ui/PixelBox'
 import { PageTabs } from '../ui/PageTabs'
 import { StatBar } from '../ui/StatBar'
 import { TrainerSprite } from '../ui/TrainerSprite'
-import { Heading, Sources, Tags } from '../ui/bits'
+import { Bullets, Heading, Sources, Tags } from '../ui/bits'
 import { SectionScreen } from './SectionScreen'
 
 const entry = menu.find((m) => m.id === 'profile')!
@@ -22,7 +22,7 @@ export default function Profile() {
       scrollKey={page}
       subheader={<PageTabs pages={PAGES} current={page} onChange={setPage} color={entry.color[0]} />}
     >
-      <div className="space-y-4 p-[4%] text-[16px] leading-snug">
+      <div className="space-y-4 p-[4%] text-[16px] leading-relaxed">
         {page === 0 && <InfoPage />}
         {page === 1 && <StudiesPage />}
         {page === 2 && <SkillsPage />}
@@ -69,17 +69,13 @@ function TrainerInfo() {
 function InfoPage() {
   return (
     <>
-      <PixelBox className="space-y-3 px-[5%] py-[4%]">
-        {profile.bio.map((p) => (
-          <p key={p} className="m-0">
-            {p}
-          </p>
-        ))}
+      <PixelBox className="space-y-4 px-[5%] py-[4%]">
+        <Bullets items={profile.bio} />
         <Sources ids={['resume', 'linkedin']} />
       </PixelBox>
       <section>
         <Heading>CURRENTLY</Heading>
-        <ul className="m-0 list-none space-y-1.5 p-0">
+        <ul className="m-0 list-none space-y-2.5 p-0">
           {profile.currently.map((c) => (
             <li key={c} className="flex gap-2">
               <span aria-hidden className="text-dex-red">
@@ -114,10 +110,10 @@ function StudiesPage() {
     <>
       {profile.education.map((ed) => (
         <PixelBox key={ed.school} className="px-[5%] py-[4%]">
-          <p className="font-display m-0 text-[clamp(10px,2.4cqi,13px)] text-dex-red">{ed.school.toUpperCase()}</p>
+          <p className="font-display m-0 text-[clamp(14px,3.4cqi,18px)] text-dex-red">{ed.school.toUpperCase()}</p>
           <p className="m-0 mt-1 font-semibold">{ed.award}</p>
           <p className="m-0 text-[14px] text-muted">{ed.years}</p>
-          <ul className="m-0 mt-2 list-none space-y-1.5 p-0">
+          <ul className="m-0 mt-2 list-none space-y-2.5 p-0">
             {ed.points.map((p) => (
               <li key={p} className="flex gap-2">
                 <span aria-hidden className="text-dex-red">
@@ -153,7 +149,7 @@ function SkillsPage() {
       </section>
       <section>
         <Heading>CERTIFICATIONS</Heading>
-        <ul className="m-0 list-none space-y-1.5 p-0">
+        <ul className="m-0 list-none space-y-2.5 p-0">
           {profile.certifications.map((c) => (
             <li key={c.name}>
               <span className="font-semibold">{c.name}</span> · {c.issuer} · {c.issued}
@@ -193,7 +189,7 @@ function LikesPage() {
       </section>
       <section>
         <Heading>PERSONALITY</Heading>
-        <ul className="m-0 list-none space-y-1.5 p-0">
+        <ul className="m-0 list-none space-y-2.5 p-0">
           {profile.personality.map((p) => (
             <li key={p} className="flex gap-2">
               <span aria-hidden className="text-dex-red">

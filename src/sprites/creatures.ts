@@ -240,6 +240,144 @@ function riffin(): CreatureArt {
   }
 }
 
+
+/* ---------------- Introduced in the Battle Tower ---------------- */
+
+function wicketoad(): CreatureArt {
+  const g = grid()
+  // cricket bat held over the shoulder
+  g.line(30, 33, 36, 10, 'B', 3).line(36, 10, 37, 6, 'b', 2)
+  g.ellipse(20, 29, 12, 9, 'G', 'g')
+  g.ellipse(20, 31, 8, 6, 'L', 'l')
+  g.ellipse(11, 37, 4, 1.6, 'G', 'g').ellipse(29, 37, 4, 1.6, 'G', 'g')
+  g.ellipse(19, 17, 10, 7, 'G', 'g')
+  g.ellipse(13, 11, 4, 4, 'G', 'g').ellipse(25, 11, 4, 4, 'G', 'g')
+  // a navy cap
+  g.ellipse(19, 9, 6, 3, 'N', 'n').rect(19, 10, 28, 11, 'n')
+  g.ellipse(19, 22, 6, 2.6, 'L', 'l')
+  g.ellipse(30, 29, 3, 2.5, 'G', 'g')
+  g.outline()
+  g.ellipse(13, 12, 2.2, 2.2, 'W').ellipse(25, 12, 2.2, 2.2, 'W')
+  g.set(13, 12, 'K').set(14, 12, 'K').set(25, 12, 'K').set(26, 12, 'K')
+  g.stamp(14, 19, ['K..........K', '.KKKKKKKKKK.'])
+  return {
+    pixels: g.toPixels(),
+    palette: { K, G: '#5cb048', g: '#3a8030', L: '#d8f0a0', l: '#b0d070', W: '#ffffff', B: '#ecd49c', b: '#b8945a', N: '#26345e', n: '#161f3c' },
+  }
+}
+
+function campfly(): CreatureArt {
+  const g = grid()
+  // glow
+  g.ellipse(25, 29, 11, 9, 'g')
+  g.ellipse(11, 12, 7, 4.5, 'V', 'v').ellipse(27, 11, 7, 4.5, 'V', 'v')
+  g.ellipse(25, 29, 7.5, 6.5, 'Y', 'y', 'W')
+  g.ellipse(18, 21, 6, 5, 'B', 'b')
+  g.ellipse(15, 14, 6.5, 6, 'B', 'b')
+  g.line(12, 8, 8, 2, 'B').line(18, 8, 21, 2, 'B')
+  g.ellipse(8, 2, 1.5, 1.5, 'Y').ellipse(21, 2, 1.5, 1.5, 'Y')
+  // little legs + a flag
+  g.line(15, 26, 13, 33, 'B').line(20, 26, 21, 33, 'B')
+  g.line(6, 34, 6, 18, 'F').rect(6, 18, 12, 22, 'R')
+  g.outline()
+  g.ellipse(12, 14, 2, 2.2, 'W').ellipse(18, 14, 2, 2.2, 'W')
+  g.set(12, 15, 'K').set(18, 15, 'K')
+  g.stamp(13, 18, ['K..K', '.KK.'])
+  return {
+    pixels: g.toPixels(),
+    palette: { K, B: '#3a3c58', b: '#24263a', V: '#d8ecff', v: '#a8c4e8', Y: '#fff070', y: '#f0c030', W: '#ffffff', g: '#fff8c0', F: '#8a5a2a', R: '#f4c838' },
+  }
+}
+
+function megaphawk(): CreatureArt {
+  const g = grid()
+  // wings + body
+  g.poly([[8, 22], [1, 34], [12, 32]], 'D').poly([[30, 22], [38, 33], [27, 32]], 'd')
+  g.ellipse(19, 27, 10, 10, 'D', 'd')
+  g.ellipse(19, 30, 6, 6.5, 'C', 'c')
+  g.ellipse(14, 38, 3, 1.3, 'Y').ellipse(24, 38, 3, 1.3, 'Y')
+  g.ellipse(17, 13, 8, 7.5, 'D', 'd')
+  g.poly([[12, 7], [9, 0], [16, 5]], 'D').poly([[16, 6], [16, 0], [20, 5]], 'd')
+  // megaphone beak
+  g.poly([[23, 11], [37, 6], [37, 21], [23, 17]], 'W')
+  g.poly([[23, 15], [37, 15], [37, 21], [23, 17]], 'w')
+  g.rect(22, 11, 24, 17, 'R')
+  g.outline()
+  g.rect(36, 7, 37, 20, 'R')
+  g.ellipse(17, 12, 2.4, 2.4, 'W').set(18, 12, 'K').set(18, 13, 'K')
+  g.line(13, 9, 19, 10, 'K')
+  for (const [x, y] of [[38, 4], [39, 12], [38, 22]]) g.set(x, y, 'Y')
+  return {
+    pixels: g.toPixels(),
+    palette: { K, D: '#8a5430', d: '#5e361c', C: '#f4e2c4', c: '#d8c09c', W: '#f8f8f4', w: '#c8ccd8', R: '#e0383e', Y: '#f8c030' },
+  }
+}
+
+function stitchick(): CreatureArt {
+  const g = grid()
+  g.ellipse(20, 24, 13, 13, 'Y', 'y', 'W')
+  // the hoodie: lower half, hood behind the head
+  g.poly([[7, 25], [33, 25], [32, 36], [8, 36]], 'H')
+  g.rect(26, 25, 32, 36, 'h')
+  g.rect(14, 29, 26, 34, 'h')
+  g.ellipse(14, 38, 2.5, 1.3, 'O').ellipse(26, 38, 2.5, 1.3, 'O')
+  // needle and thread
+  g.line(31, 18, 38, 6, 'X', 1).set(38, 5, 'X')
+  g.line(38, 7, 36, 12, 'R').line(36, 12, 33, 13, 'R')
+  g.outline()
+  g.rect(14, 29, 26, 29, 'K')
+  g.line(17, 25, 17, 30, 'W').line(23, 25, 23, 30, 'W')
+  g.ellipse(15, 18, 1.8, 2.2, 'K').ellipse(25, 18, 1.8, 2.2, 'K')
+  g.set(15, 17, 'W').set(25, 17, 'W')
+  g.poly([[18, 20], [22, 20], [20, 23]], 'O')
+  g.set(11, 21, 'P').set(29, 21, 'P')
+  return {
+    pixels: g.toPixels(),
+    palette: { K, Y: '#f8d848', y: '#d0a820', W: '#fff8d8', H: '#a890e0', h: '#7860b0', O: '#f08a28', X: '#d8dee8', R: '#e04848', P: '#f8a0a0' },
+  }
+}
+
+function diplomoth(): CreatureArt {
+  const g = grid()
+  g.ellipse(10, 15, 9, 9, 'M', 'm').ellipse(30, 15, 9, 9, 'M', 'm')
+  g.ellipse(11, 29, 7, 6, 'M', 'm').ellipse(29, 29, 7, 6, 'M', 'm')
+  g.ellipse(10, 15, 4, 4, 'V', 'v').ellipse(30, 15, 4, 4, 'V', 'v')
+  g.ellipse(20, 24, 4, 10, 'G', 'g')
+  g.ellipse(20, 15, 6, 3, 'W', 'w')
+  g.ellipse(20, 10, 5, 4.5, 'G', 'g')
+  g.line(18, 6, 14, 0, 'G').line(22, 6, 26, 0, 'G')
+  // placard
+  g.line(20, 30, 20, 39, 'F', 2).rect(13, 31, 27, 37, 'W')
+  g.outline()
+  g.set(18, 10, 'K').set(22, 10, 'K').set(18, 9, 'W').set(22, 9, 'W')
+  g.line(15, 33, 25, 33, 'K').line(15, 35, 22, 35, 'K')
+  for (const x of [13, 15, 25, 27]) g.set(x, 1, 'G')
+  return {
+    pixels: g.toPixels(),
+    palette: { K, M: '#d8c8a0', m: '#b0a078', V: '#6a5ab0', v: '#4a3a88', G: '#6a6a7a', g: '#4a4a58', W: '#f8f8f4', w: '#d0d0d8', F: '#8a5a2a' },
+  }
+}
+
+function datadillo(): CreatureArt {
+  const g = grid()
+  g.ellipse(29, 34, 6, 2, 'S', 's')
+  g.ellipse(22, 25, 14, 11, 'A', 'a', 'Q')
+  for (let x = 12; x <= 32; x += 5) g.line(x, 15, x + 1, 35, 'a')
+  g.ellipse(8, 29, 6, 5, 'S', 's')
+  g.ellipse(6, 22, 2, 3, 'S', 's')
+  g.line(35, 30, 39, 33, 'A', 2)
+  g.ellipse(12, 37, 2.5, 1.5, 'S', 's').ellipse(30, 37, 2.5, 1.5, 'S', 's')
+  g.outline()
+  // circuit lines glowing across the plates
+  g.line(17, 18, 17, 24, 'C').line(17, 24, 23, 24, 'C').line(23, 24, 23, 30, 'C').line(28, 17, 28, 22, 'C')
+  g.set(17, 18, 'W').set(23, 30, 'W').set(28, 17, 'W')
+  g.set(6, 28, 'K').set(2, 31, 'P')
+  return {
+    pixels: g.toPixels(),
+    palette: { K, A: '#6a7a98', a: '#4a5674', Q: '#8e9cb8', S: '#e0b4a0', s: '#b88a78', C: '#40e0f0', W: '#ffffff', P: '#f08098' },
+  }
+}
+
 export const creatureArt: Record<string, CreatureArt> = {
   gavelion: gavelion(),
   helixor: helixor(),
@@ -250,6 +388,12 @@ export const creatureArt: Record<string, CreatureArt> = {
   byterat: byterat(),
   beakerbun: beakerbun(),
   riffin: riffin(),
+  wicketoad: wicketoad(),
+  campfly: campfly(),
+  megaphawk: megaphawk(),
+  stitchick: stitchick(),
+  diplomoth: diplomoth(),
+  datadillo: datadillo(),
 }
 
 /** The TRAINERDEX BADGE — earned by beating Aaryan. */

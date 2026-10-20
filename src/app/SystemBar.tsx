@@ -51,7 +51,7 @@ export function SystemBar() {
         </button>
         <button
           type="button"
-          className="pixel-btn pixel-btn--primary ml-1 inline-flex items-center gap-2 !text-[10px]"
+          className="pixel-btn pixel-btn--primary ml-1 inline-flex items-center gap-2 !text-[14px]"
           onClick={() => {
             sfx('open')
             navigate('/pc/resume')

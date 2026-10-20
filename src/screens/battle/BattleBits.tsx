@@ -30,7 +30,7 @@ export function HpBar({ hp, max, showNumbers = false }: { hp: number; max: numbe
   return (
     <div>
       <div className="flex items-center gap-1">
-        <span className="font-display rounded-sm bg-[#e0a020] px-1 text-[clamp(6px,1.6cqi,9px)] leading-tight text-ink">HP</span>
+        <span className="font-display rounded-sm bg-[#e0a020] px-1 text-[clamp(8px,2.2cqi,13px)] leading-tight text-ink">HP</span>
         <div
           role="meter"
           aria-label="HP"
@@ -43,7 +43,7 @@ export function HpBar({ hp, max, showNumbers = false }: { hp: number; max: numbe
         </div>
       </div>
       {showNumbers && (
-        <p className="font-display m-0 mt-0.5 text-right text-[clamp(7px,2cqi,12px)]">
+        <p className="font-display m-0 mt-0.5 text-right text-[clamp(10px,2.8cqi,17px)]">
           {Math.max(0, Math.round(hp))}/{max}
         </p>
       )}

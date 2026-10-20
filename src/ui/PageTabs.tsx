@@ -21,7 +21,7 @@ export function PageTabs({ pages, current, onChange, keys = true, color = 'var(-
 
   return (
     <div className="flex items-center justify-between gap-2 px-[2%] py-[1.2%] text-paper" style={{ background: color }}>
-      <button type="button" aria-label="Previous page" onClick={() => go(-1)} className="font-display cursor-pointer border-0 bg-transparent px-2 py-1 text-[12px] text-paper">
+      <button type="button" aria-label="Previous page" onClick={() => go(-1)} className="font-display cursor-pointer border-0 bg-transparent px-2 py-1 text-[17px] text-paper">
         ◀
       </button>
       <div role="tablist" aria-label="Pages" className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto">
@@ -35,13 +35,13 @@ export function PageTabs({ pages, current, onChange, keys = true, color = 'var(-
               sfx('cursor')
               onChange(i)
             }}
-            className={`font-display shrink-0 cursor-pointer border-0 px-2 py-1 text-[clamp(8px,2cqi,11px)] ${i === current ? 'bg-paper text-ink' : 'bg-transparent text-paper/70 hover:text-paper'}`}
+            className={`font-display shrink-0 cursor-pointer border-0 px-2 py-1 text-[clamp(11px,2.8cqi,15px)] ${i === current ? 'bg-paper text-ink' : 'bg-transparent text-paper/70 hover:text-paper'}`}
           >
             {p}
           </button>
         ))}
       </div>
-      <button type="button" aria-label="Next page" onClick={() => go(1)} className="font-display cursor-pointer border-0 bg-transparent px-2 py-1 text-[12px] text-paper">
+      <button type="button" aria-label="Next page" onClick={() => go(1)} className="font-display cursor-pointer border-0 bg-transparent px-2 py-1 text-[17px] text-paper">
         ▶
       </button>
     </div>

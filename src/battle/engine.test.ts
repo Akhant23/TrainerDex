@@ -195,3 +195,40 @@ describe('balance (simulated battles)', () => {
     expect(results.standard.win).toBeGreaterThan(results.champion.win)
   })
 })
+
+describe('battle tower floors (simulated)', async () => {
+  const { floors, floorSetup, STARTER_PARTY, unlockedSpecies } = await import('./tower')
+  const { createBattleFrom } = await import('./engine')
+  const N = 120
+  const winRate = (floor: number, party: SpeciesId[]) => {
+    let wins = 0
+    for (let i = 0; i < N; i++) {
+      let s = createBattleFrom(floorSetup(floor, party), 5000 + i)
+      let r = i * 13 + 7
+      const rand = () => ((r = (r * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+      let guard = 0
+      while (s.phase !== 'over' && guard++ < 300) {
+        if (s.phase === 'replace') s = replace(s, bestReplacement(s)).state
+        else s = takeTurn(s, playerBot(s, rand, 0.85)).state
+      }
+      if (s.winner === 0) wins++
+    }
+    return wins / N
+  }
+  const rates = floors.map((f) => winRate(f.floor, STARTER_PARTY))
+  it('reports tower win rates with the starter party', () => console.log('tower', JSON.stringify(rates)))
+  it('early floors are friendly, the Champion floor is tough but beatable', () => {
+    expect(rates[0]).toBeGreaterThan(0.9)
+    expect(rates[4]).toBeGreaterThan(0.08)
+    expect(rates[4]).toBeLessThan(0.6)
+  })
+  it('floors get harder overall', () => {
+    expect(rates[0]).toBeGreaterThanOrEqual(rates[2])
+    expect(rates[2]).toBeGreaterThan(rates[4])
+  })
+  it('unlocks grow as floors are cleared', () => {
+    expect(unlockedSpecies(0)).toEqual(STARTER_PARTY)
+    expect(unlockedSpecies(5)).toHaveLength(15)
+    expect(new Set(unlockedSpecies(5)).size).toBe(15)
+  })
+})

@@ -7,7 +7,7 @@ export function TypeChip({ type }: { type: TypeId }) {
   const t = types[type]
   return (
     <span
-      className="font-display inline-block px-2 py-1 text-[9px] leading-none text-paper text-outline"
+      className="font-display inline-block px-2 py-1 text-[13px] leading-none text-paper text-outline"
       style={{ background: t.color, boxShadow: '0 0 0 2px var(--color-ink), inset 0 -2px 0 rgb(0 0 0 / 0.25)' }}
     >
       {t.label}
@@ -20,7 +20,7 @@ export function Sources({ ids, className = '' }: { ids: readonly SourceId[]; cla
   if (!ids.length) return null
   return (
     <p className={`m-0 text-[13px] text-muted ${className}`}>
-      <span className="font-display text-[8px] tracking-wide">SOURCE </span>
+      <span className="font-display text-[11px] tracking-wide">SOURCE </span>
       {ids.map((id, i) => {
         const s = sources[id]
         return (
@@ -42,7 +42,7 @@ export function Sources({ ids, className = '' }: { ids: readonly SourceId[]; cla
 
 /** Small heading used inside content panels. */
 export function Heading({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <h3 className={`font-display m-0 mb-2 text-[clamp(10px,2.3cqi,13px)] text-dex-red ${className}`}>{children}</h3>
+  return <h3 className={`font-display m-0 mb-2 text-[clamp(14px,3.2cqi,18px)] text-dex-red ${className}`}>{children}</h3>
 }
 
 /** Pill list for skills/tags. */
@@ -61,4 +61,30 @@ export function Tags({ items }: { items: readonly string[] }) {
 /** Shown wherever a fact hasn't been supplied yet — never filled with invented text. */
 export function Pending({ children = 'Notes coming soon.' }: { children?: ReactNode }) {
   return <span className="text-muted italic">{children}</span>
+}
+
+/** Split prose into sentences for dot points ("e.g." / "St." safe enough for our content). */
+export function toPoints(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9“"‘(])/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+/** ▸ dot-point list with comfortable spacing. Pass prose (split by sentence) or an array. */
+export function Bullets({ items, className = '' }: { items: string | readonly string[]; className?: string }) {
+  const list = typeof items === 'string' ? toPoints(items) : items
+  if (list.length === 1) return <p className={`m-0 leading-relaxed ${className}`}>{list[0]}</p>
+  return (
+    <ul className={`m-0 list-none space-y-2.5 p-0 leading-relaxed ${className}`}>
+      {list.map((t) => (
+        <li key={t} className="flex gap-2.5">
+          <span aria-hidden className="shrink-0 text-dex-red">
+            ▸
+          </span>
+          <span>{t}</span>
+        </li>
+      ))}
+    </ul>
+  )
 }

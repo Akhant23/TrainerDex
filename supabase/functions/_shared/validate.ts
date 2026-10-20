@@ -6,18 +6,23 @@
 export const LIMITS = { name: 24, message: 280 } as const
 
 /** Avatars a visitor can pick (creature ids + the trainer). */
-export const AVATARS = ['trainer', 'byterat', 'beakerbun', 'riffin', 'gavelion', 'helixor', 'brushfox', 'subwoof', 'strikaroo', 'hootour'] as const
+export const AVATARS = ['trainer', 'byterat', 'beakerbun', 'riffin', 'gavelion', 'helixor', 'brushfox', 'subwoof', 'strikaroo', 'hootour', 'wicketoad', 'campfly', 'megaphawk', 'stitchick', 'diplomoth', 'datadillo'] as const
 export type Avatar = (typeof AVATARS)[number]
+
+export const KINDS = ['message', 'suggestion'] as const
+export type Kind = (typeof KINDS)[number]
 
 export interface Submission {
   name: string
   message: string
   avatar: string
+  /** 'suggestion' = a creature / type idea for Aaryan; never shown publicly. */
+  kind?: string
   /** Hidden field real people never fill in. */
   website?: string
 }
 
-export type ValidationResult = { ok: true; value: { name: string; message: string; avatar: Avatar } } | { ok: false; error: string; spam?: boolean }
+export type ValidationResult = { ok: true; value: { name: string; message: string; avatar: Avatar; kind: Kind } } | { ok: false; error: string; spam?: boolean }
 
 /** Collapse whitespace, strip control/zero-width characters, normalise Unicode. */
 export function clean(s: string): string {
@@ -53,6 +58,8 @@ export function validateSubmission(input: Partial<Submission>): ValidationResult
   const name = clean(String(input.name ?? '')).replace(/\n/g, ' ')
   const message = clean(String(input.message ?? ''))
   const avatar = String(input.avatar ?? 'trainer')
+  const kind = String(input.kind ?? 'message')
+  if (!(KINDS as readonly string[]).includes(kind)) return { ok: false, error: 'Invalid request.' }
 
   if (!name) return { ok: false, error: 'Please enter a name.' }
   if (name.length > LIMITS.name) return { ok: false, error: `Names can be up to ${LIMITS.name} characters.` }
@@ -63,5 +70,23 @@ export function validateSubmission(input: Partial<Submission>): ValidationResult
   if (containsProfanity(name) || containsProfanity(message)) return { ok: false, error: 'Please keep it friendly — that message includes language that isn’t allowed.' }
   if (/(.)\1{9,}/.test(message)) return { ok: false, error: 'That message looks like spam.', spam: true }
 
-  return { ok: true, value: { name, message, avatar: avatar as Avatar } }
+  return { ok: true, value: { name, message, avatar: avatar as Avatar, kind: kind as Kind } }
+}
+
+/** Public trainer name for the resort (shown above avatars). */
+export function validateTrainerName(input: string): { ok: true; value: string } | { ok: false; error: string } {
+  const name = clean(String(input ?? '')).replace(/\n/g, ' ')
+  if (!name) return { ok: false, error: 'Please enter a trainer name.' }
+  if (name.length > 16) return { ok: false, error: 'Trainer names can be up to 16 characters.' }
+  if (URL_RE.test(name) || containsProfanity(name)) return { ok: false, error: 'Please choose a different name.' }
+  return { ok: true, value: name }
+}
+
+/** Short greeting other visitors see in your speech bubble. */
+export function validateGreeting(input: string): { ok: true; value: string } | { ok: false; error: string } {
+  const g = clean(String(input ?? '')).replace(/\n/g, ' ')
+  if (g.length > 60) return { ok: false, error: 'Greetings can be up to 60 characters.' }
+  if (URL_RE.test(g)) return { ok: false, error: 'Links aren’t allowed.' }
+  if (containsProfanity(g)) return { ok: false, error: 'Please keep it friendly.' }
+  return { ok: true, value: g || 'Hi!' }
 }

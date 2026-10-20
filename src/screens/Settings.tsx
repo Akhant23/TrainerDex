@@ -6,6 +6,7 @@ import { useSettings, type Settings, type TextSpeed, type MotionPref } from '../
 import { useVisitor } from '../systems/visitor'
 import { useGameKeys } from '../systems/input'
 import { clearAll } from '../systems/storage'
+import { forgetMe } from '../systems/forget'
 import { ChoiceMenu } from '../ui/ChoiceMenu'
 import { DialogueBox } from '../ui/DialogueBox'
 import { PixelBox } from '../ui/PixelBox'
@@ -74,7 +75,7 @@ const rows: Row[] = [
   },
   { kind: 'action', id: 'medals', label: 'MEDAL BOX', help: 'See the medals you’ve earned exploring the TrainerDex.' },
   { kind: 'action', id: 'replay', label: 'REPLAY INTRO', help: 'Watch the opening again from the start.' },
-  { kind: 'action', id: 'reset', label: 'RESET SAVE DATA', help: 'Forget your name, play time and settings on this device.' },
+  { kind: 'action', id: 'reset', label: 'RESET SAVE DATA', help: 'Start again: clears your name, play time, settings, medals, tower progress and avatar on this device — and removes your resort avatar and any Poké Pager messages or suggestions you sent from the server.' },
   { kind: 'action', id: 'save', label: 'SAVE & EXIT', help: 'Save these options and return to the menu.' },
 ]
 
@@ -90,6 +91,7 @@ export default function SettingsScreen() {
   const [draft, setDraft] = useState<Settings>(saved)
   const [focus, setFocus] = useState(0)
   const [mode, setMode] = useState<Mode>('edit')
+  const [resetNote, setResetNote] = useState('')
   const rowRefs = useRef<Array<HTMLElement | null>>([])
   const dirty = !same(draft, saved)
 
@@ -169,7 +171,7 @@ export default function SettingsScreen() {
       onBack={() => mode === 'edit' && exit()}
       top={
         <div className="bg-stripes absolute inset-0 flex flex-col gap-[4%] p-[4%]" style={{ ['--s1' as string]: entry.color[0], ['--s2' as string]: entry.color[1] }}>
-          <h1 className="font-display text-outline m-0 text-[clamp(14px,5cqi,32px)] text-paper">OPTIONS</h1>
+          <h1 className="font-display text-outline m-0 text-[clamp(20px,7.0cqi,45px)] text-paper">OPTIONS</h1>
           <PixelBox variant="plate" className="cq-text-sm px-[4%] py-[3%] font-semibold" aria-live="polite">
             <span className="font-display cq-text-xs block text-dex-red">{current.label}</span>
             <span className="mt-2 block">{current.help}</span>
@@ -195,7 +197,7 @@ export default function SettingsScreen() {
               isFocus ? 'bg-paper shadow-[0_0_0_var(--u)_var(--color-gold)]' : ''
             }`
             const arrow = (
-              <span aria-hidden className={`font-display absolute left-[1%] text-[10px] text-dex-red ${isFocus ? 'cursor-arrow' : 'invisible'}`}>
+              <span aria-hidden className={`font-display absolute left-[1%] text-[14px] text-dex-red ${isFocus ? 'cursor-arrow' : 'invisible'}`}>
                 ▶
               </span>
             )
@@ -212,7 +214,7 @@ export default function SettingsScreen() {
                       act(row.id)
                     }}
                     onMouseEnter={() => setFocus(i)}
-                    className={`${rowClass} font-display cursor-pointer border-0 bg-transparent pl-[5%] text-left text-[clamp(10px,2.4cqi,14px)] ${
+                    className={`${rowClass} font-display cursor-pointer border-0 bg-transparent pl-[5%] text-left text-[clamp(14px,3.4cqi,20px)] ${
                       row.id === 'reset' ? 'text-ember' : row.id === 'save' ? 'text-harbour' : 'text-ink'
                     }`}
                   >
@@ -238,7 +240,7 @@ export default function SettingsScreen() {
                 className={`${rowClass} my-1 pl-[5%]`}
               >
                 {arrow}
-                <span className="font-display text-[clamp(10px,2.4cqi,14px)]">{row.label}</span>
+                <span className="font-display text-[clamp(14px,3.4cqi,20px)]">{row.label}</span>
                 {row.kind === 'volume' ? (
                   <span className="flex min-w-[45%] flex-1 items-center justify-end gap-3">
                     <input
@@ -252,7 +254,7 @@ export default function SettingsScreen() {
                       className="pixel-range w-full max-w-[220px]"
                       onChange={(e) => change({ ...draft, volume: Number(e.target.value) })}
                     />
-                    <span className="font-display w-[4ch] text-right text-[11px]">{draft.volume}</span>
+                    <span className="font-display w-[4ch] text-right text-[15px]">{draft.volume}</span>
                   </span>
                 ) : (
                   <span className="flex flex-wrap justify-end gap-1">
@@ -269,7 +271,7 @@ export default function SettingsScreen() {
                             change({ ...draft, [row.key]: o.value } as Settings)
                             window.setTimeout(() => sfx('cursor'), 20)
                           }}
-                          className={`font-display cursor-pointer border-0 px-2 py-1.5 text-[clamp(9px,2.1cqi,12px)] ${
+                          className={`font-display cursor-pointer border-0 px-2 py-1.5 text-[clamp(13px,2.9cqi,17px)] ${
                             on ? 'bg-dex-red text-paper shadow-[0_0_0_2px_var(--color-ink)]' : 'bg-transparent text-muted hover:text-ink'
                           }`}
                         >
@@ -309,7 +311,7 @@ export default function SettingsScreen() {
             )}
             {mode === 'confirmReset' && (
               <>
-                <DialogueBox className="w-full" waitOnLast={false} lines={['Erase your name, play time and settings on this device?']} />
+                <DialogueBox className="w-full" waitOnLast={false} lines={[resetNote || 'Erase everything and start again? This also removes your avatar and messages from the server.']} />
                 <ChoiceMenu
                   label="Erase save data?"
                   choices={[
@@ -317,8 +319,14 @@ export default function SettingsScreen() {
                     { label: 'YES, ERASE', value: true },
                   ]}
                   onCancel={() => setMode('edit')}
-                  onChoose={(v) => {
+                  onChoose={async (v) => {
                     if (!v) return setMode('edit')
+                    try {
+                      await forgetMe()
+                    } catch (e) {
+                      // keep the local save so the visitor can retry the server part
+                      return setResetNote(`${(e as Error).message} Nothing was erased — try again in a moment.`)
+                    }
                     clearAll()
                     window.location.hash = '/'
                     window.location.reload()

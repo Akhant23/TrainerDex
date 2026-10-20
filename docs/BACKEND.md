@@ -1,6 +1,6 @@
-# Poké Pager backend (Supabase + Cloudflare Turnstile)
+# Poké Pager + Battle Resort backend (Supabase + Cloudflare Turnstile)
 
-The guestbook needs three things: a **Supabase** project (database + admin login + one Edge
+The guestbook and the resort's shared avatars need three things: a **Supabase** project (database + admin login + one Edge
 Function), a **Cloudflare Turnstile** widget (free bot check), and a few environment variables.
 Everything is on free tiers. Budget about 20 minutes.
 
@@ -8,6 +8,9 @@ Everything is on free tiers. Budget about 20 minutes.
 browser ──read approved──▶ Supabase REST (RLS: approved rows, public columns only)
 browser ──send──▶ Edge Function submit-message ──▶ validate · Turnstile · rate limit ──▶ insert as "pending"
 you (#/admin) ──sign in──▶ Supabase Auth ──▶ approve / reject / spam / delete (RLS: admins only)
+browser ──read avatars──▶ Supabase REST (RLS: trainers not hidden, public columns only)
+browser ──save avatar──▶ Edge Function save-trainer ──▶ validate · owner secret · rate limit ──▶ upsert (public at once)
+you (#/admin → RESORT AVATARS) ──▶ hide / unhide / delete
 ```
 
 What's public vs secret:
@@ -36,7 +39,8 @@ Never put a secret in a `VITE_` variable: anything `VITE_` ships to every visito
 
 1. In the dashboard open **SQL Editor → New query**.
 2. Paste the whole of `supabase/migrations/20261020000000_poke_pager.sql` and **Run**.
-3. Check **Table Editor**: you should see `messages` and `admins`, both marked "RLS enabled".
+3. New query again: paste `supabase/migrations/20261021000000_battle_resort.sql` and **Run**.
+4. Check **Table Editor**: you should see `messages`, `admins` and `trainers`, all marked "RLS enabled".
 
 ## 3. Lock down sign-ups and create your admin login
 
@@ -97,6 +101,14 @@ When the site is live, run the same command again with your real origin added, c
 supabase functions deploy submit-message
 ```
 
+```bash
+supabase functions deploy save-trainer
+```
+
+```bash
+supabase functions deploy forget-me
+```
+
 ## 6. Point the website at it
 
 Create `.env.local` in the project root (it's git-ignored):
@@ -116,6 +128,12 @@ Restart `npm run dev`. The Poké Pager's "NO SIGNAL" notice disappears.
 3. Go to `/#/admin`, sign in, approve it under **PENDING**.
 4. Back in the Pager, **Refresh** — it's there.
 5. Try a message with a link or a swear word → friendly error. Send 4 in an hour → rate-limit error.
+6. Open **Battle → make an avatar**. The panel should say "Saved — other visitors can see you now."
+7. In a private window, make a second avatar and walk up to the first one: name tag, party and greeting should show.
+8. Send a Pager message with **Show this above my avatar** ticked, approve it — it now pops up over that avatar.
+9. `#/admin → RESORT AVATARS`: hide one, refresh the resort — it's gone. Unhide brings it back.
+10. In the tower reception, drop an idea in the red suggestion box. It shows under `#/admin → SUGGESTIONS`, never in the public inbox.
+11. Settings → Reset save data. Your avatar disappears from the resort and the messages/suggestions you sent are deleted (the function reports how many).
 
 ### Security checklist
 
@@ -125,3 +143,7 @@ Restart `npm run dev`. The Poké Pager's "NO SIGNAL" notice disappears.
 - [x] IPs are never stored — only a salted SHA-256 hash, visible to the service role only.
 - [x] Messages render as plain text (React escapes everything; no `dangerouslySetInnerHTML`).
 - [x] No admin password or secret in the frontend.
+- [x] Resort avatars: only listed options are accepted (server re-parses every field), names and greetings run the same link + profanity filter, each avatar can only be edited with the random secret kept in its creator's browser (stored as a SHA-256 hash), 5 new avatars per IP per day, and admins can hide or delete. Hidden avatars stay hidden when edited.
+- [x] Suggestions are stored as `kind = 'suggestion'` and RLS never returns them to visitors.
+- [x] "Forget me": every message carries a SHA-256 of a random secret held only by the sender's browser (never readable by visitors); `forget-me` deletes those messages and the matching avatar.
+- [x] "Match my photo" runs entirely in the browser — the photo is never uploaded or stored.

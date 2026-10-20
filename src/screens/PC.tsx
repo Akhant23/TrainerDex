@@ -13,7 +13,7 @@ import { Overlay } from '../ui/Overlay'
 import { PageTabs } from '../ui/PageTabs'
 import { PixelBox } from '../ui/PixelBox'
 import { PixelIcon } from '../ui/PixelIcon'
-import { Heading, Pending, Sources, Tags } from '../ui/bits'
+import { Bullets, Heading, Pending, Sources, Tags } from '../ui/bits'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 
@@ -39,10 +39,10 @@ function MonitorTop({ label, children }: { label: string; children?: ReactNode }
     <div className="absolute inset-0 flex flex-col bg-[#b8c4d8] p-[4%]">
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#1a3a8a] p-[4%] text-paper shadow-[0_0_0_var(--u)_var(--color-ink),inset_0_0_0_calc(var(--u)*2)_#0a1a4a]">
         <div aria-hidden className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 4px)' }} />
-        <p className="font-display relative m-0 text-[clamp(9px,2.6cqi,15px)] text-gold">{label}</p>
+        <p className="font-display relative m-0 text-[clamp(13px,3.6cqi,21px)] text-gold">{label}</p>
         <div className="relative mt-[3%] min-h-0 flex-1">{children}</div>
       </div>
-      <div className="font-display mt-[2%] flex items-center justify-between text-[clamp(7px,1.8cqi,10px)] text-ink">
+      <div className="font-display mt-[2%] flex items-center justify-between text-[clamp(10px,2.5cqi,14px)] text-ink">
         <span>POKé CENTRE PC SYSTEM</span>
         <span className="text-leaf">● ONLINE</span>
       </div>
@@ -63,7 +63,7 @@ function PCMenu() {
       entry={entry}
       top={
         <MonitorTop label={`${profile.name}'S PC`}>
-          <ul className="font-display m-0 list-none space-y-[4%] p-0 text-[clamp(8px,2.2cqi,13px)]">
+          <ul className="font-display m-0 list-none space-y-[4%] p-0 text-[clamp(11px,3.1cqi,18px)]">
             <li>▸ RESUME ........ 1 FILE</li>
             <li>▸ PORTFOLIO ..... {publishedPortfolio.length} ITEMS</li>
             <li>▸ EXPERIENCE .... {experience.length} ENTRIES</li>
@@ -106,10 +106,10 @@ function Resume() {
 
   const buttons = (
     <>
-      <a className="pixel-btn pixel-btn--primary !text-[10px] no-underline" href={file} download={downloadName}>
+      <a className="pixel-btn pixel-btn--primary !text-[14px] no-underline" href={file} download={downloadName}>
         ⬇ DOWNLOAD
       </a>
-      <a className="pixel-btn !text-[10px] no-underline" href={file} target="_blank" rel="noreferrer">
+      <a className="pixel-btn !text-[14px] no-underline" href={file} target="_blank" rel="noreferrer">
         ↗ NEW TAB
       </a>
     </>
@@ -140,7 +140,7 @@ function Resume() {
       {view === 0 ? (
         <div className="flex h-full min-h-[60dvh] flex-col gap-2 p-[2%] sm:min-h-0">
           <div className="flex flex-wrap items-center justify-end gap-1">
-            <button type="button" className="pixel-btn !text-[10px]" onClick={() => setExpanded(true)}>
+            <button type="button" className="pixel-btn !text-[14px]" onClick={() => setExpanded(true)}>
               ⛶ FULL SCREEN
             </button>
             {buttons}
@@ -168,7 +168,7 @@ function TextResume() {
   const work = experience.filter((e) => e.kind === 'work')
   const lead = experience.filter((e) => e.kind === 'leadership')
   return (
-    <article className="space-y-4 bg-paper p-[5%] text-[15px] leading-snug text-ink">
+    <article className="space-y-4 bg-paper p-[5%] text-[15px] leading-relaxed text-ink">
       <header>
         <h3 className="m-0 text-[22px] font-semibold">{profile.fullName}</h3>
         <p className="m-0 text-muted">
@@ -296,7 +296,7 @@ function PortfolioBoxes() {
                 <img src={focused.thumb} alt="" className="max-h-full max-w-full object-contain" />
               </div>
               <PixelBox variant="plate" className="flex min-w-0 flex-1 flex-col justify-center gap-[4%] px-[4%] py-[3%]">
-                <p className="font-display m-0 text-[clamp(8px,2.2cqi,13px)] text-dex-red">{focused.type.toUpperCase()}</p>
+                <p className="font-display m-0 text-[clamp(11px,3.1cqi,18px)] text-dex-red">{focused.type.toUpperCase()}</p>
                 <p className="m-0 text-[clamp(13px,3.2cqi,19px)] leading-tight font-semibold">{focused.title}</p>
                 <p className="m-0 text-[clamp(11px,2.6cqi,15px)] text-muted">{focused.org}</p>
               </PixelBox>
@@ -308,13 +308,13 @@ function PortfolioBoxes() {
       }
       subheader={
         <div className="flex items-center justify-between bg-[#3a6ad0] px-[2%] py-[1.2%] text-paper">
-          <button type="button" aria-label="Previous box" onClick={() => switchBox(-1)} className="font-display cursor-pointer border-0 bg-transparent px-2 text-[12px] text-paper">
+          <button type="button" aria-label="Previous box" onClick={() => switchBox(-1)} className="font-display cursor-pointer border-0 bg-transparent px-2 text-[17px] text-paper">
             ◀
           </button>
-          <span className="font-display text-[clamp(9px,2.4cqi,13px)]" aria-live="polite">
+          <span className="font-display text-[clamp(13px,3.4cqi,18px)]" aria-live="polite">
             BOX: {boxes[box].toUpperCase()} <span className="opacity-70">({items.length})</span>
           </span>
-          <button type="button" aria-label="Next box" onClick={() => switchBox(1)} className="font-display cursor-pointer border-0 bg-transparent px-2 text-[12px] text-paper">
+          <button type="button" aria-label="Next box" onClick={() => switchBox(1)} className="font-display cursor-pointer border-0 bg-transparent px-2 text-[17px] text-paper">
             ▶
           </button>
         </div>
@@ -339,7 +339,7 @@ function PortfolioBoxes() {
             >
               <img src={p.thumb} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
               {p.media[0].kind === 'video' && (
-                <span aria-hidden className="font-display absolute right-1 bottom-1 bg-ink/80 px-1 text-[8px] text-paper">
+                <span aria-hidden className="font-display absolute right-1 bottom-1 bg-ink/80 px-1 text-[11px] text-paper">
                   ▶
                 </span>
               )}
@@ -397,25 +397,25 @@ function CaseStudyView({ project }: { project: Project }) {
       top={
         <div className="absolute inset-0 flex items-center justify-center bg-[#0e1a3a] p-[2%]">
           <MediaView media={media} />
-          <button type="button" onClick={() => setExpanded(true)} className="pixel-btn absolute right-1 bottom-1 !text-[9px]" aria-label="View full size">
+          <button type="button" onClick={() => setExpanded(true)} className="pixel-btn absolute right-1 bottom-1 !text-[13px]" aria-label="View full size">
             ⛶
           </button>
         </div>
       }
     >
-      <div className="space-y-3 p-[4%] text-[16px] leading-snug">
+      <div className="space-y-3 p-[4%] text-[16px] leading-relaxed">
         <PixelBox className="px-[5%] py-[4%]">
-          <p className="font-display m-0 text-[clamp(8px,2cqi,11px)] text-dex-red">{project.type.toUpperCase()}</p>
+          <p className="font-display m-0 text-[clamp(11px,2.8cqi,15px)] text-dex-red">{project.type.toUpperCase()}</p>
           <p className="m-0 mt-1 text-[19px] leading-tight font-semibold">{project.title}</p>
           <p className="m-0 text-[14px] text-muted">
             {project.org}
             {project.date && ` · ${project.date}`}
           </p>
-          <p className="m-0 mt-3">{project.summary}</p>
+          <Bullets items={project.summary} className="mt-3" />
           <dl className="m-0 mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[15px]">
-            <dt className="font-display text-[9px] leading-[1.9] text-muted">ROLE</dt>
+            <dt className="font-display text-[13px] leading-[1.9] text-muted">ROLE</dt>
             <dd className="m-0">{project.role ?? <Pending>To be confirmed.</Pending>}</dd>
-            <dt className="font-display text-[9px] leading-[1.9] text-muted">TOOLS</dt>
+            <dt className="font-display text-[13px] leading-[1.9] text-muted">TOOLS</dt>
             <dd className="m-0">{project.tools ? project.tools.join(', ') : <Pending>To be confirmed.</Pending>}</dd>
           </dl>
           <div className="mt-3">
@@ -432,10 +432,10 @@ function CaseStudyView({ project }: { project: Project }) {
           ))}
         {!project.confirmed && <p className="m-0 text-[13px] text-muted">Draft entry — year and role still to be confirmed.</p>}
         <div className="flex justify-between pt-1">
-          <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(-1)}>
+          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
             ◀ PREV
           </button>
-          <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(1)}>
+          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(1)}>
             NEXT ▶
           </button>
         </div>
@@ -489,7 +489,7 @@ function ExperienceLog({ openId }: { openId?: string }) {
       }
       top={
         <MonitorTop label="EXPERIENCE LOG">
-          <ul className="font-display m-0 list-none space-y-[5%] p-0 text-[clamp(8px,2.2cqi,13px)]">
+          <ul className="font-display m-0 list-none space-y-[5%] p-0 text-[clamp(11px,3.1cqi,18px)]">
             {KINDS.map(([k, l]) => (
               <li key={k}>
                 ▸ {l.padEnd(11, '.')} {experience.filter((e) => e.kind === k).length}
@@ -522,18 +522,14 @@ function ExperienceLog({ openId }: { openId?: string }) {
                     {e.org} · {formatRange(e.start, e.end)}
                   </span>
                 </span>
-                <span aria-hidden className="font-display pt-1 text-[10px] text-dex-red">
+                <span aria-hidden className="font-display pt-1 text-[14px] text-dex-red">
                   {isOpen ? '▼' : '▶'}
                 </span>
               </button>
               {isOpen && (
-                <div className="space-y-2 bg-[#f4f6fb] px-4 py-3 text-[15px] leading-snug shadow-[0_0_0_2px_#b8c0d8]">
+                <div className="space-y-2 bg-[#f4f6fb] px-4 py-3 text-[15px] leading-relaxed shadow-[0_0_0_2px_#b8c0d8]">
                   {(e.team || e.location) && <p className="m-0 text-[14px] text-muted">{[e.team, e.location].filter(Boolean).join(' · ')}</p>}
-                  <ul className="m-0 pl-5">
-                    {e.points.map((p) => (
-                      <li key={p}>{p}</li>
-                    ))}
-                  </ul>
+                  <Bullets items={e.points} />
                   {e.skills.length > 0 && <Tags items={e.skills} />}
                   <Sources ids={e.sources} />
                 </div>

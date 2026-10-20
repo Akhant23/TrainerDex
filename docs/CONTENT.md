@@ -55,9 +55,20 @@ a strong player: Casual ~100%, Standard ~74%, Champion ~25%.
 Creature art is drawn from shapes in `src/sprites/creatures.ts` (see `raster.ts`); `npm run
 sprites:export` writes PNG previews to `sprites-export/`.
 
+## Battle Resort and the tower
+
+- **Aaryan's looks per floor** — `src/content/aaryan.ts`: `signature` (everyday / Champion), `shinySignature`, and `towerStages` (floor, title, years, look, intro line, defeat line). Each look uses the same options visitors pick from.
+- **The five floors** (from your photos): 1 SBHS student (maroon piped blazer) · 2 first-year (black shirt, teal tie) · 3 Marketing Director (black suit, Law Ball 2024) · 4 Yellow Shirts tours (O-Week tee, bucket hat, crossbody bag) · 5 Champion (today's look).
+- **Floor teams and difficulty** — `src/battle/tower.ts` (`floors`: AI tier, Aaryan's team and levels, your level, potions, which creatures each floor unlocks). Each floor introduces creatures from that stage of the story. `npm test` simulates every floor and checks the climb stays beatable and gets harder (current starter-party win rates: 100%, 100%, 90%, 65%, 32%).
+- **Creatures** — `src/battle/data.ts` (stats, moves, types) and `src/sprites/creatures.ts` (art). The six introduced in the tower, all drawn from real parts of the story: WICKETOAD (school cricket coaching), CAMPFLY (First Year Camp leader), MEGAPHAWK (marketing campaigns), STITCHICK (the merch he designed), DIPLOMOTH (DiscoverMUN mentoring) and DATADILLO (data & risk work at Clayton Utz).
+- **Suggestion box** — in the tower reception. Ideas arrive in `#/admin → SUGGESTIONS` and are never shown publicly.
+- **Resort maps** — `src/resort/maps.ts` (each character is a tile from `src/resort/tiles.ts`; buildings are `structures` drawn in `src/resort/structures.ts`; signs' text lives in `things`). The 2.5D view (tilted floor + upright sprites) is `src/resort/render.ts`.
+- **Staff lines** — `src/resort/npcs.ts` (guide, lifeguard, receptionist).
+- **Avatar options** — `supabase/functions/_shared/appearance.ts` is the single list used by the studio and the server. Adding an option means drawing it in `src/sprites/character.ts` and `overworld.ts` too (see docs/SPRITES.md).
+
 ## Medals and Easter eggs
 
-`src/content/medals.ts` lists the 16 medals (name, description, tier, hidden + hint). The rules that
+`src/content/medals.ts` lists the 19 medals (name, description, tier, hidden + hint). The rules that
 award them live in `src/systems/progress.ts` (collections, battles, polishing) and in the screens that
 trigger them (shiny/secret on the main menu, resume in the PC, rare encounter in the Pokédex, the
 Konami code in `src/systems/konami.ts`). Rare-encounter odds and lines are in `dialogue.ts`; shiny
@@ -68,8 +79,8 @@ in the Medal Box room.
 
 ## Visitor data
 
-Visitors' settings, chosen name, play time, Pokédex progress, badge shine, TRAINERDEX BADGE, Hall of Fame and medals are stored only in their own browser (local storage,
-key prefix `tdx:v1:`). Nothing is sent anywhere. **Settings → Reset save data** clears it.
+Visitors' settings, chosen name, play time, Pokédex progress, badge shine, TRAINERDEX BADGE, Hall of Fame, medals and tower progress are stored only in their own browser (local storage,
+key prefix `tdx:v1:`). The only things ever sent are a Pager message they choose to send and, once Supabase is set up, their resort avatar (look, trainer name, greeting, party), which other visitors can see. **Settings → Reset save data** clears it.
 
 ## Open questions
 

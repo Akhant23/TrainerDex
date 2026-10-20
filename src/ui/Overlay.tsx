@@ -31,10 +31,10 @@ export function Overlay({ title, onClose, children, actions }: { title: string; 
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-[60] flex flex-col bg-[#0a0a10f2] p-2 sm:p-4">
       <div className="flex items-center justify-between gap-2 pb-2">
-        <h2 className="font-display m-0 truncate text-[11px] text-paper">{title}</h2>
+        <h2 className="font-display m-0 truncate text-[15px] text-paper">{title}</h2>
         <div className="flex items-center gap-1">
           {actions}
-          <button ref={closeRef} type="button" className="pixel-btn !text-[10px]" onClick={close}>
+          <button ref={closeRef} type="button" className="pixel-btn !text-[14px]" onClick={close}>
             ✕ CLOSE
           </button>
         </div>

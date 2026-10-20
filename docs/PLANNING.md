@@ -131,8 +131,9 @@ Each menu section has its own tile colour (profile red, Pokédex orange, card go
 album pink, battle crimson, pager teal, settings slate) used for its header bar and backdrop.
 
 ### Type
-- **Display / labels:** *Press Start 2P* (OFL, self-hosted) — titles, tile labels, numbers.
-- **Dialogue / body:** *Pixelify Sans* (OFL, self-hosted) — far more readable for paragraphs.
+- **Display + body:** *Pixelify Sans* (OFL, self-hosted) — body 500, headings 600. A thicker pixel face where i, l and I are all distinct (DotGothic16 was tried in Oct 2026 but drew them as identical bars).
+- **Logo only:** *Press Start 2P*.
+- Body line-height 1.6; longer text is split into ▸ dot points where it reads as a list.
 - Minimum body size 16px; uppercase only for short labels.
 
 ### Components (Phase 2)

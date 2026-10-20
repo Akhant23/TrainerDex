@@ -55,7 +55,7 @@ export default function MedalBox() {
         <PixelBox className="min-h-[5.5em] px-4 py-3">
           {got || !('hidden' in m) ? (
             <>
-              <p className="font-display m-0 text-[11px] text-dex-red">
+              <p className="font-display m-0 text-[15px] text-dex-red">
                 {m.name.toUpperCase()} <span className="text-muted">· {m.tier.toUpperCase()}</span>
               </p>
               <p className="m-0 mt-1 text-[16px]">{m.description}</p>
@@ -63,7 +63,7 @@ export default function MedalBox() {
             </>
           ) : (
             <>
-              <p className="font-display m-0 text-[11px] text-dex-red">??? · HIDDEN MEDAL</p>
+              <p className="font-display m-0 text-[15px] text-dex-red">??? · HIDDEN MEDAL</p>
               <p className="m-0 mt-1 text-[16px] italic">{'hint' in m ? m.hint : ''}</p>
             </>
           )}
@@ -160,7 +160,7 @@ function Room() {
       <div className="absolute" style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -100%)' }}>
         <OverworldSprite facing={facing} walking={!!target} scale={scale} />
       </div>
-      <p className="font-display text-outline absolute right-[3%] bottom-[3%] m-0 text-[clamp(7px,1.8cqi,10px)] text-paper">TAP THE FLOOR TO WALK</p>
+      <p className="font-display text-outline absolute right-[3%] bottom-[3%] m-0 text-[clamp(10px,2.5cqi,14px)] text-paper">TAP THE FLOOR TO WALK</p>
     </div>
   )
 }

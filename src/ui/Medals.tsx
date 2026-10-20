@@ -47,7 +47,7 @@ export function MedalToast() {
       <div className="medal-toast pixel-box pixel-box--dark flex items-center gap-3 px-4 py-3">
         <MedalArt medal={medal} earned scale={3} />
         <div>
-          <p className="font-display m-0 text-[10px] text-gold">MEDAL GET!</p>
+          <p className="font-display m-0 text-[14px] text-gold">MEDAL GET!</p>
           <p className="m-0 text-[17px] font-semibold text-paper">{medal.name}</p>
           <p className="m-0 text-[13px] text-paper/80">{medal.description}</p>
         </div>

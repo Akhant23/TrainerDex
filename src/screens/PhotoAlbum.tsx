@@ -40,13 +40,13 @@ export default function PhotoAlbum({ path }: { path: string }) {
           {focused ? (
             <figure className="m-0 flex h-full w-full flex-col items-center justify-center gap-[3%]">
               <img src={focused.src} alt={focused.alt} className="max-h-[78%] max-w-full bg-paper object-contain p-[1.5%] shadow-[0_0_0_var(--u)_var(--color-ink)]" />
-              <figcaption className="font-display text-outline text-[clamp(9px,2.6cqi,15px)] text-paper">
+              <figcaption className="font-display text-outline text-[clamp(13px,3.6cqi,21px)] text-paper">
                 No.{pad(nav.focus + 1)} {focused.title.toUpperCase()}
               </figcaption>
             </figure>
           ) : (
             <PixelBox variant="plate" className="max-w-[80%] px-[5%] py-[4%] text-center">
-              <p className="font-display m-0 text-[clamp(10px,2.8cqi,16px)]">No.{pad(nav.focus + 1)} ?????</p>
+              <p className="font-display m-0 text-[clamp(14px,3.9cqi,22px)]">No.{pad(nav.focus + 1)} ?????</p>
               <p className="m-0 mt-2 text-[clamp(12px,3cqi,17px)]">{photos.length === 0 ? 'No memories registered yet.' : 'This memory hasn’t been discovered yet.'}</p>
             </PixelBox>
           )}
@@ -70,7 +70,7 @@ export default function PhotoAlbum({ path }: { path: string }) {
               } ${i === nav.focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_var(--color-ink)]'}`}
             >
               {p ? <img src={p.thumb} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" /> : <PixelIcon name="album" scale={2} className="opacity-30 grayscale" />}
-              <span className="font-display absolute top-0.5 left-0.5 bg-ink/70 px-1 text-[8px] text-paper">{pad(i + 1)}</span>
+              <span className="font-display absolute top-0.5 left-0.5 bg-ink/70 px-1 text-[11px] text-paper">{pad(i + 1)}</span>
             </button>
           ))}
         </div>
@@ -117,7 +117,7 @@ function PhotoViewer({ index, onClose }: { index: number; onClose: () => void })
           <img src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} className="max-h-full max-w-full bg-paper object-contain p-2 shadow-[0_0_0_var(--u)_var(--color-ink)]" />
         </div>
         <PixelBox className="shrink-0 px-5 py-4 lg:w-[340px] lg:self-start">
-          <p className="font-display m-0 text-[12px] text-dex-red">
+          <p className="font-display m-0 text-[17px] text-dex-red">
             No.{pad(index + 1)} {photo.title.toUpperCase()}
           </p>
           <p className="m-0 text-[14px] text-muted">
@@ -127,10 +127,10 @@ function PhotoViewer({ index, onClose }: { index: number; onClose: () => void })
           <p className="m-0 mt-2 text-[17px]">{photo.caption}</p>
           <p className="m-0 mt-2 text-[15px] italic">{photo.dexEntry}</p>
           <div className="mt-3 flex justify-between">
-            <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(-1)}>
+            <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
               ◀ PREV
             </button>
-            <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(1)}>
+            <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(1)}>
               NEXT ▶
             </button>
           </div>

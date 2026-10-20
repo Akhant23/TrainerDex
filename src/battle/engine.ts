@@ -86,23 +86,47 @@ export function makeMon(id: SpeciesId, level: number): Mon {
   }
 }
 
-/** Visitor's team: the chosen starter leads (+2 levels), the other two follow. */
-export function createBattle(difficulty: Difficulty, starter: SpeciesId, seed: number): BattleState {
-  const d = difficulties[difficulty]
-  const others = (['byterat', 'beakerbun', 'riffin'] as SpeciesId[]).filter((s) => s !== starter)
+/** Everything needed to start a battle. Difficulty presets and tower floors both build one. */
+export interface BattleSetup {
+  /** Decides AI behaviour. */
+  ai: Difficulty
+  player: Array<{ species: SpeciesId; level: number }>
+  opponent: Array<{ species: SpeciesId; level: number }>
+  playerPotions: number
+  aiPotions: number
+}
+
+export function createBattleFrom(setup: BattleSetup, seed: number): BattleState {
   return {
     rng: seed | 0,
     turn: 0,
-    difficulty,
+    difficulty: setup.ai,
     sides: [
-      { team: [makeMon(starter, d.playerLevel + 2), ...others.map((s) => makeMon(s, d.playerLevel))], active: 0, potions: d.playerPotions },
-      { team: d.team.map((s) => makeMon(s, d.level)), active: 0, potions: d.aiPotions },
+      { team: setup.player.map((m) => makeMon(m.species, m.level)), active: 0, potions: setup.playerPotions },
+      { team: setup.opponent.map((m) => makeMon(m.species, m.level)), active: 0, potions: setup.aiPotions },
     ],
     phase: 'choose',
     winner: null,
     aiSwitches: 0,
     stats: { crits: 0, superEffective: 0, damageDealt: 0 },
   }
+}
+
+/** Quick-battle preset: the chosen starter leads (+2 levels), the other two follow. */
+export function presetSetup(difficulty: Difficulty, starter: SpeciesId): BattleSetup {
+  const d = difficulties[difficulty]
+  const others = (['byterat', 'beakerbun', 'riffin'] as SpeciesId[]).filter((s) => s !== starter)
+  return {
+    ai: difficulty,
+    player: [{ species: starter, level: d.playerLevel + 2 }, ...others.map((s) => ({ species: s, level: d.playerLevel }))],
+    opponent: d.team.map((s) => ({ species: s, level: d.level })),
+    playerPotions: d.playerPotions,
+    aiPotions: d.aiPotions,
+  }
+}
+
+export function createBattle(difficulty: Difficulty, starter: SpeciesId, seed: number): BattleState {
+  return createBattleFrom(presetSetup(difficulty, starter), seed)
 }
 
 /* ---------------- Helpers ---------------- */

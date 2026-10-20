@@ -15,6 +15,8 @@ import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
 import { CreatureSprite } from './BattleBits'
 import Fight from './Fight'
+import Resort from '../resort/Resort'
+import { presetSetup } from '../../battle/engine'
 
 const entry = menu.find((m) => m.id === 'battle')!
 const DIFFS: Difficulty[] = ['casual', 'standard', 'champion']
@@ -22,13 +24,21 @@ const DIFFS: Difficulty[] = ['casual', 'standard', 'champion']
 let lastDifficulty: Difficulty = 'standard'
 
 export default function Battle({ path }: { path: string }) {
+  if (path === '/battle' || path === '/battle/') return <Resort />
+  return <QuickBattle path={path} />
+}
+
+function QuickBattle({ path }: { path: string }) {
   const [fight, setFight] = useState<{ difficulty: Difficulty; starter: SpeciesId; seed: number } | null>(null)
   if (path === '/battle/hall-of-fame') return <HallOfFame />
   if (fight)
     return (
       <Fight
         key={fight.seed}
-        {...fight}
+        setup={presetSetup(fight.difficulty, fight.starter)}
+        seed={fight.seed}
+        title={`VS AARYAN · ${fight.difficulty.toUpperCase()}`}
+        recordWin={fight.difficulty}
         onExit={(to) => {
           setFight(null)
           if (to === 'hall') navigate('/battle/hall-of-fame')
@@ -54,7 +64,7 @@ function Setup({ onStart }: { onStart: (d: Difficulty, s: SpeciesId) => void }) 
       onBack={() => {
         sfx('back')
         if (step === 'starter') setStep('difficulty')
-        else navigate('/')
+        else navigate('/battle')
       }}
       scrollKey={step}
       top={
@@ -66,7 +76,7 @@ function Setup({ onStart }: { onStart: (d: Difficulty, s: SpeciesId) => void }) 
             {hasBadge && (
               <div className="mb-[6%] flex flex-col items-center gap-1">
                 <PixelArt pixels={trainerdexBadge.pixels} palette={trainerdexBadge.palette} scale={4} label="TRAINERDEX BADGE earned" />
-                <span className="font-display text-outline text-[8px] text-gold">BADGE EARNED</span>
+                <span className="font-display text-outline text-[11px] text-gold">BADGE EARNED</span>
               </div>
             )}
           </div>
@@ -122,17 +132,17 @@ function DifficultyPick({ initial, onPick, wins }: { initial: number; onPick: (d
             }`}
           >
             <span>
-              <span className="font-display block text-[clamp(10px,2.6cqi,14px)] text-dex-red">{cfg.label}</span>
+              <span className="font-display block text-[clamp(14px,3.6cqi,20px)] text-dex-red">{cfg.label}</span>
               <span className="text-[15px]">{cfg.blurb}</span>
             </span>
-            <span className="font-display shrink-0 text-[9px] text-muted">
+            <span className="font-display shrink-0 text-[13px] text-muted">
               {cfg.team.length} VS 3 · Lv{cfg.level}
             </span>
           </button>
         )
       })}
       <details className="bg-paper/80 px-4 py-2 text-[14px]">
-        <summary className="font-display cursor-pointer text-[9px]">TYPE MATCHUPS</summary>
+        <summary className="font-display cursor-pointer text-[13px]">TYPE MATCHUPS</summary>
         <ul className="m-0 mt-2 pl-4">
           {typeReasons.map((r) => (
             <li key={r}>{r}</li>
@@ -174,14 +184,14 @@ function StarterPick({ onPick }: { onPick: (s: SpeciesId) => void }) {
               style={{ background: i === nav.focus ? `radial-gradient(circle at 50% 40%, #fff, ${types[sp.types[0]].color}55)` : undefined }}
             >
               <CreatureSprite id={id} scale={2} />
-              <span className="font-display text-[clamp(8px,2.2cqi,12px)]">{sp.name}</span>
+              <span className="font-display text-[clamp(11px,3.1cqi,17px)]">{sp.name}</span>
               <TypeChip type={sp.types[0]} />
             </button>
           )
         })}
       </div>
       <PixelBox className="px-4 py-3 text-[15px]">
-        <span className="font-display block text-[10px] text-dex-red">{focused.name}</span>
+        <span className="font-display block text-[14px] text-dex-red">{focused.name}</span>
         {focused.blurb}
       </PixelBox>
     </div>
@@ -203,7 +213,7 @@ function HallOfFame() {
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-[4%] p-[4%]" style={{ background: 'radial-gradient(ellipse at 50% 80%, #6a4a10, #1a1408 70%)' }}>
           {latest ? (
             <>
-              <p className="font-display text-outline m-0 text-[clamp(10px,3cqi,18px)] text-gold">✦ HALL OF FAME ✦</p>
+              <p className="font-display text-outline m-0 text-[clamp(14px,4.2cqi,25px)] text-gold">✦ HALL OF FAME ✦</p>
               <div className="flex items-end justify-center gap-[6%]">
                 {latest.team.map((id) => (
                   <span key={id} className="sparkle-host">
@@ -211,13 +221,13 @@ function HallOfFame() {
                   </span>
                 ))}
               </div>
-              <p className="font-display text-outline m-0 text-[clamp(8px,2.2cqi,12px)] text-paper">
+              <p className="font-display text-outline m-0 text-[clamp(11px,3.1cqi,17px)] text-paper">
                 {latest.name} · {latest.difficulty.toUpperCase()} · {latest.turns} TURNS
               </p>
             </>
           ) : (
             <PixelBox variant="plate" className="px-5 py-4 text-center">
-              <p className="font-display m-0 text-[12px]">NO CHAMPIONS YET</p>
+              <p className="font-display m-0 text-[17px]">NO CHAMPIONS YET</p>
               <p className="m-0 mt-2">Beat Trainer Aaryan to be recorded here.</p>
             </PixelBox>
           )}
@@ -236,7 +246,7 @@ function HallOfFame() {
           {hallOfFame.map((h, i) => (
             <li key={h.date + i} className="flex items-center justify-between gap-2 bg-paper px-3 py-2 shadow-[0_0_0_2px_var(--color-ink)]">
               <span>
-                <span className="font-display block text-[10px] text-dex-red">{h.difficulty.toUpperCase()}</span>
+                <span className="font-display block text-[14px] text-dex-red">{h.difficulty.toUpperCase()}</span>
                 <span className="text-[14px]">
                   {h.name} · {new Date(h.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} · {h.turns} turns
                 </span>
@@ -250,7 +260,7 @@ function HallOfFame() {
           ))}
         </ol>
         <div className="flex justify-end">
-          <button type="button" className="pixel-btn pixel-btn--primary !text-[10px]" onClick={() => navigate('/battle')}>
+          <button type="button" className="pixel-btn pixel-btn--primary !text-[14px]" onClick={() => navigate('/battle')}>
             BATTLE AARYAN
           </button>
         </div>

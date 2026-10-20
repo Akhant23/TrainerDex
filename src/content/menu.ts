@@ -68,11 +68,11 @@ export const menu: readonly MenuEntry[] = [
   },
   {
     id: 'battle',
-    label: 'BATTLE',
+    label: 'BATTLE RESORT',
     route: '/battle',
     icon: 'battle',
     color: ['#c02838', '#5a1018'],
-    blurb: 'Challenge Trainer Aaryan to a real turn-based battle.',
+    blurb: 'Make an avatar, meet other visitors and climb the Battle Tower to the Champion.',
     phase: 4,
     planned: ['Pick a starter', 'Turn-based battle with types & crits', '3 difficulty levels', 'Win the TRAINERDEX BADGE'],
   },

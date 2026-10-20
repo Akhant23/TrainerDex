@@ -5,7 +5,12 @@ import { fetchApproved, pagerConfigured, submitMessage, TURNSTILE_SITE_KEY, type
 import { useSettings } from '../systems/settings'
 import { useVisitor } from '../systems/visitor'
 import { progress } from '../systems/progress'
-import { trainerFrames, trainerPalette } from '../sprites/trainerData'
+import { paletteFor } from '../sprites/character'
+import { crop } from '../sprites/pixels'
+import { signature } from '../content/aaryan'
+import { portraitPixels } from '../ui/CharacterSprite'
+import { resortSave } from '../systems/resortSave'
+import { trainersOnline } from '../systems/trainers'
 import { PixelArt } from '../ui/PixelArt'
 import { PixelBox } from '../ui/PixelBox'
 import { Turnstile } from '../ui/Turnstile'
@@ -16,8 +21,11 @@ import type { SpeciesId } from '../battle/data'
 
 const entry = menu.find((m) => m.id === 'pager')!
 
+let head: ReturnType<typeof crop> | null = null
+const trainerHead = () => (head ??= crop(portraitPixels(signature), 6, 2, 28, 30))
+
 export function AvatarIcon({ avatar, scale = 1 }: { avatar: Avatar; scale?: number }) {
-  if (avatar === 'trainer') return <PixelArt pixels={trainerFrames.portrait[0]} palette={trainerPalette} scale={scale} />
+  if (avatar === 'trainer') return <PixelArt pixels={trainerHead()} palette={paletteFor(signature)} scale={scale} />
   return <CreatureSprite id={avatar as SpeciesId} scale={scale} />
 }
 
@@ -71,7 +79,7 @@ export default function PokePager() {
       <div className="flex min-h-full flex-col gap-3 bg-[#1f5e58] p-[3%]">
         {!pagerConfigured && (
           <PixelBox className="px-4 py-3 text-[15px]">
-            <p className="font-display m-0 text-[10px] text-dex-red">NO SIGNAL</p>
+            <p className="font-display m-0 text-[14px] text-dex-red">NO SIGNAL</p>
             <p className="m-0 mt-1">The Poké Pager isn’t connected to its server yet, so messages can’t be sent or shown. (Setup: docs/BACKEND.md.)</p>
           </PixelBox>
         )}
@@ -80,7 +88,7 @@ export default function PokePager() {
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                className="pixel-btn pixel-btn--primary !text-[10px]"
+                className="pixel-btn pixel-btn--primary !text-[14px]"
                 disabled={!pagerConfigured}
                 onClick={() => {
                   sfx('open')
@@ -89,7 +97,7 @@ export default function PokePager() {
               >
                 ✉ COMPOSE
               </button>
-              <button type="button" className="pixel-btn !text-[10px]" disabled={!pagerConfigured || load.state === 'loading'} onClick={() => void refresh()}>
+              <button type="button" className="pixel-btn !text-[14px]" disabled={!pagerConfigured || load.state === 'loading'} onClick={() => void refresh()}>
                 ↻ REFRESH
               </button>
             </div>
@@ -106,9 +114,9 @@ export default function PokePager() {
         )}
         {view === 'sent' && (
           <PixelBox className="px-4 py-4">
-            <p className="font-display m-0 text-[11px] text-dex-red">MESSAGE SENT!</p>
+            <p className="font-display m-0 text-[15px] text-dex-red">MESSAGE SENT!</p>
             <p className="m-0 mt-2 text-[16px]">Thanks! Aaryan reviews every message, so yours will appear in the inbox once it’s approved.</p>
-            <button type="button" autoFocus className="pixel-btn mt-3 !text-[10px]" onClick={() => setView('inbox')}>
+            <button type="button" autoFocus className="pixel-btn mt-3 !text-[14px]" onClick={() => setView('inbox')}>
               BACK TO INBOX
             </button>
           </PixelBox>
@@ -128,7 +136,7 @@ function Display({ selected, view, count }: { selected?: PublicMessage; view: Vi
   }, [])
   return (
     <div className="absolute inset-0 flex flex-col bg-[#2a9a90] p-[3%]">
-      <div className="font-display flex items-center justify-between px-[1%] pb-[2%] text-[clamp(8px,2.2cqi,12px)] text-paper">
+      <div className="font-display flex items-center justify-between px-[1%] pb-[2%] text-[clamp(11px,3.1cqi,17px)] text-paper">
         <span>POKé PAGER</span>
         <span aria-hidden className="flex items-end gap-[2px]">
           {[4, 7, 10, 13].map((h) => (
@@ -140,7 +148,7 @@ function Display({ selected, view, count }: { selected?: PublicMessage; view: Vi
       <div className="relative flex min-h-0 flex-1 flex-col bg-[#c8e8c0] p-[3%] text-[#1a3a2a] shadow-[inset_0_0_0_var(--u)_#1a3a2a]">
         <div aria-hidden className="pointer-events-none absolute inset-0 opacity-15" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #1a3a2a 0 1px, transparent 1px 3px)' }} />
         {view === 'compose' ? (
-          <p className="font-display m-auto text-center text-[clamp(9px,2.6cqi,14px)] leading-relaxed">
+          <p className="font-display m-auto text-center text-[clamp(13px,3.6cqi,20px)] leading-relaxed">
             NEW MESSAGE
             <br />
             TO: AARYAN
@@ -152,14 +160,14 @@ function Display({ selected, view, count }: { selected?: PublicMessage; view: Vi
                 <AvatarIcon avatar={selected.avatar} scale={1} />
               </span>
               <span>
-                <span className="font-display block text-[clamp(9px,2.6cqi,14px)]">{selected.name}</span>
+                <span className="font-display block text-[clamp(13px,3.6cqi,20px)]">{selected.name}</span>
                 <span className="text-[clamp(11px,2.8cqi,15px)]">{fmtDate(selected.created_at)}</span>
               </span>
             </div>
-            <p className="m-0 min-h-0 flex-1 overflow-y-auto text-[clamp(13px,3.6cqi,21px)] leading-snug break-words whitespace-pre-wrap">{selected.message}</p>
+            <p className="m-0 min-h-0 flex-1 overflow-y-auto text-[clamp(13px,3.6cqi,21px)] leading-relaxed break-words whitespace-pre-wrap">{selected.message}</p>
           </div>
         ) : (
-          <p className="font-display m-auto text-center text-[clamp(9px,2.6cqi,14px)] leading-relaxed">
+          <p className="font-display m-auto text-center text-[clamp(13px,3.6cqi,20px)] leading-relaxed">
             {count === 0 ? (
               <>
                 NO MESSAGES YET
@@ -181,7 +189,7 @@ function Display({ selected, view, count }: { selected?: PublicMessage; view: Vi
 function Inbox({ load, focus, setFocus }: { load: Load; focus: number; setFocus: (i: number) => void }) {
   const messages = load.state === 'ready' ? load.messages : []
   const nav = useGridNav(messages.length, 1, { onMove: setFocus, initial: focus })
-  if (load.state === 'loading') return <p className="font-display blink m-0 p-3 text-[10px] text-paper">RECEIVING…</p>
+  if (load.state === 'loading') return <p className="font-display blink m-0 p-3 text-[14px] text-paper">RECEIVING…</p>
   if (load.state === 'error')
     return (
       <PixelBox className="px-4 py-3">
@@ -208,7 +216,7 @@ function Inbox({ load, focus, setFocus }: { load: Load; focus: number; setFocus:
               <AvatarIcon avatar={m.avatar} scale={1} />
             </span>
             <span className="min-w-0">
-              <span className="font-display block truncate text-[10px]">
+              <span className="font-display block truncate text-[14px]">
                 {m.name} <span className="opacity-60">· {fmtDate(m.created_at)}</span>
               </span>
               <span className="block truncate text-[15px]">{m.message}</span>
@@ -230,6 +238,10 @@ function Compose({ onSent }: { onSent: () => void }) {
   const [message, setMessage] = useState('')
   const [website, setWebsite] = useState('')
   const [token, setToken] = useState('')
+  // visitors with a resort avatar can have their message pop up above it
+  const [resort] = useState(() => resortSave.get())
+  const canLink = trainersOnline && !!resort.avatar
+  const [link, setLink] = useState(canLink)
   const [resetKey, setResetKey] = useState(0)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'sending' } | { kind: 'error'; text: string }>({ kind: 'idle' })
 
@@ -246,7 +258,8 @@ function Compose({ onSent }: { onSent: () => void }) {
     setStatus({ kind: 'sending' })
     sfx('sendOut')
     try {
-      await submitMessage({ ...check.value, turnstileToken: token, website })
+      // the browser secret lets this visitor delete the message later (Settings → Reset save data)
+      await submitMessage({ ...check.value, turnstileToken: token, website, trainerSecret: resort.secret, ...(canLink && link ? { trainerId: resort.trainerId } : {}) })
       sfx('save')
       onSent()
     } catch (e) {
@@ -269,17 +282,17 @@ function Compose({ onSent }: { onSent: () => void }) {
       }}
     >
       <label className="flex flex-col gap-1">
-        <span className="font-display text-[9px]">YOUR NAME</span>
+        <span className="font-display text-[13px]">YOUR NAME</span>
         <input className={field} value={name} maxLength={LIMITS.name} onChange={(e) => setName(e.target.value)} autoComplete="nickname" required />
       </label>
 
       <fieldset className="m-0 border-0 p-0">
-        <legend className="font-display mb-1 text-[9px]">AVATAR</legend>
+        <legend className="font-display mb-1 text-[13px]">AVATAR</legend>
         <AvatarPicker value={avatar} onChange={setAvatar} />
       </fieldset>
 
       <label className="flex flex-col gap-1">
-        <span className="font-display flex justify-between text-[9px]">
+        <span className="font-display flex justify-between text-[13px]">
           <span>MESSAGE</span>
           <span className={left < 20 ? 'text-gold' : ''} aria-live="polite">
             {left}
@@ -287,6 +300,13 @@ function Compose({ onSent }: { onSent: () => void }) {
         </span>
         <textarea className={`${field} min-h-[96px] resize-y`} value={message} maxLength={LIMITS.message} onChange={(e) => setMessage(e.target.value)} required />
       </label>
+
+      {canLink && (
+        <label className="flex items-center gap-2 text-[14px]">
+          <input type="checkbox" checked={link} onChange={(e) => setLink(e.target.checked)} className="h-4 w-4 accent-[var(--color-gold)]" />
+          Show this above my avatar ({resort.name}) at the Battle Resort
+        </label>
+      )}
 
       {/* honeypot: hidden from people, irresistible to bots */}
       <label aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
@@ -303,7 +323,7 @@ function Compose({ onSent }: { onSent: () => void }) {
         </p>
       )}
       <div className="flex justify-end">
-        <button type="submit" className="pixel-btn pixel-btn--primary !text-[10px]" disabled={status.kind === 'sending'}>
+        <button type="submit" className="pixel-btn pixel-btn--primary !text-[14px]" disabled={status.kind === 'sending'}>
           {status.kind === 'sending' ? (
             <>
               SENDING<span className="blink">…</span>

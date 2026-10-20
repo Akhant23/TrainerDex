@@ -10,7 +10,7 @@ import { useGameKeys } from '../systems/input'
 import { PixelArt } from '../ui/PixelArt'
 import { PixelBox } from '../ui/PixelBox'
 import { TrainerSprite } from '../ui/TrainerSprite'
-import { Heading, Sources, Tags } from '../ui/bits'
+import { Bullets, Heading, Sources, Tags } from '../ui/bits'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 
@@ -80,7 +80,7 @@ function CardAndCase() {
           ))}
         </div>
         <PixelBox className="px-[4%] py-[3%]">
-          <p className="font-display m-0 text-[clamp(10px,2.4cqi,13px)] text-dex-red">{focused.name}</p>
+          <p className="font-display m-0 text-[clamp(14px,3.4cqi,18px)] text-dex-red">{focused.name}</p>
           <p className="m-0 mt-1 text-[15px]">{focused.awardedFor}</p>
           <p className="m-0 mt-2 text-[13px] text-muted">Rub a badge with your cursor or finger to polish it. Select one for the full entry.</p>
         </PixelBox>
@@ -109,12 +109,12 @@ function FlipCard({ flipped, onFlip }: { flipped: boolean; onFlip: () => void })
       >
         {/* front */}
         <div className={face} style={{ background: goldBg }}>
-          <div className="font-display flex items-center justify-between bg-[#8a6008] px-[4%] py-[2%] text-[clamp(8px,2.2cqi,13px)] text-paper">
+          <div className="font-display flex items-center justify-between bg-[#8a6008] px-[4%] py-[2%] text-[clamp(11px,3.1cqi,18px)] text-paper">
             <span>TRAINER CARD</span>
             <span>ID No.{profile.trainerId}</span>
           </div>
           <div className="flex min-h-0 flex-1 gap-[3%] p-[3%]">
-            <dl className="font-display m-0 grid flex-1 grid-cols-[auto_1fr] content-center gap-x-3 gap-y-[0.7em] text-[clamp(7px,1.9cqi,12px)]">
+            <dl className="font-display m-0 grid flex-1 grid-cols-[auto_1fr] content-center gap-x-3 gap-y-[0.7em] text-[clamp(10px,2.7cqi,17px)]">
               {(
                 [
                   ['NAME', profile.name],
@@ -144,7 +144,7 @@ function FlipCard({ flipped, onFlip }: { flipped: boolean; onFlip: () => void })
 
         {/* back */}
         <div className={`${face} [transform:rotateY(180deg)]`} style={{ background: goldBg }}>
-          <div className="font-display flex items-center justify-between bg-[#8a6008] px-[4%] py-[2%] text-[clamp(8px,2.2cqi,13px)] text-paper">
+          <div className="font-display flex items-center justify-between bg-[#8a6008] px-[4%] py-[2%] text-[clamp(11px,3.1cqi,18px)] text-paper">
             <span>TRAINER PROFILE</span>
             <span>SINCE {profile.started}</span>
           </div>
@@ -164,7 +164,7 @@ function FlipCard({ flipped, onFlip }: { flipped: boolean; onFlip: () => void })
           </dl>
         </div>
       </div>
-      <span aria-hidden className="font-display absolute -bottom-[1.6em] right-0 text-[9px] text-paper/80">
+      <span aria-hidden className="font-display absolute -bottom-[1.6em] right-0 text-[13px] text-paper/80">
         TAP TO FLIP ↻
       </span>
     </button>
@@ -246,18 +246,18 @@ function BadgeDetail({ badge }: { badge: Badge }) {
           <span className="sm:hidden">
             <PolishableBadge badge={badge} scale={7} />
           </span>
-          <p className="font-display m-0 text-[clamp(8px,2cqi,11px)] text-paper/80">
+          <p className="font-display m-0 text-[clamp(11px,2.8cqi,15px)] text-paper/80">
             {(shine[badge.id] ?? 0) >= 100 ? '✦ SPARKLING!' : 'RUB TO POLISH'} · {badge.category.toUpperCase()}
           </p>
         </div>
       }
     >
-      <div className="space-y-3 p-[4%] text-[16px] leading-snug">
+      <div className="space-y-3 p-[4%] text-[16px] leading-relaxed">
         <PixelBox className="px-[5%] py-[4%]">
-          <p className="font-display m-0 text-[clamp(10px,2.6cqi,14px)] text-dex-red">{badge.title}</p>
+          <p className="font-display m-0 text-[clamp(14px,3.6cqi,20px)] text-dex-red">{badge.title}</p>
           <p className="m-0 mt-1 font-semibold">{badge.org}</p>
           <p className="m-0 text-[14px] text-muted">{badge.dates}</p>
-          <p className="m-0 mt-3">{badge.description}</p>
+          <Bullets items={badge.description} className="mt-3" />
         </PixelBox>
         <section>
           <Heading>SKILLS</Heading>
@@ -266,7 +266,7 @@ function BadgeDetail({ badge }: { badge: Badge }) {
         {badge.evidence.length > 0 && (
           <section>
             <Heading>BACKED BY</Heading>
-            <ul className="m-0 list-none space-y-1 p-0">
+            <ul className="m-0 list-none space-y-2 p-0">
               {badge.evidence.map((id) => {
                 const ex = experienceById(id)!
                 return (
@@ -283,10 +283,10 @@ function BadgeDetail({ badge }: { badge: Badge }) {
         )}
         <Sources ids={badge.sources} />
         <div className="flex justify-between pt-1">
-          <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(-1)}>
+          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
             ◀ PREV
           </button>
-          <button type="button" className="pixel-btn !text-[10px]" onClick={() => go(1)}>
+          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(1)}>
             NEXT ▶
           </button>
         </div>

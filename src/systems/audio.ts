@@ -17,7 +17,7 @@ export function noteToFreq(note: string): number {
 
 const tokens = (bars: string[]) => bars.join(' ').split(/\s+/)
 
-export type Track = 'menu' | 'battle' | 'victory'
+export type Track = 'menu' | 'battle' | 'victory' | 'resort'
 
 interface TrackData {
   lead: string[]
@@ -59,6 +59,18 @@ const TRACKS: Record<Track, TrackData> = {
       'B4 . B4 C5 . D5 E5 - - - G#4 - B4 - E5 .',
     ]),
     bass: [['A2', 'E3'], ['A2', 'E3'], ['F2', 'C3'], ['E2', 'B2']],
+  },
+  // "Sunset Terrace" — the Battle Resort
+  resort: {
+    bpm: 112,
+    loop: true,
+    lead: tokens([
+      'E5 . G5 . A5 - G5 . E5 . D5 . C5 - - .',
+      'D5 . E5 . G5 - E5 . D5 - - - . . . .',
+      'E5 . G5 . A5 - C6 . B5 . A5 . G5 - - .',
+      'A5 . G5 . E5 . D5 . C5 - - - - - . .',
+    ]),
+    bass: [['C3', 'G3'], ['G2', 'D3'], ['A2', 'E3'], ['F2', 'C3']],
   },
   // victory fanfare (plays once)
   victory: {

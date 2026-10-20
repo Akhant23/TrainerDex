@@ -58,7 +58,7 @@ export default function Intro({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-black text-paper">
-      <button type="button" onClick={onDone} className="pixel-btn pixel-btn--ghost absolute top-3 right-3 z-20 !text-[10px]">
+      <button type="button" onClick={onDone} className="pixel-btn pixel-btn--ghost absolute top-3 right-3 z-20 !text-[14px]">
         SKIP INTRO &gt;&gt;
       </button>
 
@@ -140,7 +140,7 @@ export default function Intro({ onDone }: { onDone: () => void }) {
                   submitName(draftName)
                 }}
               >
-                <label htmlFor="visitor-name" className="font-display text-[11px]">
+                <label htmlFor="visitor-name" className="font-display text-[15px]">
                   YOUR NAME?
                 </label>
                 <input
@@ -151,7 +151,7 @@ export default function Intro({ onDone }: { onDone: () => void }) {
                   autoComplete="nickname"
                   placeholder="TRAINER"
                   onChange={(e) => setDraftName(e.target.value)}
-                  className="font-display w-full border-0 bg-[#e8ecf8] px-3 py-3 text-[16px] text-ink uppercase shadow-[inset_0_0_0_var(--u)_var(--color-frame)] outline-none focus:shadow-[inset_0_0_0_var(--u)_var(--color-harbour)]"
+                  className="font-display w-full border-0 bg-[#e8ecf8] px-3 py-3 text-[22px] text-ink uppercase shadow-[inset_0_0_0_var(--u)_var(--color-frame)] outline-none focus:shadow-[inset_0_0_0_var(--u)_var(--color-harbour)]"
                 />
                 <div className="flex flex-wrap justify-end gap-2">
                   <PixelButton variant="ghost" className="!text-ink" sound={null} onClick={() => submitName('')}>

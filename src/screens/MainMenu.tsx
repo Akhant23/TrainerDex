@@ -200,7 +200,7 @@ function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) =
 
   return (
     <div className="bg-dots flex h-full flex-1 flex-col">
-      <div className="font-display flex items-center justify-between bg-ink px-[3%] py-[1.6%] text-[clamp(9px,2.2cqi,13px)] text-paper">
+      <div className="font-display flex items-center justify-between bg-ink px-[3%] py-[1.6%] text-[clamp(13px,3.1cqi,18px)] text-paper">
         <span>MENU</span>
         <span className="text-frame-hi">
           TRAINER: <span className="text-gold">{name}</span>
@@ -235,13 +235,13 @@ function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) =
                 <PixelIcon name={entry.icon} scale={3} />
               </span>
             </span>
-            <span className="font-display text-outline min-w-0 text-[clamp(10px,2.6cqi,16px)] leading-tight text-paper">{entry.label}</span>
-            <span id={`tile-${entry.id}-num`} className="font-display absolute top-[6%] right-[4%] text-[9px] text-paper/70">
+            <span className="font-display text-outline min-w-0 text-[clamp(14px,3.6cqi,22px)] leading-tight text-paper">{entry.label}</span>
+            <span id={`tile-${entry.id}-num`} className="font-display absolute top-[6%] right-[4%] text-[13px] text-paper/70">
               <span className="sr-only">Shortcut key </span>
               {i + 1}
             </span>
             {i === focus && (
-              <span aria-hidden className="cursor-arrow font-display absolute bottom-[8%] right-[5%] text-[12px] text-gold text-outline">
+              <span aria-hidden className="cursor-arrow font-display absolute bottom-[8%] right-[5%] text-[17px] text-gold text-outline">
                 ▶
               </span>
             )}

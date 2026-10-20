@@ -102,6 +102,17 @@ export const moves = {
   firewall: m({ id: 'firewall', name: 'FIREWALL', type: 'TECH', power: 0, accuracy: 0, pp: 10, effect: { kind: 'self', stats: { def: 2 } }, description: 'Sharply raises DEFENCE.' }),
   ctrlZ: m({ id: 'ctrlZ', name: 'CTRL+Z', type: 'TECH', power: 0, accuracy: 0, pp: 5, effect: { kind: 'heal', fraction: 0.5 }, description: 'Undo. Restores half of max HP.' }),
 
+  yorker: m({ id: 'yorker', name: 'YORKER', type: 'SPORT', power: 50, accuracy: 100, pp: 20, priority: 1, effect: { kind: 'none' }, description: 'Right at the toes. Always goes first.' }),
+  netSession: m({ id: 'netSession', name: 'NET SESSION', type: 'SPORT', power: 0, accuracy: 0, pp: 10, effect: { kind: 'self', stats: { atk: 1, def: 1 } }, description: 'Practice in the nets. Raises ATTACK and DEFENCE.' }),
+  icebreaker: m({ id: 'icebreaker', name: 'ICEBREAKER', type: 'LEADER', power: 60, accuracy: 100, pp: 15, effect: { kind: 'target', stats: { atk: -1 }, chance: 30 }, description: 'Gets everyone talking. May lower the target’s ATTACK.' }),
+  campfireStory: m({ id: 'campfireStory', name: 'CAMPFIRE STORY', type: 'LEADER', power: 0, accuracy: 0, pp: 5, effect: { kind: 'heal', fraction: 0.5 }, description: 'A story by the fire. Restores half of max HP.' }),
+  hypeCampaign: m({ id: 'hypeCampaign', name: 'HYPE CAMPAIGN', type: 'CREATIVE', power: 85, accuracy: 95, pp: 10, effect: { kind: 'none' }, description: 'A launch nobody can scroll past.' }),
+  soldOut: m({ id: 'soldOut', name: 'SOLD OUT', type: 'CREATIVE', power: 60, accuracy: 100, pp: 5, effect: { kind: 'finisher' }, description: 'Gone in minutes. Double power if the target is at half HP or less.' }),
+  merchDrop: m({ id: 'merchDrop', name: 'MERCH DROP', type: 'CREATIVE', power: 70, accuracy: 100, pp: 10, effect: { kind: 'self', stats: { spe: 1 }, chance: 50 }, description: 'New stock lands. May raise SPEED.' }),
+  resolution: m({ id: 'resolution', name: 'RESOLUTION', type: 'LAW', power: 75, accuracy: 100, pp: 10, effect: { kind: 'target', stats: { atk: -1 }, chance: 30 }, description: 'Passed by consensus. May lower the target’s ATTACK.' }),
+  veto: m({ id: 'veto', name: 'VETO', type: 'LAW', power: 0, accuracy: 90, pp: 10, effect: { kind: 'target', stats: { atk: -2 } }, description: 'Blocks the motion. Sharply lowers the target’s ATTACK.' }),
+  riskAudit: m({ id: 'riskAudit', name: 'RISK AUDIT', type: 'TECH', power: 70, accuracy: 100, pp: 15, effect: { kind: 'target', stats: { def: -1 }, chance: 50 }, description: 'Finds every weak point. May lower the target’s DEFENCE.' }),
+
   tackle: m({ id: 'tackle', name: 'TACKLE', type: 'NORMAL', power: 40, accuracy: 100, pp: 30, effect: { kind: 'none' }, description: 'A full-body charge.' }),
   bunnyHop: m({ id: 'bunnyHop', name: 'BUNNY HOP', type: 'NORMAL', power: 70, accuracy: 95, pp: 15, effect: { kind: 'none' }, description: 'Springs out of the flask and lands hard.' }),
   diveBomb: m({ id: 'diveBomb', name: 'DIVE BOMB', type: 'NORMAL', power: 70, accuracy: 95, pp: 15, effect: { kind: 'none' }, description: 'Straight down from the clifftop.' }),
@@ -134,6 +145,12 @@ export const species = {
 
   byterat: s({ id: 'byterat', name: 'BYTERAT', types: ['TECH'], base: { hp: 74, atk: 88, def: 70, spe: 96 }, moves: ['byte', 'overclock', 'firewall', 'ctrlZ'], blurb: 'Lives in server racks. Its tail is a working ethernet cable.' }),
   beakerbun: s({ id: 'beakerbun', name: 'BEAKERBUN', types: ['SCIENCE'], base: { hp: 84, atk: 82, def: 82, spe: 72 }, moves: ['labExperiment', 'splice', 'peerReview', 'bunnyHop'], blurb: 'Hops out of round-bottom flasks. Nobody knows what’s in the green stuff.' }),
+  wicketoad: s({ id: 'wicketoad', name: 'WICKETOAD', types: ['SPORT'], base: { hp: 86, atk: 84, def: 80, spe: 70 }, moves: ['hitForSix', 'yorker', 'netSession', 'tackle'], blurb: 'Bats, bowls and coaches the juniors. Puffs up its throat before every appeal.' }),
+  campfly: s({ id: 'campfly', name: 'CAMPFLY', types: ['LEADER'], base: { hp: 72, atk: 72, def: 70, spe: 92 }, moves: ['leadByExample', 'icebreaker', 'campfireStory', 'guidedTour'], blurb: 'Glows brightest at First Year Camp. Knows every icebreaker going.' }),
+  megaphawk: s({ id: 'megaphawk', name: 'MEGAPHAWK', types: ['CREATIVE', 'LEADER'], base: { hp: 76, atk: 92, def: 66, spe: 94 }, moves: ['hypeCampaign', 'soldOut', 'pepTalk', 'diveBomb'], blurb: 'Its beak is a megaphone. Every campaign it fronts sells out.' }),
+  stitchick: s({ id: 'stitchick', name: 'STITCHICK', types: ['CREATIVE'], base: { hp: 74, atk: 80, def: 76, spe: 88 }, moves: ['merchDrop', 'quickSketch', 'moodBoard', 'creativeSpark'], blurb: 'Hatched in a hoodie it stitched itself. The socks match, too.' }),
+  diplomoth: s({ id: 'diplomoth', name: 'DIPLOMOTH', types: ['LAW', 'LEADER'], base: { hp: 80, atk: 80, def: 84, spe: 74 }, moves: ['resolution', 'veto', 'crossExamine', 'leadByExample'], blurb: 'Raises its placard, waits its turn, and wins the room anyway.' }),
+  datadillo: s({ id: 'datadillo', name: 'DATADILLO', types: ['TECH', 'LAW'], base: { hp: 90, atk: 84, def: 96, spe: 58 }, moves: ['riskAudit', 'byte', 'firewall', 'objection'], blurb: 'Rolls up in encrypted plates. Spots the risk before anyone else does.' }),
   riffin: s({ id: 'riffin', name: 'RIFFIN', types: ['MUSIC'], base: { hp: 78, atk: 90, def: 72, spe: 82 }, moves: ['bassDrop', 'powerChord', 'hypeTrack', 'diveBomb'], blurb: 'A cliff-dwelling puffin with a tiny guitar and a big riff.' }),
 } satisfies Record<string, Species>
 

@@ -27,7 +27,7 @@ export async function fetchApproved(limit = 50): Promise<PublicMessage[]> {
   return res.json()
 }
 
-export async function submitMessage(body: { name: string; message: string; avatar: string; turnstileToken: string; website: string }): Promise<void> {
+export async function submitMessage(body: { name: string; message: string; avatar: string; kind?: 'message' | 'suggestion'; turnstileToken: string; website: string; trainerId?: string; trainerSecret?: string }): Promise<void> {
   const res = await fetch(`${URL}/functions/v1/submit-message`, {
     method: 'POST',
     headers: { ...headers(), 'Content-Type': 'application/json' },

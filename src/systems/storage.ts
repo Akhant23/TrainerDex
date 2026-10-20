@@ -33,6 +33,8 @@ export function clearAll(): void {
     const ls = globalThis.localStorage
     if (!ls) return
     for (const k of Object.keys(ls)) if (k.startsWith(PREFIX)) ls.removeItem(k)
+    const ss = globalThis.sessionStorage
+    if (ss) for (const k of Object.keys(ss)) if (k.startsWith(PREFIX)) ss.removeItem(k)
   } catch {
     /* ignore */
   }

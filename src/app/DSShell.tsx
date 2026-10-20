@@ -47,8 +47,8 @@ export function DSShell({ top, bottom, compactTop = false, topLabel = 'Top scree
       </div>
       <footer className="mt-auto px-4 pt-4 pb-3 text-center text-[13px] text-muted">
         <p className="m-0 hidden lg:block">
-          <kbd className="font-display text-[9px]">↑↓←→</kbd> move · <kbd className="font-display text-[9px]">ENTER / Z</kbd> select ·{' '}
-          <kbd className="font-display text-[9px]">ESC / X</kbd> back
+          <kbd className="font-display text-[13px]">↑↓←→</kbd> move · <kbd className="font-display text-[13px]">ENTER / Z</kbd> select ·{' '}
+          <kbd className="font-display text-[13px]">ESC / X</kbd> back
         </p>
         <p className="m-0">A fan-inspired personal site. Not affiliated with Nintendo, Game Freak, Creatures or The Pokémon Company.</p>
       </footer>

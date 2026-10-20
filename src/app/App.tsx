@@ -117,7 +117,7 @@ function Game() {
 
 function Loading() {
   return (
-    <div role="status" className="font-display flex min-h-dvh items-center justify-center text-[12px] text-paper">
+    <div role="status" className="font-display flex min-h-dvh items-center justify-center text-[17px] text-paper">
       <span className="blink">LOADING…</span>
     </div>
   )

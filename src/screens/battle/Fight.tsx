@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { navigate } from '../../app/router'
 import { menu } from '../../content/menu'
 import { types } from '../../content/pokedex'
-import { moves, species, type Difficulty, type MoveId, type SpeciesId } from '../../battle/data'
-import { active, alive, createBattle, nameOf, openingEvents, replace, takeTurn, type Action, type BattleEvent, type BattleState, type SideId } from '../../battle/engine'
+import { moves, species, type Difficulty, type MoveId } from '../../battle/data'
+import type { Appearance } from '../../sprites/character'
+import { active, alive, createBattleFrom, nameOf, openingEvents, replace, takeTurn, type Action, type BattleEvent, type BattleSetup, type BattleState, type SideId } from '../../battle/engine'
 import { audio, type Sfx } from '../../systems/audio'
 import { TEXT_SPEED_MS, useSettings } from '../../systems/settings'
 import { useVisitor } from '../../systems/visitor'
@@ -14,6 +15,11 @@ import { ChoiceMenu } from '../../ui/ChoiceMenu'
 import { PixelArt } from '../../ui/PixelArt'
 import { PixelBox } from '../../ui/PixelBox'
 import { TrainerSprite } from '../../ui/TrainerSprite'
+import { CHAR_H } from '../../sprites/character'
+import { CharacterSprite } from '../../ui/CharacterSprite'
+import { signature } from '../../content/aaryan'
+import { resortSave } from '../../systems/resortSave'
+import { DEFAULT_AVATAR } from '../resort/AvatarStudio'
 import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
 import { CreatureSprite, HpBar, useHeightScale } from './BattleBits'
@@ -36,12 +42,39 @@ interface View {
   message: string
 }
 
-export default function Fight({ difficulty, starter, seed, onExit }: { difficulty: Difficulty; starter: SpeciesId; seed: number; onExit: (to: 'setup' | 'hall') => void }) {
+export interface FightOpponent {
+  look?: Appearance
+  /** Shown on the VS screen, e.g. "AARYAN" / "FLOOR 3 · MARKETING DIRECTOR". */
+  name?: string
+  tag?: string
+  winLines?: string[]
+  loseLines?: string[]
+}
+
+export default function Fight({
+  setup,
+  seed,
+  title,
+  opponent = {},
+  mode = 'quick',
+  recordWin = null,
+  onExit,
+}: {
+  setup: BattleSetup
+  seed: number
+  title: string
+  opponent?: FightOpponent
+  mode?: 'quick' | 'tower'
+  /** Quick battles and the Champion floor record a Hall of Fame entry + badge. */
+  recordWin?: Difficulty | null
+  onExit: (to: 'setup' | 'hall' | 'resort', won: boolean) => void
+}) {
   const { settings, sfx, reducedMotion } = useSettings()
   const { name } = useVisitor()
-  const [battle, setBattle] = useState<BattleState>(() => createBattle(difficulty, starter, seed))
+  const [battle, setBattle] = useState<BattleState>(() => createBattleFrom(setup, seed))
   const [panel, setPanel] = useState<Panel>('none')
   const [encounter, setEncounter] = useState(true)
+  const [vs, setVs] = useState(false)
   const [result, setResult] = useState<{ won: boolean; firstBadge: boolean } | null>(null)
   const [view, setView] = useState<View>(() => ({
     active: [0, 0],
@@ -215,22 +248,25 @@ export default function Fight({ difficulty, starter, seed, onExit }: { difficult
           audio.setTrack('victory')
           patch({ trainer: 'defeated' })
           await say(`You defeated TRAINER AARYAN!`)
-          await say('AARYAN: Well played. I didn’t see that coming!')
-          const firstBadge = progress.winBattle({
-            date: new Date().toISOString(),
-            difficulty,
-            team: st.sides[0].team.map((m) => m.species),
-            turns: st.turn,
-            name,
-          })
-          sfx('badge')
-          await say(`${name} received the TRAINERDEX BADGE!`)
+          for (const line of opponent.winLines ?? ['AARYAN: Well played. I didn’t see that coming!']) await say(line)
+          let firstBadge = false
+          if (recordWin) {
+            firstBadge = progress.winBattle({
+              date: new Date().toISOString(),
+              difficulty: recordWin,
+              team: st.sides[0].team.map((m) => m.species),
+              turns: st.turn,
+              name,
+            })
+            sfx('badge')
+            await say(`${name} received the TRAINERDEX BADGE!`)
+          }
           setResult({ won: true, firstBadge })
         } else {
           audio.setTrack('menu')
           patch({ trainer: 'victorious' })
           await say(`${name} was defeated by TRAINER AARYAN…`)
-          await say('AARYAN: Good game! The arena’s always open for a rematch.')
+          for (const line of opponent.loseLines ?? ['AARYAN: Good game! The arena’s always open for a rematch.']) await say(line)
           setResult({ won: false, firstBadge: false })
         }
         setPanel('results')
@@ -244,7 +280,7 @@ export default function Fight({ difficulty, starter, seed, onExit }: { difficult
       patch({ message: `What will ${nameOf(active(st, 0))} do?` })
       setPanel('command')
     },
-    [difficulty, name, patch, say, sfx],
+    [opponent, recordWin, name, patch, say, sfx],
   )
 
   /* ---------- opening ---------- */
@@ -259,6 +295,12 @@ export default function Fight({ difficulty, starter, seed, onExit }: { difficult
       await wait(reducedMotion ? 300 : 1100, false)
       if (cancelled) return
       setEncounter(false)
+      // BW-style VS screen: both trainers slide in and nod (A / tap skips)
+      setVs(true)
+      sfx('select')
+      await wait(reducedMotion ? 900 : 2700)
+      if (cancelled) return
+      setVs(false)
       await play(openingEvents(battle), battle)
       if (!cancelled) await afterTurn(battle)
     })()
@@ -313,11 +355,22 @@ export default function Fight({ difficulty, starter, seed, onExit }: { difficult
   return (
     <SectionScreen
       entry={entry}
-      title={`VS AARYAN · ${difficulty.toUpperCase()}`}
+      title={title}
       compactTop={false}
       onBack={back}
       backKeys={panel !== 'none' && panel !== 'replace'}
-      top={<Scene battle={battle} view={view} encounter={encounter} onSkip={() => skipRef.current?.()} />}
+      top={
+        <>
+          <Scene battle={battle} view={view} encounter={encounter} look={opponent.look} onSkip={() => skipRef.current?.()} />
+          {vs && (
+            <VsScreen
+              me={{ look: resortSave.get().avatar ?? DEFAULT_AVATAR, name: (resortSave.get().name || name).toUpperCase(), tag: 'CHALLENGER' }}
+              foe={{ look: opponent.look ?? signature, name: opponent.name ?? 'AARYAN', tag: opponent.tag ?? title }}
+              onSkip={() => skipRef.current?.()}
+            />
+          )}
+        </>
+      }
     >
       <div className="flex min-h-[45dvh] flex-col bg-[#2a2c3a] p-[3%] sm:min-h-full">
         {panel === 'command' && <CommandPanel battle={battle} onPick={(p) => setPanel(p)} />}
@@ -344,9 +397,9 @@ export default function Fight({ difficulty, starter, seed, onExit }: { difficult
             />
           </div>
         )}
-        {panel === 'results' && result && <Results battle={battle} won={result.won} firstBadge={result.firstBadge} onAgain={() => onExit('setup')} onHall={() => onExit('hall')} />}
+        {panel === 'results' && result && <Results battle={battle} won={result.won} firstBadge={result.firstBadge} badge={!!recordWin} mode={mode} onAgain={() => onExit('setup', result.won)} onHall={() => onExit('hall', result.won)} onContinue={() => onExit('resort', result.won)} />}
         {panel === 'none' && (
-          <button type="button" onClick={() => skipRef.current?.()} className="font-display m-auto cursor-pointer border-0 bg-transparent p-4 text-[10px] text-paper/60">
+          <button type="button" onClick={() => skipRef.current?.()} className="font-display m-auto cursor-pointer border-0 bg-transparent p-4 text-[14px] text-paper/60">
             <span className="blink">▼</span> TAP OR PRESS A TO SPEED UP
           </button>
         )}
@@ -357,10 +410,12 @@ export default function Fight({ difficulty, starter, seed, onExit }: { difficult
 
 /* ---------------- Top screen ---------------- */
 
-function Scene({ battle, view, encounter, onSkip }: { battle: BattleState; view: View; encounter: boolean; onSkip: () => void }) {
+function Scene({ battle, view, encounter, look, onSkip }: { battle: BattleState; view: View; encounter: boolean; look?: Appearance; onSkip: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const oppScale = useHeightScale(ref, 0.3, 40)
   const plyScale = useHeightScale(ref, 0.46, 40)
+  // the trainer stands on the far platform, so they must fit in the space above it
+  const trainerScale = useHeightScale(ref, 0.4, CHAR_H)
   const opp = battle.sides[1].team[view.active[1]]
   const ply = battle.sides[0].team[view.active[0]]
   const animCls = (side: SideId) => {
@@ -380,7 +435,7 @@ function Scene({ battle, view, encounter, onSkip }: { battle: BattleState; view:
         {/* opponent trainer */}
         {(view.trainer === 'intro' || view.trainer === 'defeated' || view.trainer === 'victorious') && (
           <div className={`stand anim-enter`} style={{ left: '72%', top: '46%' }}>
-            <TrainerSprite pose={view.trainer === 'victorious' ? 'victory' : 'idle'} scale={Math.max(1, Math.round(oppScale * 0.9))} />
+            <TrainerSprite look={look} pose={view.trainer === 'victorious' ? 'victory' : 'idle'} scale={trainerScale} />
           </div>
         )}
 
@@ -406,7 +461,7 @@ function Scene({ battle, view, encounter, onSkip }: { battle: BattleState; view:
         {view.shown[0] && <InfoBox className="right-[3%] top-[60%]" name={nameOf(ply)} level={ply.level} hp={view.hp[0]} max={ply.maxHp} numbers />}
         {view.trainer === 'intro' && (
           <PixelBox variant="plate" className="absolute top-[5%] left-[3%] px-3 py-2">
-            <p className="font-display m-0 text-[clamp(7px,2cqi,12px)]">TRAINER AARYAN</p>
+            <p className="font-display m-0 text-[clamp(10px,2.8cqi,17px)]">TRAINER AARYAN</p>
             <p className="m-0 mt-1 flex gap-1" aria-label={`${battle.sides[1].team.length} creatures`}>
               {battle.sides[1].team.map((_, i) => (
                 <span key={i} className="inline-block h-[clamp(6px,1.8cqi,10px)] w-[clamp(6px,1.8cqi,10px)] rounded-full bg-dex-red shadow-[0_0_0_2px_var(--color-ink)]" />
@@ -431,7 +486,7 @@ function Scene({ battle, view, encounter, onSkip }: { battle: BattleState; view:
 function InfoBox({ name, level, hp, max, numbers = false, team, className }: { name: string; level: number; hp: number; max: number; numbers?: boolean; team?: boolean[]; className: string }) {
   return (
     <PixelBox variant="plate" className={`absolute w-[44%] px-[2.5%] py-[1.5%] ${className}`}>
-      <div className="font-display flex items-baseline justify-between gap-2 text-[clamp(7px,2.1cqi,12px)]">
+      <div className="font-display flex items-baseline justify-between gap-2 text-[clamp(10px,2.9cqi,17px)]">
         <span className="truncate">{name}</span>
         <span className="shrink-0">Lv{level}</span>
       </div>
@@ -515,7 +570,7 @@ function CommandPanel({ battle, onPick }: { battle: BattleState; onPick: (p: Pan
           }`}
           style={{ background: it.bg }}
         >
-          <span className={`font-display text-outline ${it.id === 'fight' ? 'text-[clamp(14px,4.5cqi,26px)]' : 'text-[clamp(10px,3cqi,16px)]'}`}>{it.label}</span>
+          <span className={`font-display text-outline ${it.id === 'fight' ? 'text-[clamp(20px,6.3cqi,36px)]' : 'text-[clamp(14px,4.2cqi,22px)]'}`}>{it.label}</span>
           {it.sub && <span className="text-[13px] text-paper/90">{it.sub}</span>}
         </button>
       ))}
@@ -546,9 +601,9 @@ function FightPanel({ battle, onMove }: { battle: BattleState; onMove: (i: numbe
               }`}
               style={{ background: t.color }}
             >
-              <span className="font-display text-outline text-[clamp(8px,2.4cqi,13px)] leading-tight">{mv.name}</span>
+              <span className="font-display text-outline text-[clamp(11px,3.4cqi,18px)] leading-tight">{mv.name}</span>
               <span className="flex items-center justify-between text-[13px] text-paper text-outline">
-                <span className="font-display text-[clamp(6px,1.8cqi,9px)]">{t.label}</span>
+                <span className="font-display text-[clamp(8px,2.5cqi,13px)]">{t.label}</span>
                 <span>
                   PP {m.pp}/{mv.pp}
                 </span>
@@ -558,7 +613,7 @@ function FightPanel({ battle, onMove }: { battle: BattleState; onMove: (i: numbe
         })}
       </div>
       <PixelBox className="px-3 py-2 text-[14px]">
-        <span className="font-display text-[9px] text-muted">
+        <span className="font-display text-[13px] text-muted">
           {focused.power ? `POWER ${focused.power} · ACC ${focused.accuracy || '—'}` : 'STATUS MOVE'}
         </span>
         <span className="mt-1 block">{focused.description}</span>
@@ -578,7 +633,7 @@ function PartyPanel({ battle, forced, onPick }: { battle: BattleState; forced: b
   const nav = useGridNav(side.team.length, 1, { autoFocus: true, initial: forced ? Math.max(0, alive(side)[0] ?? 0) : 0, onActivate: pick })
   return (
     <div className="flex flex-col gap-2">
-      {forced && <p className="font-display m-0 text-[10px] text-gold">SEND OUT WHICH CREATURE?</p>}
+      {forced && <p className="font-display m-0 text-[14px] text-gold">SEND OUT WHICH CREATURE?</p>}
       {side.team.map((m, i) => (
         <button
           key={i}
@@ -595,7 +650,7 @@ function PartyPanel({ battle, forced, onPick }: { battle: BattleState; forced: b
             <CreatureSprite id={m.species} scale={1} />
           </span>
           <span className="min-w-0 flex-1 text-paper">
-            <span className="font-display text-outline flex justify-between text-[clamp(8px,2.4cqi,12px)]">
+            <span className="font-display text-outline flex justify-between text-[clamp(11px,3.4cqi,17px)]">
               <span>{species[m.species].name}</span>
               <span>Lv{m.level}</span>
             </span>
@@ -603,8 +658,8 @@ function PartyPanel({ battle, forced, onPick }: { battle: BattleState; forced: b
               <HpBar hp={m.hp} max={m.maxHp} showNumbers />
             </span>
           </span>
-          {i === side.active && !forced && <span className="font-display text-[8px] text-paper">IN BATTLE</span>}
-          {m.hp <= 0 && <span className="font-display text-[8px] text-paper">FAINTED</span>}
+          {i === side.active && !forced && <span className="font-display text-[11px] text-paper">IN BATTLE</span>}
+          {m.hp <= 0 && <span className="font-display text-[11px] text-paper">FAINTED</span>}
         </button>
       ))}
     </div>
@@ -619,10 +674,10 @@ function BagPanel({ battle, onUse }: { battle: BattleState; onUse: () => void })
     <div className="flex flex-col gap-3">
       <PixelBox className="flex items-center justify-between gap-3 px-4 py-3">
         <span>
-          <span className="font-display block text-[11px]">POTION ×{left}</span>
+          <span className="font-display block text-[15px]">POTION ×{left}</span>
           <span className="text-[14px]">Restores half of the active creature’s max HP.</span>
         </span>
-        <button type="button" autoFocus className="pixel-btn pixel-btn--primary !text-[10px]" disabled={left <= 0 || full} onClick={onUse}>
+        <button type="button" autoFocus className="pixel-btn pixel-btn--primary !text-[14px]" disabled={left <= 0 || full} onClick={onUse}>
           USE
         </button>
       </PixelBox>
@@ -631,7 +686,25 @@ function BagPanel({ battle, onUse }: { battle: BattleState; onUse: () => void })
   )
 }
 
-function Results({ battle, won, firstBadge, onAgain, onHall }: { battle: BattleState; won: boolean; firstBadge: boolean; onAgain: () => void; onHall: () => void }) {
+function Results({
+  battle,
+  won,
+  firstBadge,
+  badge,
+  mode,
+  onAgain,
+  onHall,
+  onContinue,
+}: {
+  battle: BattleState
+  won: boolean
+  firstBadge: boolean
+  badge: boolean
+  mode: 'quick' | 'tower'
+  onAgain: () => void
+  onHall: () => void
+  onContinue: () => void
+}) {
   // ignore input briefly so mashing A through the last lines doesn't restart straight away
   const [ready, setReady] = useState(false)
   useEffect(() => {
@@ -641,21 +714,26 @@ function Results({ battle, won, firstBadge, onAgain, onHall }: { battle: BattleS
   return (
     <div className="flex flex-col gap-3 text-ink">
       <PixelBox className="px-[5%] py-[4%]">
-        {won ? (
+        {won && !badge ? (
+          <>
+            <p className="font-display m-0 text-[clamp(14px,3.9cqi,20px)] text-dex-red">FLOOR CLEARED!</p>
+            <p className="m-0 mt-1">You beat this version of Aaryan. The lift to the next floor is open.</p>
+          </>
+        ) : won ? (
           <div className="flex items-center gap-4">
             <PixelArt pixels={trainerdexBadge.pixels} palette={trainerdexBadge.palette} scale={4} label="TRAINERDEX BADGE" className="sparkle-once" />
             <div>
-              <p className="font-display m-0 text-[clamp(10px,2.8cqi,14px)] text-dex-red">CONGRATULATIONS!</p>
+              <p className="font-display m-0 text-[clamp(14px,3.9cqi,20px)] text-dex-red">CONGRATULATIONS!</p>
               <p className="m-0 mt-1">You defeated Trainer Aaryan{firstBadge ? ' and earned the TRAINERDEX BADGE!' : ' again!'}</p>
             </div>
           </div>
         ) : (
           <>
-            <p className="font-display m-0 text-[clamp(10px,2.8cqi,14px)] text-dex-red">DEFEATED…</p>
-            <p className="m-0 mt-1">Trainer Aaryan wins this round. Try a different starter or a lower difficulty.</p>
+            <p className="font-display m-0 text-[clamp(14px,3.9cqi,20px)] text-dex-red">DEFEATED…</p>
+            <p className="m-0 mt-1">{mode === 'tower' ? 'Aaryan holds this floor for now. Swap your party at the PC and try again.' : 'Trainer Aaryan wins this round. Try a different starter or a lower difficulty.'}</p>
           </>
         )}
-        <dl className="font-display m-0 mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[clamp(8px,2.2cqi,11px)]">
+        <dl className="font-display m-0 mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[clamp(11px,3.1cqi,15px)]">
           <dt className="text-muted">TURNS</dt>
           <dd className="m-0">{battle.turn}</dd>
           <dt className="text-muted">CRITS</dt>
@@ -664,17 +742,64 @@ function Results({ battle, won, firstBadge, onAgain, onHall }: { battle: BattleS
           <dd className="m-0">{battle.stats.superEffective}</dd>
         </dl>
       </PixelBox>
+      {mode === 'tower' ? (
+        <div className="flex justify-end">
+          <button type="button" autoFocus disabled={!ready} className="pixel-btn pixel-btn--primary !text-[14px]" onClick={onContinue}>
+            CONTINUE
+          </button>
+        </div>
+      ) : (
       <div className="flex flex-wrap justify-end gap-1">
-        <button type="button" autoFocus disabled={!ready} className="pixel-btn pixel-btn--primary !text-[10px]" onClick={onAgain}>
+        <button type="button" autoFocus disabled={!ready} className="pixel-btn pixel-btn--primary !text-[14px]" onClick={onAgain}>
           BATTLE AGAIN
         </button>
-        <button type="button" disabled={!ready} className="pixel-btn !text-[10px]" onClick={onHall}>
+        <button type="button" disabled={!ready} className="pixel-btn !text-[14px]" onClick={onHall}>
           HALL OF FAME
         </button>
-        <button type="button" className="pixel-btn !text-[10px]" onClick={() => navigate('/')}>
+        <button type="button" className="pixel-btn !text-[14px]" onClick={() => navigate('/')}>
           MAIN MENU
         </button>
       </div>
+      )}
+    </div>
+  )
+}
+
+/* ---------------- VS screen ---------------- */
+
+interface VsSide {
+  look: Appearance
+  name: string
+  tag: string
+}
+
+/** Two diagonal bands slide in — the opponent from the right, you from the left — then both nod. */
+function VsScreen({ me, foe, onSkip }: { me: VsSide; foe: VsSide; onSkip: () => void }) {
+  const band = (side: VsSide, top: boolean) => (
+    <div
+      className={`absolute inset-x-0 flex h-[46%] items-stretch overflow-hidden ${top ? 'vs-in-right top-[2%] flex-row-reverse' : 'vs-in-left bottom-[2%]'}`}
+      style={{
+        background: top ? 'linear-gradient(90deg,#3a0d16,#c8283c 60%,#ff6a50)' : 'linear-gradient(90deg,#1c66d8,#2a3c9a 45%,#101a4a)',
+        clipPath: top ? 'polygon(8% 0,100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,92% 100%,0 100%)',
+      }}
+    >
+      <div className="relative h-full w-[46%] shrink-0">
+        <div className="absolute inset-x-0 top-[8%] flex h-full justify-center">
+          <CharacterSprite appearance={side.look} fill={2.7} nod alt={`${side.name}`} />
+        </div>
+      </div>
+      <div className={`flex min-w-0 flex-1 flex-col justify-center gap-1 ${top ? 'items-start pl-[12%]' : 'items-end pr-[12%] text-right'}`}>
+        <span className="font-display text-[clamp(10px,2.8cqi,16px)] text-paper/80">{side.tag}</span>
+        <span className="font-display text-[clamp(18px,6cqi,36px)] leading-none text-paper [text-shadow:2px_2px_0_#1c1a24]">{side.name}</span>
+      </div>
+    </div>
+  )
+  return (
+    <div className="absolute inset-0 z-10 cursor-pointer overflow-hidden bg-[#101018] [container-type:inline-size]" onClick={onSkip} role="img" aria-label={`${me.name} versus ${foe.name}`}>
+      <div className="absolute inset-0 opacity-30" style={{ background: 'repeating-linear-gradient(115deg,#fff 0 2px,transparent 2px 14px)' }} />
+      {band(foe, true)}
+      {band(me, false)}
+      <span className="vs-mark font-logo absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[clamp(28px,10cqi,64px)] text-gold [text-shadow:3px_3px_0_#1c1a24,-2px_-2px_0_#1c1a24]">VS</span>
     </div>
   )
 }
