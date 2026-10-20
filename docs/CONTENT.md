@@ -44,9 +44,20 @@ the site shows "Notes coming soon".
 
 **Rename or recolour a menu tile** — `menu.ts`. `color` is `[main, dark]`.
 
+## Battle tuning
+
+Everything balance-related lives in `src/battle/data.ts`: the type chart, moves (power, accuracy,
+PP, effects), creature base stats, and per-difficulty teams, levels and potions. After changing
+numbers run `npm test` — the balance suite plays 450 simulated battles and checks Casual stays easy,
+Champion stays hard-but-beatable, and the difficulties stay in order. Current simulated win rates for
+a strong player: Casual ~100%, Standard ~74%, Champion ~25%.
+
+Creature art is drawn from shapes in `src/sprites/creatures.ts` (see `raster.ts`); `npm run
+sprites:export` writes PNG previews to `sprites-export/`.
+
 ## Visitor data
 
-Visitors' settings, chosen name and play time are stored only in their own browser (local storage,
+Visitors' settings, chosen name, play time, Pokédex progress, badge shine, TRAINERDEX BADGE and Hall of Fame are stored only in their own browser (local storage,
 key prefix `tdx:v1:`). Nothing is sent anywhere. **Settings → Reset save data** clears it.
 
 ## Open questions

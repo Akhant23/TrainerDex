@@ -16,7 +16,7 @@ export const dialogue = {
     "Careful — I bruise easily. I'm a law student.",
     'Have you checked the PC yet? My resume lives there.',
     'Fun fact: this jersey has a +10 boost to confidence.',
-    "I'd challenge you to a battle, but the arena's still being built.",
+    "Fancy a battle? I'll be in the BATTLE tile. Bring your best starter.",
   ],
   /** Unlocked by clicking the sprite this many times in a row. */
   secretClicks: 10,

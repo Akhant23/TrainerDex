@@ -12,11 +12,11 @@ The interactive, Gen IV/V-style personal site of **Aaryan Khan**, a Law / Biotec
 | 1. Planning | ✅ | [docs/PLANNING.md](docs/PLANNING.md) |
 | 2. Design foundation | ✅ | DS shell, intro, dialogue engine, main menu, navigation, settings + save, sprite prototype, audio, play time |
 | 3. Personal content | ✅ | Profile, Pokédex (15 entries), Trainer Card + 8 badges + polishing, PC (resume viewer, 11 portfolio case studies, 27-entry experience log), Photo Album (10 memories) |
-| 4. Interactive | ⏳ | Battle simulator, achievements, Easter eggs, walking sprite |
+| 4. Interactive | ◐ | **Battle simulator done** (9 original creatures, 3 difficulties, TRAINERDEX BADGE, Hall of Fame). Still to do: visitor achievements, Easter eggs, walking sprite |
 | 5. Backend | ⏳ | Poké Pager guestbook + moderation (Supabase) |
 | 6. Testing & launch | ⏳ | a11y, Lighthouse, deploy |
 
-Battle and Poké Pager open an "under construction" screen that says so and lists what's planned.
+The Poké Pager opens an "under construction" screen that says so and lists what's planned.
 See [docs/CONTENT.md](docs/CONTENT.md#open-questions) for facts still waiting on confirmation.
 
 ## Running it
@@ -37,7 +37,8 @@ Controls: arrows move · Enter / Space / Z = A · Esc / X / Backspace = B · 1�
 
 ```
 src/content/      ← all personal content + dialogue (edit these, not the components)
-src/sprites/      pixel-art data (trainer, icons) + renderer
+src/sprites/      pixel-art data (trainer, icons, battle creatures) + renderer
+src/battle/       deterministic battle engine, data (types, moves, creatures, difficulty) + tests
 src/ui/           design-system components (PixelBox, DialogueBox, ChoiceMenu, TrainerSprite …)
 src/screens/      Intro, MainMenu, Settings, section screens
 src/systems/      settings, visitor/play time, audio synth, input, safe storage

@@ -15,6 +15,7 @@ const loaders = {
   card: () => import('../screens/TrainerCard'),
   pc: () => import('../screens/PC'),
   album: () => import('../screens/PhotoAlbum'),
+  battle: () => import('../screens/battle/Battle'),
 }
 const Intro = lazy(() => import('../screens/Intro'))
 const SettingsScreen = lazy(loaders.settings)
@@ -25,6 +26,7 @@ const sections: Record<string, LazyExoticComponent<ComponentType<{ path: string 
   card: lazy(loaders.card),
   pc: lazy(loaders.pc),
   album: lazy(loaders.album),
+  battle: lazy(loaders.battle),
 }
 
 /** Once the menu is up, quietly fetch section code so opening one never shows a loader. */

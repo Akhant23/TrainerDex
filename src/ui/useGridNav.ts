@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { useSettings } from '../systems/settings'
 import { useGameKeys } from '../systems/input'
 
@@ -6,7 +6,7 @@ import { useGameKeys } from '../systems/input'
  * Roving-focus keyboard navigation for a grid (or list, cols = 1) of buttons.
  * Arrow keys move real DOM focus; Enter/Space are left to the buttons; Z activates.
  */
-export function useGridNav(count: number, cols: number, opts: { enabled?: boolean; initial?: number; onMove?: (i: number) => void; onActivate?: (i: number) => void } = {}) {
+export function useGridNav(count: number, cols: number, opts: { enabled?: boolean; initial?: number; autoFocus?: boolean; onMove?: (i: number) => void; onActivate?: (i: number) => void } = {}) {
   const { sfx } = useSettings()
   const [focus, setFocusState] = useState(Math.min(opts.initial ?? 0, Math.max(0, count - 1)))
   const refs = useRef<Array<HTMLElement | null>>([])
@@ -16,6 +16,12 @@ export function useGridNav(count: number, cols: number, opts: { enabled?: boolea
     opts.onMove?.(i)
     if (moveDom) refs.current[i]?.focus()
   }
+
+  useEffect(() => {
+    if (opts.autoFocus) refs.current[focus]?.focus()
+    // only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const move = (to: number) => {
     if (to < 0 || to >= count || to === focus) return sfx('bump')
@@ -41,6 +47,8 @@ export function useGridNav(count: number, cols: number, opts: { enabled?: boolea
     },
     tabIndex: i === focus ? 0 : -1,
     onFocus: () => focus !== i && setFocus(i),
+    // keep one highlight: hovering moves real focus too
+    onPointerEnter: (e: PointerEvent) => e.pointerType === 'mouse' && refs.current[i] !== document.activeElement && refs.current[i]?.focus({ preventScroll: true }),
   })
 
   return { focus, setFocus, itemProps }

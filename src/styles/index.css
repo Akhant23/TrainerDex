@@ -73,6 +73,7 @@ body {
   clip: rect(0 0 0 0);
 }
 
+@layer components {
 /* ---------- Pixel box: notched corners via four offset shadows ---------- */
 
 .pixel-box {
@@ -504,4 +505,216 @@ body {
 }
 [data-motion='reduced'] [style*='photo-in'] {
   animation: none !important;
+}
+
+/* ---------- Battle ---------- */
+
+.battle-field {
+  background:
+    radial-gradient(ellipse 60% 30% at 50% 100%, #7cc87055, transparent),
+    linear-gradient(#bfe4f8 0%, #e8f6ff 42%, #9fd88a 42.5%, #6fb85e 100%);
+}
+.platform {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, #e8f0c0, #b8c888 70%);
+  box-shadow: 0 0 0 3px #5a7a40, inset 0 -6px 0 #9aac70;
+  transform: translate(-50%, -50%);
+}
+.stand {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+}
+.flip {
+  transform: scaleX(-1);
+}
+.anim-enter {
+  animation: b-enter 420ms steps(6);
+}
+@keyframes b-enter {
+  from {
+    transform: scale(0.1);
+    opacity: 0;
+  }
+}
+.anim-lunge-right {
+  animation: b-lunge-r 360ms steps(6);
+}
+@keyframes b-lunge-r {
+  45% {
+    translate: 14% -6%;
+  }
+}
+.anim-lunge-left {
+  animation: b-lunge-l 360ms steps(6);
+}
+@keyframes b-lunge-l {
+  45% {
+    translate: -14% 6%;
+  }
+}
+.anim-hit {
+  animation: b-hit 480ms steps(8);
+}
+@keyframes b-hit {
+  0%,
+  25%,
+  50%,
+  75% {
+    opacity: 0.15;
+  }
+  12%,
+  37%,
+  62%,
+  100% {
+    opacity: 1;
+  }
+}
+.anim-faint {
+  animation: b-faint 520ms steps(6) forwards;
+}
+@keyframes b-faint {
+  to {
+    translate: 0 60%;
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+}
+.anim-statUp {
+  animation: b-up 600ms steps(6);
+}
+@keyframes b-up {
+  0%,
+  100% {
+    filter: none;
+  }
+  50% {
+    filter: brightness(1.6) drop-shadow(0 0 6px #f8d040);
+  }
+}
+.anim-statDown {
+  animation: b-down 600ms steps(6);
+}
+@keyframes b-down {
+  0%,
+  100% {
+    filter: none;
+  }
+  50% {
+    filter: brightness(0.6) saturate(0.4) drop-shadow(0 0 6px #5070ff);
+  }
+}
+.anim-heal {
+  animation: b-heal 700ms steps(7);
+}
+@keyframes b-heal {
+  50% {
+    filter: brightness(1.5) drop-shadow(0 0 8px #78f088);
+  }
+}
+.anim-slide-out {
+  animation: b-slide-out 420ms steps(6) forwards;
+}
+@keyframes b-slide-out {
+  to {
+    translate: 120% 0;
+    opacity: 0;
+  }
+}
+.screen-shake {
+  animation: b-shake 360ms steps(6);
+}
+@keyframes b-shake {
+  20% {
+    translate: -2% 1%;
+  }
+  40% {
+    translate: 2% -1%;
+  }
+  60% {
+    translate: -1% 0;
+  }
+  80% {
+    translate: 1% 1%;
+  }
+}
+.fx-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  animation: fx-burst 620ms steps(8) forwards;
+}
+@keyframes fx-burst {
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(1);
+    opacity: 0;
+  }
+}
+.fx-slam {
+  position: absolute;
+  animation: fx-slam 520ms steps(6) forwards;
+}
+@keyframes fx-slam {
+  0% {
+    transform: translate(-50%, -260%) rotate(-30deg);
+  }
+  55% {
+    transform: translate(-50%, -60%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -60%) rotate(0deg);
+    opacity: 0;
+  }
+}
+.encounter {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  animation: encounter 1100ms steps(1) forwards;
+}
+@keyframes encounter {
+  0%,
+  30%,
+  60% {
+    background: #ffffff;
+  }
+  15%,
+  45%,
+  75% {
+    background: #000000;
+  }
+  90% {
+    background: #000000;
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    background: #000000;
+    clip-path: inset(50% 0 50% 0);
+  }
+}
+[data-motion='reduced'] .anim-enter,
+[data-motion='reduced'] .anim-lunge-right,
+[data-motion='reduced'] .anim-lunge-left,
+[data-motion='reduced'] .anim-hit,
+[data-motion='reduced'] .screen-shake,
+[data-motion='reduced'] .fx-particle,
+[data-motion='reduced'] .fx-slam,
+[data-motion='reduced'] .anim-statUp,
+[data-motion='reduced'] .anim-statDown,
+[data-motion='reduced'] .anim-heal {
+  animation: none !important;
+}
+[data-motion='reduced'] .encounter {
+  animation-duration: 300ms;
+}
+
 }
