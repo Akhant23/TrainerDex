@@ -5,6 +5,7 @@ import type { Pixels } from '../../sprites/pixels'
 import { useSettings } from '../../systems/settings'
 import { creatureOverrideUrl } from '../../sprites/assets'
 import { useAssetLoads } from '../../ui/useAssets'
+import { crispScale } from '../../ui/CharacterSprite'
 import type { SpeciesId } from '../../battle/data'
 
 /** BW-style breathing: the upper body rises by `d` pixels and the waist stretches to follow. */
@@ -52,18 +53,24 @@ export function CreatureSprite({ id, scale, flip = false, still = false, view = 
   )
 }
 
-/** Largest integer scale so `units` pixels fit in `fraction` of the element's height. */
-export function useHeightScale(ref: RefObject<HTMLElement | null>, fraction: number, units: number) {
+/**
+ * Largest scale so `units` pixels fit in `fraction` of the element's height: a whole number, or
+ * with `crisp`, any step that keeps art pixels on whole device pixels (see crispScale).
+ */
+export function useHeightScale(ref: RefObject<HTMLElement | null>, fraction: number, units: number, crisp = false) {
   const [scale, setScale] = useState(2)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const measure = () => setScale(Math.max(1, Math.floor((el.clientHeight * fraction) / units)))
+    const measure = () => {
+      const px = (el.clientHeight * fraction) / units
+      setScale(crisp ? crispScale(px) : Math.max(1, Math.floor(px)))
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [ref, fraction, units])
+  }, [ref, fraction, units, crisp])
   return scale
 }
 

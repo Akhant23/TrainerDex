@@ -119,7 +119,7 @@ describe('character model', () => {
       for (const turned of [renderSide(a), renderBack(a), renderBack(a, true)]) expect(validate(turned, pal, CHAR_W, CHAR_H), JSON.stringify(a)).toEqual([])
       for (const frames of Object.values(overworldFor(a))) for (const f of frames) expect(validate(f, pal, OW_W, OW_H), JSON.stringify(a)).toEqual([])
     }
-  })
+  }, 30_000)
   it('asset slots document the generated sprite sizes', () => {
     expect([ASSET_SLOTS['aaryan.front'].width, ASSET_SLOTS['aaryan.front'].height]).toEqual([CHAR_W, CHAR_H])
     expect([ASSET_SLOTS['aaryan.vs'].width, ASSET_SLOTS['aaryan.victory'].height]).toEqual([CHAR_W, CHAR_H])

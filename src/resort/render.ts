@@ -224,7 +224,11 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
     const dx = (p.x - anchorX * ws * p.s) * RES
     const dy = p.y * RES - dh
     if (dx > VIEW_W * RES || dx + dw < 0 || dy > vh * RES || dy + dh < 0) return
-    ctx.drawImage(img, Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh))
+    // snap both edges (not the start and the size separately), so props in a row — counter
+    // sections, wall panels — always meet exactly instead of leaving 1px seams between them
+    const x0 = Math.round(dx)
+    const y0 = Math.round(dy)
+    ctx.drawImage(img, x0, y0, Math.round(dx + dw) - x0, Math.round(dy + dh) - y0)
   }
   const shadow = (bx: number, by: number, rx: number) => {
     const p = project(cam, bx, by, vh)

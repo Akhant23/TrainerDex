@@ -34,12 +34,25 @@ export function portraitPixels(a: Appearance, hi = false): Pixels {
   return p
 }
 
+const dpr = () => (typeof window !== 'undefined' && window.devicePixelRatio) || 1
+const whole = (v: number) => Math.abs(v - Math.round(v)) < 1e-6
+
+/**
+ * The largest scale up to `px` at which every art pixel still covers a whole number of *device*
+ * pixels: whole numbers on standard screens, half steps on 2× screens, and so on. Sprites can
+ * then be sized to their space without the big jumps of whole-number CSS scaling, and stay crisp.
+ */
+export function crispScale(px: number): number {
+  const d = dpr()
+  return Math.max(1, Math.floor(px * d + 1e-6) / d)
+}
+
 function useFitScale(fill: number | undefined, units: number, ref: React.RefObject<HTMLElement | null>) {
   const [scale, setScale] = useState(1)
   useLayoutEffect(() => {
     const parent = ref.current?.parentElement
     if (!fill || !parent) return
-    const measure = () => setScale(Math.max(1, Math.floor((parent.clientHeight * fill) / units)))
+    const measure = () => setScale(crispScale((parent.clientHeight * fill) / units))
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(parent)
@@ -116,8 +129,9 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
     return () => window.clearTimeout(t)
   }, [animate])
 
-  // 2× art lands on whole device pixels at even scales, or at any scale on high-DPI screens
-  const hi = scale % 2 === 0 || (typeof window !== 'undefined' && window.devicePixelRatio >= 2)
+  // use the 2× art when its pixels land on whole device pixels; otherwise the 1× art (which does,
+  // since scales are chosen by crispScale)
+  const hi = whole((scale * dpr()) / 2)
   const { layers, palette } = layersFor(appearance, pose === 'victory' ? 'raised' : pose === 'point' ? 'point' : 'idle', hi)
   const urls = useMemo(
     () => ({

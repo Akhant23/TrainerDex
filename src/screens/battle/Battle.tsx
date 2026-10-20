@@ -64,18 +64,22 @@ function QuickBattle({ path }: { path: string }) {
  */
 function HubStage({ hasBadge }: { hasBadge: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
-  const scale = useHeightScale(ref, 0.76, CHAR_H)
+  // a full-height figure in the foreground of the room: the counter behind reaches about his hips.
+  // Fit the visible figure (about 90% of the sprite canvas — the rest is headroom and floor), not
+  // the whole canvas, so he can fill the stage.
+  const scale = useHeightScale(ref, 0.94, CHAR_H * 0.9, true)
   return (
     <div ref={ref} className="relative min-h-0 flex-1">
-      <div className="platform" style={{ left: '50%', top: '90%', width: '50%', height: '13%' }} />
-      <div className="stand" style={{ left: '50%', top: '93%' }}>
+      <div className="platform" style={{ left: '50%', top: '93%', width: '54%', height: '13%' }} />
+      <div className="stand" style={{ left: '50%', top: '97%' }}>
         <TrainerSprite scale={scale} />
       </div>
       {hasBadge && (
+        // compact on narrow screens (just the badge) so it never crowds the trainer
         <div className="gv-hud-wrap absolute top-[5%] right-[3%]">
-          <div className="gv-hud gv-hud--mine flex items-center gap-2 py-1 pr-3 pl-6">
+          <div className="gv-hud gv-hud--mine flex items-center gap-2 py-1 pr-2 pl-5 @md:pr-3 @md:pl-6">
             <PixelArt pixels={trainerdexBadge.pixels} palette={trainerdexBadge.palette} scale={2} label="TRAINERDEX BADGE earned" />
-            <span className="gv-label text-[12px] text-gold">BADGE EARNED</span>
+            <span aria-hidden className="gv-label hidden text-[12px] text-gold @md:inline">BADGE EARNED</span>
           </div>
         </div>
       )}
