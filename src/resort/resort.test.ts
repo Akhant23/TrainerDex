@@ -5,7 +5,7 @@ import { structureArt } from './structures'
 import { validate } from '../sprites/pixels'
 import { renderLayers, renderFlat, renderSide, renderBack, atResolution, paletteFor, CHAR_W, CHAR_H, PORTRAIT } from '../sprites/character'
 import { ASSET_SLOTS } from '../content/sprites'
-import { overworldFor, OW_W, OW_H } from '../sprites/overworld'
+import { overworldFor, OW_W, OW_H, riderFor } from '../sprites/overworld'
 import { signature, towerStages } from '../content/aaryan'
 import { regulars } from './regulars'
 import { SKINS, HAIR_COLOURS, CLOTH_COLOURS, EYE_COLOURS } from '../sprites/character'
@@ -214,5 +214,14 @@ describe('compact Gen V walkers', () => {
     const ow = overworldFor(signature)
     const mirrored = ow.left[0].map((r) => [...r].reverse().join(''))
     expect(ow.right[0]).not.toEqual(mirrored)
+  })
+})
+
+describe('riders by direction', () => {
+  it("an asymmetric outfit isn't just mirrored when flying right; a symmetric one is", () => {
+    const flip = (px: string[]) => px.map((r) => [...r].reverse().join(''))
+    expect(riderFor(signature, 'right')).not.toEqual(flip(riderFor(signature, 'left')))
+    const plain = regulars.map((r) => r.look).find((l) => l.top !== 'jersey' && !l.accessories.some((x) => x === 'watch' || x === 'bracelet'))!
+    expect(riderFor(plain, 'right')).toEqual(flip(riderFor(plain, 'left')))
   })
 })

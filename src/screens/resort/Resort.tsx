@@ -203,7 +203,8 @@ export default function Resort() {
         title={`VS ${t.name}`}
         opponent={{ look: t.look, name: t.name, tag: t.record ? `RECORD ${formatRecord(t.record)}` : 'TRAINER', winLines: [`${t.name}: Good battle! I’ll get you next time.`], loseLines: [`${t.name}: That was close! Rematch whenever you like.`] }}
         mode="challenge"
-        arena={{ map: 'plaza', x: 12, y: 19 }}
+        // the foe's platform on open paving, the fountain off to the side
+        arena={{ map: 'plaza', x: 10, y: 20 }}
         onExit={(_to, won) => {
           recordResult(won)
           void syncTrainer().catch(() => undefined)

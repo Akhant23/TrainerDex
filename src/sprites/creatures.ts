@@ -91,10 +91,11 @@ function grid() {
 }
 
 /** Draw a species' held item for this view (the holder's grip goes on afterwards). */
-function hold(g: HiGrid, id: string, view: 'front' | 'back') {
+/** Draw a species' held item; `move` shifts and turns it for an attack pose (grip point moves with it). */
+function hold(g: HiGrid, id: string, view: 'front' | 'back', move: { dx?: number; dy?: number; da?: number } = {}) {
   const h = HOLDS[id]
   const at = h?.[view]
-  if (h && at) drawItem(g, h.item, at)
+  if (h && at) drawItem(g, h.item, { ...at, x: at.x + (move.dx ?? 0), y: at.y + (move.dy ?? 0), angle: at.angle + (move.da ?? 0) })
 }
 function holdInk(g: HiGrid, id: string, view: 'front' | 'back') {
   const h = HOLDS[id]
@@ -360,8 +361,8 @@ function strikarooBack(): Pixels {
 function hootour(): Art {
   const g = grid()
   // idle: the ear tufts quiver and it glances about
-  const tuft = cyc([0, -1, 0, -1] as const)
-  const look = cyc([0, 0, 1, 0] as const)
+  const tuft = cyc([0, -1, 0, -1] as const) + pz(-2, 0)
+  const look = cyc([0, 0, 1, 0] as const) + pz(0, -1)
   g.poly([[10, 13], [11, 4 + tuft], [16, 11]], 'H').poly([[30, 13], [29, 4 + tuft], [24, 11]], 'H')
   g.ellipse(20, 24, 11, 13, 'H', 'h')
   g.ellipse(20, 27, 7, 8, 'C', 'c')
@@ -371,10 +372,12 @@ function hootour(): Art {
   g.rect(10, 29, 30, 31, 'Y').rect(10, 31, 30, 31, 'y')
   g.rect(24, 31, 26, 36, 'Y')
   g.ellipse(16, 38, 2, 1, 'O').ellipse(24, 38, 2, 1, 'O')
-  // the flag held high in the right wing, its feathers wrapped round the pole
-  hold(g, 'hootour', 'front')
-  g.ellipse(32, 26, 3, 5.5, 'H', 'h')
-  g.ellipse(31.5, 27.5, 1.6, 1.4, 'C')
+  // the flag held high in the right wing, its feathers wrapped round the pole; attacking, the
+  // wing hoists it high and leans it back, then sweeps it forward at the foe
+  const wing = POSE === 'windup' ? { dx: 1, dy: -5, da: 0.3 } : POSE === 'strike' ? { dx: 1, dy: 1.5, da: -0.32 } : {}
+  hold(g, 'hootour', 'front', wing)
+  g.ellipse(32 + (wing.dx ?? 0), 26 + (wing.dy ?? 0), 3, 5.5, 'H', 'h')
+  g.ellipse(31.5 + (wing.dx ?? 0), 27.5 + (wing.dy ?? 0), 1.6, 1.4, 'C')
   g.outline(OL)
   if (GESTURE === 'blink') g.line(12, 18, 18, 18, 'K').line(22, 18, 28, 18, 'K')
   else g.set(14 + look, 17, 'W').set(24 + look, 17, 'W')
@@ -387,7 +390,7 @@ function hootour(): Art {
 
 function hootourBack(): Pixels {
   const g = grid()
-  const tuft = cyc([0, -1, 0, -1] as const)
+  const tuft = cyc([0, -1, 0, -1] as const) + pz(-2, 0)
   g.poly([[11, 13], [12, 4 + tuft], [17, 11]], 'H').poly([[31, 13], [30, 4 + tuft], [25, 11]], 'h')
   g.ellipse(21, 24, 11, 13, 'H', 'h')
   // folded wings and the tail
@@ -397,8 +400,10 @@ function hootourBack(): Pixels {
   g.rect(11, 20, 31, 22, 'Y').rect(11, 22, 31, 22, 'y')
   g.poly([[19, 22], [23, 22], [24, 31], [20, 30]], 'Y')
   g.ellipse(17, 38, 2, 1, 'O').ellipse(25, 38, 2, 1, 'O')
-  hold(g, 'hootour', 'back')
-  g.ellipse(32, 26, 3, 5.5, 'H', 'h')
+  // attacking: the flag hoisted and leaned back, then swept forward toward the foe (upper right)
+  const wing = POSE === 'windup' ? { dx: -1, dy: -5, da: -0.35 } : POSE === 'strike' ? { dx: -3, dy: -2, da: 0.05 } : {}
+  hold(g, 'hootour', 'back', wing)
+  g.ellipse(32 + (wing.dx ?? 0), 26 + (wing.dy ?? 0), 3, 5.5, 'H', 'h')
   g.outline(OL)
   // feather chevrons
   for (const [x, y] of [[15, 12], [22, 11], [27, 15], [16, 26], [26, 28]]) g.stamp(x, y, ['h.h', '.h.'])
@@ -703,14 +708,15 @@ function stitchick(): Art {
   g.rect(26, 25, 32, 36, 'h')
   g.rect(14, 29, 26, 34, 'h')
   g.ellipse(14, 38, 2.5, 1.3, 'O').ellipse(26, 38, 2.5, 1.3, 'O')
-  // needle and thread pinched in its right wing
-  hold(g, 'stitchick', 'front')
-  g.ellipse(31.5, 22.5, 2.6, 3.6, 'Y', 'y')
+  // needle and thread pinched in its right wing; attacking, it cocks the needle back, then jabs
+  const wing = POSE === 'windup' ? { dx: 1, dy: -3, da: 0.55 } : POSE === 'strike' ? { dx: -1.5, dy: 2, da: -0.6 } : {}
+  hold(g, 'stitchick', 'front', wing)
+  g.ellipse(31.5 + (wing.dx ?? 0), 22.5 + (wing.dy ?? 0), 2.6, 3.6, 'Y', 'y')
   g.outline(OL)
   g.rect(14, 29, 26, 29, 'K')
   g.line(17, 25, 17, 30, 'W').line(23, 25, 23, 30, 'W')
-  // idle: it glances one way, then the other
-  const look = cyc([0, 1, 0, -1] as const)
+  // idle: it glances one way, then the other (and eyes the foe when attacking)
+  const look = cyc([0, 1, 0, -1] as const) + pz(-1, -1)
   if (GESTURE === 'blink') g.line(13, 18, 17, 18, 'K').line(23, 18, 27, 18, 'K')
   else {
     g.ellipse(15 + look * 0.6, 18, 1.8, 2.2, 'K').ellipse(25 + look * 0.6, 18, 1.8, 2.2, 'K')
@@ -734,8 +740,9 @@ function stitchickBack(): Pixels {
   g.rect(26, 27, 32, 36, 'h')
   // idle: it shifts its weight, tapping one foot
   g.ellipse(14, 38, 2.5, 1.3, 'O').ellipse(26, 38 + cyc([0, -0.8, 0, 0] as const), 2.5, 1.3, 'O')
-  hold(g, 'stitchick', 'back')
-  g.ellipse(32, 23, 2.6, 3.6, 'Y', 'y')
+  const wing = POSE === 'windup' ? { dx: -1, dy: -3, da: -0.5 } : POSE === 'strike' ? { dx: 1.5, dy: -1, da: 0.9 } : {}
+  hold(g, 'stitchick', 'back', wing)
+  g.ellipse(32 + (wing.dx ?? 0), 23 + (wing.dy ?? 0), 2.6, 3.6, 'Y', 'y')
   g.outline(OL)
   g.line(20, 30, 20, 36, 'h')
   return g.toPixels()
@@ -785,13 +792,30 @@ function diplomothBack(): Pixels {
   return g.toPixels()
 }
 
+/** Datadillo rolled up: its plates closed into an armoured ball, the circuit lines wrapping round. */
+function datadilloBall(g: HiGrid, cx: number) {
+  g.ellipse(cx, 26, 12.5, 12, 'A', 'a', 'Q')
+  for (const [y0, y1] of [[17, 15], [22, 21], [28, 28], [33, 34]] as const) g.line(cx - 11, y0 + 1, cx + 11, y1 - 1, 'a')
+  g.ellipse(cx + 9, 33, 2.4, 1.6, 'S', 's')
+  g.outline(OL)
+  g.line(cx - 6, 18, cx - 6, 26, 'C').line(cx - 6, 26, cx + 3, 26, 'C').line(cx + 3, 26, cx + 3, 33, 'C')
+  g.set(cx - 6, 18, 'W').set(cx + 3, 33, 'W')
+}
+
 function datadillo(): Art {
   const g = grid()
+  const palette = { K, A: '#6a7a98', a: '#4a5674', Q: '#8e9cb8', S: '#e0b4a0', s: '#b88a78', C: '#40e0f0', W: '#ffffff', P: '#f08098' }
+  // strike: rolled into a ball (its rollout); the wind-up tucks the head in first
+  if (POSE === 'strike') {
+    datadilloBall(g, 21)
+    return { pixels: g.toPixels(), palette }
+  }
+  const tuck = pz(2.5, 0)
   g.ellipse(29, 34, 6, 2, 'S', 's')
   g.ellipse(22, 25, 14, 11, 'A', 'a', 'Q')
   for (let x = 12; x <= 32; x += 5) g.line(x, 15, x + 1, 35, 'a')
-  g.ellipse(8, 29, 6, 5, 'S', 's')
-  g.ellipse(6, 22, 2, 3, 'S', 's')
+  g.ellipse(8 + tuck, 29 + tuck * 0.4, 6 - tuck * 0.4, 5 - tuck * 0.3, 'S', 's')
+  g.ellipse(6 + tuck, 22 + tuck, 2, 3 - tuck * 0.4, 'S', 's')
   // idle: the tail flicks and a pulse runs along the circuit lines
   g.line(35, 30, 39, 33 + cyc([0, -1, -1, 0] as const), 'A', 2)
   g.ellipse(12, 37, 2.5, 1.5, 'S', 's').ellipse(30, 37, 2.5, 1.5, 'S', 's')
@@ -803,21 +827,23 @@ function datadillo(): Art {
   const pulse: Array<[number, number] | null> = [null, [17, 22], [20, 24], [23, 27]]
   const at = pulse[PHASE]
   if (at) g.set(at[0], at[1], 'W')
-  g.set(6, 28, 'K').set(2, 31, 'P')
-  return {
-    pixels: g.toPixels(),
-    palette: { K, A: '#6a7a98', a: '#4a5674', Q: '#8e9cb8', S: '#e0b4a0', s: '#b88a78', C: '#40e0f0', W: '#ffffff', P: '#f08098' },
-  }
+  g.set(6 + tuck, 28 + tuck * 0.4, 'K').set(2 + tuck * 1.2, 31, 'P')
+  return { pixels: g.toPixels(), palette }
 }
 
 function datadilloBack(): Pixels {
   const g = grid()
+  if (POSE === 'strike') {
+    datadilloBall(g, 20)
+    return g.toPixels()
+  }
+  const tuck = pz(2.5, 0)
   g.line(6, 31, 1, 35 + cyc([0, -1, -1, 0] as const), 'A', 2)
   g.ellipse(20, 25, 15, 12, 'A', 'a', 'Q')
   // plate bands curve over its back
   for (const y of [17, 22, 27, 32]) g.line(7, y + 1, 33, y - 1, 'a')
-  g.ellipse(33, 17, 4.5, 4, 'S', 's')
-  g.ellipse(35, 12, 1.6, 2.4, 'S', 's')
+  g.ellipse(33 - tuck, 17 + tuck, 4.5, 4, 'S', 's')
+  g.ellipse(35 - tuck, 12 + tuck * 1.2, 1.6, 2.4, 'S', 's')
   g.ellipse(10, 37, 2.5, 1.5, 's').ellipse(29, 37, 2.5, 1.5, 'S', 's')
   g.outline(OL)
   g.line(12, 19, 12, 25, 'C').line(12, 25, 20, 25, 'C').line(26, 18, 26, 29, 'C')

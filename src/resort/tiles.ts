@@ -20,6 +20,11 @@ export interface Prop {
 
 export interface TileDef {
   px: Pixels
+  /**
+   * Position-dependent art, so large areas don't repeat every 16 px: returns which variant to
+   * draw at (tx, ty) and its pixels. Used for BW-style 2×2 paving slabs and varied grass.
+   */
+  variant?: (tx: number, ty: number) => { id: string; px: Pixels }
   frame2?: Pixels
   prop?: Prop
   wall?: boolean
@@ -30,7 +35,8 @@ export const tilePalette: Palette = {
   K: '#1c1a24',
   g: '#6cbc54', G: '#509c3c', n: '#3e7e30', N: '#2c5c24',
   s: '#f2dca4', S: '#e0c48a',
-  p: '#d8dce4', P: '#b8bfcc', '1': '#c8ced8', '2': '#9aa2b2',
+  // paving nudged slightly toward Accumula Town's lavender-grey (small step: video colour is unreliable)
+  p: '#d9dae6', P: '#b7b9cc', '1': '#c9cada', '2': '#9a9fb4',
   w: '#3c9ee6', W: '#8cd0ff', v: '#2a7cc0',
   f: '#ffffff',
   t: '#8a5a32', T: '#b07a44', u: '#5e3c20',
@@ -60,6 +66,20 @@ const dots = (g: Grid, pts: Array<[number, number]>, ch: string) => (pts.forEach
 /* ---------------- ground ---------------- */
 
 const grass = () => dots(fill('g'), [[3, 3], [11, 5], [6, 11], [13, 13]], 'G')
+/** Four grass tufts patterns; neighbouring tiles pick different ones so the field doesn't tile visibly. */
+const GRASS_VARIANTS: Pixels[] = [
+  [[3, 3], [11, 5], [6, 11], [13, 13]],
+  [[2, 9], [8, 2], [12, 10], [5, 14]],
+  [[6, 5], [14, 2], [1, 12], [10, 13]],
+  [[4, 1], [9, 8], [13, 6], [2, 6], [11, 14]],
+].map((pts, i) => {
+  const g = fill('g')
+  for (const [x, y] of pts) g.set(x, y, 'G').set(x, y + 1 > 15 ? y : y + 1, i % 2 ? 'G' : 'g')
+  // a short blade above some tufts
+  for (const [x, y] of pts.slice(0, 2)) if (y > 0) g.set(x, y - 1, 'G')
+  return g.toPixels()
+})
+const mix = (tx: number, ty: number) => ((tx * 73856093) ^ (ty * 19349663)) >>> 0
 const sand = () => dots(fill('s'), [[3, 4], [11, 2], [7, 9], [13, 12], [2, 13], [9, 14]], 'S')
 /** City paving: large light slabs with darker joints, like BW's plazas. */
 const paving = () => {
@@ -67,6 +87,20 @@ const paving = () => {
   const g = fill('p')
   return g.rect(0, 15, 15, 15, '1').rect(15, 0, 15, 15, '1')
 }
+/**
+ * BW's town paving is laid in big slabs about two tiles across with faint joints (Accumula Town),
+ * not a joint on every tile: each tile draws its quarter of a 2×2 slab.
+ */
+const PAVING_VARIANTS: Pixels[] = [0, 1, 2, 3].map((q) => {
+  const g = fill('p')
+  const right = q % 2 === 1
+  const bottom = q >= 2
+  if (right) g.rect(15, 0, 15, 15, '1')
+  if (bottom) g.rect(0, 15, 15, 15, '1')
+  // a couple of faint specks so each slab isn't perfectly flat
+  g.set(right ? 4 : 10, bottom ? 6 : 9, '1')
+  return g.toPixels()
+})
 const floor = () => {
   const g = grid()
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) g.set(x, y, (x < 8) !== (y < 8) ? 'O' : 'o')
@@ -316,9 +350,9 @@ function liftWall(): Prop {
 
 export const tiles: Record<string, TileDef> = {
   // outdoor ground
-  ',': { px: grass().toPixels(), solid: false },
+  ',': { px: grass().toPixels(), variant: (tx, ty) => { const i = mix(tx, ty) % 4; return { id: `g${i}`, px: GRASS_VARIANTS[i] } }, solid: false },
   f: { px: dots(grass(), [[3, 4], [11, 3], [6, 12], [13, 10], [9, 7]], 'r').stamp(9, 8, ['y']).stamp(2, 10, ['h']).stamp(12, 11, ['q']).toPixels(), solid: false },
-  ':': { px: paving().toPixels(), solid: false },
+  ':': { px: paving().toPixels(), variant: (tx, ty) => { const q = (tx & 1) + (ty & 1) * 2; return { id: `p${q}`, px: PAVING_VARIANTS[q] } }, solid: false },
   '=': {
     px: (() => {
       const g = fill('c')

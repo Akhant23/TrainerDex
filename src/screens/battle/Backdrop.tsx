@@ -11,8 +11,12 @@ export interface Arena {
   y: number
 }
 
-/** Quick exhibition matches happen in the tower reception. */
-export const RECEPTION_ARENA: Arena = { map: 'reception', x: 7, y: 8 }
+/**
+ * Quick exhibition matches happen in the tower reception. The camera spot puts the foe's platform
+ * on open floor in front of the counter (from y 8 it landed on the counter itself), the way BW's
+ * far platform always rests on open ground.
+ */
+export const RECEPTION_ARENA: Arena = { map: 'reception', x: 7, y: 10 }
 
 /**
  * The real surroundings behind a battle, BW-style: the same 2.5D map the visitor was walking
@@ -44,7 +48,9 @@ export function Backdrop({ arena }: { arena: Arena }) {
     <>
       {/* zoomed in a touch (more indoors) so the surroundings fill the battle screen */}
       <canvas ref={ref} width={VIEW_W * RES} height={192 * RES} aria-hidden className="pixelated absolute inset-0 h-full w-full" style={{ transform: `scale(${maps[arena.map].outdoor ? 1.15 : 1.4})`, transformOrigin: '50% 78%' }} />
-      <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgb(16_16_24/0.15),rgb(16_16_24/0)_40%,rgb(16_16_24/0.25))]" />
+      {/* a light vignette only: BW's battle backgrounds are bright and high-key (the darker moments
+          come from the move dimming in Fight.tsx) */}
+      <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgb(16_16_24/0.1),rgb(16_16_24/0)_40%,rgb(16_16_24/0.16))]" />
     </>
   )
 }

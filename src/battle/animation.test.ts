@@ -83,8 +83,9 @@ describe('attack poses', () => {
       const m = status(s)
       if (m) expect(poseTimeline(s, m, 1000), `${s} ${m}`).toBeNull()
     }
-    const without = (Object.keys(species) as SpeciesId[]).find((s) => !ATTACK_POSES[s])!
-    expect(poseTimeline(without, damaging(without), 1000)).toBeNull()
+    // every current species has a pose; anything added without one falls back to the plain motion
+    expect(Object.keys(ATTACK_POSES).sort()).toEqual(Object.keys(species).sort())
+    expect(poseTimeline('newcomer' as SpeciesId, 'tackle', 1000)).toBeNull()
   })
 
   it('pose frames are valid sprites that actually differ from the still', () => {

@@ -137,12 +137,13 @@ function flightLayer(id: FlyerId, frame: number, layer: 'far' | 'body' | 'near',
   const px = art.frames[frame][layer]
   return pixelCanvas(flip ? flipX(px) : px, art.palette, `fl:${id}:${frame}:${layer}:${flip}`)
 }
+/** The riding sprite for this look and direction (each side drawn as itself, not mirrored). */
 const riderPx = new Map<string, ReturnType<typeof riderFor>>()
-function riderCanvas(look: Appearance, flip: boolean) {
-  const key = JSON.stringify(look)
+function riderCanvas(look: Appearance, faceRight: boolean) {
+  const key = `${JSON.stringify(look)}:${faceRight}`
   let px = riderPx.get(key)
-  if (!px) riderPx.set(key, (px = riderFor(look)))
-  return pixelCanvas(flip ? flipX(px) : px, paletteFor(look), `ride:${key}:${flip}`)
+  if (!px) riderPx.set(key, (px = riderFor(look, faceRight ? 'right' : 'left')))
+  return pixelCanvas(px, paletteFor(look), `ride:${key}`)
 }
 
 /** Which flight frame to show: birds flap in bursts and glide between them; insects never stop. */

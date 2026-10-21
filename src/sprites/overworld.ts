@@ -488,9 +488,13 @@ export function overworldFor(a: Appearance): Record<Facing, [Pixels, Pixels, Pix
   }
 }
 
-/** A trainer sitting astride a mount, facing left (mirror for right): one leg bent over its back, a hand forward holding on. */
-export function riderFor(a: Appearance): Pixels {
-  return profile(a, 0, 'left', true)
+/**
+ * A trainer sitting astride a mount: one leg bent over its back, a hand forward holding on.
+ * Facing right isn't the left rider mirrored: it's drawn showing the wearer's right side (the
+ * jersey's flames, the bracelets) and then turned, so one-sided details stay on the correct side.
+ */
+export function riderFor(a: Appearance, facing: 'left' | 'right' = 'left'): Pixels {
+  return facing === 'left' ? profile(a, 0, 'left', true) : flipX(profile(a, 0, 'right', true))
 }
 /** Where the rider's hips are in the riding sprite (art pixels): this point sits on the mount's saddle. */
 export const RIDER_HIP: [number, number] = [24, 46]

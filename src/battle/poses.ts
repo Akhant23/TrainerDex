@@ -32,8 +32,10 @@ export const ATTACK_POSES: Partial<Record<SpeciesId, AttackPose>> = {
   wicketoad: { windupUntil: 0.55, strikeHold: 260 }, // sac swells, then empties
   campfly: { windupUntil: 0.5, strikeHold: 280 }, // lantern blazes, wings snap down
   diplomoth: { windupUntil: 0.5, strikeHold: 300 }, // wings spread, then fold for the gust
-  // no pose (plain motion; artwork required): hootour (the flag would have to move with the
-  // wing), stitchick (needle and thread), datadillo (would roll into a ball)
+  // third batch: held items that move with the wing, and a new rolled-up form
+  hootour: { windupUntil: 0.55, strikeHold: 300 }, // flag hoisted and leaned back, then swept forward
+  stitchick: { windupUntil: 0.6, strikeHold: 240 }, // needle cocked back, then the jab
+  datadillo: { windupUntil: 0.5, strikeHold: 320 }, // head tucks in, then it rolls into an armoured ball
 }
 
 export interface PoseStep {

@@ -38,6 +38,13 @@ World px are treated as DS px: tiles are 16 px in both.
 - Profiles are drawn per side: facing left shows the wearer's left side, facing right their right
   (the jersey's flames, a watch or bracelets stay on the correct side instead of being mirrored).
 
+## Riders
+
+Flyers only travel left or right. The rider for each direction is drawn from that side of the
+wearer (`riderFor(look, 'left' | 'right')`) rather than mirroring the left rider, so the jersey's
+flames, the watch and the bracelets stay where they belong; a symmetric outfit comes out as an
+exact mirror, which a test checks. Capture: `docs/qa/riders-left-right.png`.
+
 ## Identity kept at this size (Aaryan)
 
 Mullet with the wavy top, bold rectangular glasses, white jersey with red sleeve stripes, side

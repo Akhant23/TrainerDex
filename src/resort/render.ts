@@ -99,9 +99,27 @@ function ground(m: ResortMap, frame: 0 | 1): HTMLCanvasElement {
       if (m.outdoor && ty < -NORTH_PAD) continue
       const ch = tileAt(m, Math.max(0, Math.min(w - 1, tx)), Math.max(0, Math.min(h - 1, ty)))
       const def = tiles[ch] ?? tiles.X
-      const px = frame && def.frame2 ? def.frame2 : def.px
-      ctx.drawImage(pixelCanvas(px, tilePalette, `tile:${ch}:${frame && def.frame2 ? 1 : 0}`), (tx + PAD) * TILE * GROUND_RES, (ty + PAD) * TILE * GROUND_RES, TILE * GROUND_RES, TILE * GROUND_RES)
+      const v = !(frame && def.frame2) && def.variant ? def.variant(tx, ty) : null
+      const px = frame && def.frame2 ? def.frame2 : (v?.px ?? def.px)
+      ctx.drawImage(pixelCanvas(px, tilePalette, `tile:${ch}:${frame && def.frame2 ? 1 : 0}:${v?.id ?? ''}`), (tx + PAD) * TILE * GROUND_RES, (ty + PAD) * TILE * GROUND_RES, TILE * GROUND_RES, TILE * GROUND_RES)
     }
+  // a one-pixel curb where paving meets grass, so the two read as separate surfaces as in BW
+  // towns rather than a hard colour change
+  if (m.outdoor) {
+    ctx.fillStyle = tilePalette.P
+    const at = (x: number, y: number) => tileAt(m, Math.max(0, Math.min(w - 1, x)), Math.max(0, Math.min(h - 1, y)))
+    const R = GROUND_RES
+    for (let ty = 0; ty < h; ty++)
+      for (let tx = 0; tx < w; tx++) {
+        if (at(tx, ty) !== ':') continue
+        const ox = (tx + PAD) * TILE * R
+        const oy = (ty + PAD) * TILE * R
+        if (at(tx, ty - 1) === ',') ctx.fillRect(ox, oy, TILE * R, R)
+        if (at(tx, ty + 1) === ',') ctx.fillRect(ox, oy + (TILE - 1) * R, TILE * R, R)
+        if (at(tx - 1, ty) === ',') ctx.fillRect(ox, oy, R, TILE * R)
+        if (at(tx + 1, ty) === ',') ctx.fillRect(ox + (TILE - 1) * R, oy, R, TILE * R)
+      }
+  }
   groundCache.set(key, c)
   return c
 }

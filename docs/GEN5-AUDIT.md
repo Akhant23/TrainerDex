@@ -103,9 +103,9 @@ Measured against White 2 footage (GEN5-TIMING.md) and now matched in `Fight.tsx`
 | Wicketoad | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | sac swells → empties |
 | Campfly | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | lantern blazes → wings snap down |
 | Diplomoth | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | wings spread → fold for the gust |
-| Hootour | FALLBACK ANIMATION USED, ARTWORK REQUIRED | the held flag would have to move with the wing |
-| Stitchick | FALLBACK ANIMATION USED, ARTWORK REQUIRED | needle and thread in the wing |
-| Datadillo | FALLBACK ANIMATION USED, ARTWORK REQUIRED | a rolled-up ball form |
+| Hootour | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED (fourth pass; live-tested with LEAD BY EXAMPLE) | flag hoisted and leaned back → swept forward (the held item moves with the wing) |
+| Stitchick | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED (fourth pass; previews and tests only: not on a reachable opponent team) | needle cocked back → jab |
+| Datadillo | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED (fourth pass; previews and tests only) | head tucks in → rolls into an armoured ball (new original artwork) |
 
 All poses are original art drawn for this site, checked in enlarged previews
 (`docs/qa/creature-poses-gestures.png`, `creature-poses-batch2.png`); there are no original-game
@@ -128,7 +128,7 @@ creature acts and resume after. Beakerbun, Diplomoth and Datadillo have no blink
 | Tree foliage | Rebuilt as dense, scalloped leaf clumps lit upper-left (was three big blobs). Compared visually. |
 | Building contact shading | Added: two stepped bands along each building's base outdoors. Compared visually. |
 | Character-to-building scale | Walkers ~1½ tiles; doors and buildings unchanged. Consistent with the footage. |
-| Tile palette and seams | UNVERIFIED: not compared side by side; no change. |
+| Tile palette and seams | Fourth pass: compared against Route 1 (28:00) and Accumula Town (29:30). Paving now lays 2×2-tile slabs with faint joints (was a joint on every tile); grass picks one of four tuft patterns by position (was identical every 16 px); a 1-px curb where paving meets grass; paving nudged slightly toward Accumula's lavender-grey. Direct visual comparison, colour approximate (video). Grass and tree greens unchanged: the footage is in BW's autumn. |
 | Ledge shading | UNVERIFIED: the plaza has no ledges like Accumula's raised plaza. |
 
 ### Battle backgrounds
@@ -138,9 +138,14 @@ They're not meant to reproduce particular BW environments, and they aren't claim
 
 | Backdrop | Location | Kind | Compared |
 |---|---|---|---|
-| Reception | tower lobby (quick battles) | deliberate location-specific | platform only (BW indoor-style floor disc); horizon and palette UNVERIFIED |
-| Tower floors 1–5 | each floor's room | deliberate location-specific | platform only; UNVERIFIED |
-| Plaza | the resort plaza (visitor challenges) | deliberate location-specific | platform only (stone); UNVERIFIED |
+| Reception | tower lobby (quick battles) | deliberate location-specific | Fourth pass, against the general BW layout (no matching original environment): the foe's platform sat on the reception counter; the camera spot moved (y 8 → 10) so it rests on open floor. Horizon (back wall's floor line) ~30% height. Palette: own design, approximation. |
+| Tower floors 1–5 | each floor's room | deliberate location-specific | Horizon ~30%, foe platform on open floor in front of the back wall, as in BW; no change. Palette: own design. |
+| Plaza | the resort plaza (visitor challenges) | deliberate location-specific | The foe's platform sat over the fountain; camera spot moved (12,19 → 10,20) to open paving. Palette: own design. |
+
+All backdrops: the static vignette was lightened (BW battle backgrounds are high-key; the darker
+moments now come from the special-move dimming). Captures: `docs/qa/backdrops-before.jpg`,
+`backdrops-after.jpg`. No backdrop reproduces a specific original environment, and none is claimed
+to.
 
 Foe platform at 44% of the field height and yours cut off by the bottom edge, as in the BW
 footage frames.
@@ -148,7 +153,8 @@ footage frames.
 ## Open gaps
 
 - Original BW overworld sprite sheets weren't reachable; walker numbers are footage-measured.
-- Poses for Hootour, Stitchick and Datadillo need new artwork.
 - Which BW moves dim the background was only observed for Electro Ball.
-- Tile palette and seam fidelity, and each backdrop's horizon and palette, are unverified.
-- Riders are mirrored when flying right (the walk cycle draws each side; the riding pose doesn't).
+- Tile and backdrop colours are compared against compressed video, so they're approximate.
+- Flying mounts are still mirrored when flying right (their art is near-symmetric, but a held
+  item, like Hootour's flag, switches wing); riders are not (fourth pass).
+- Flyers only fly left or right; there's no toward/away-from-camera flight to support.
