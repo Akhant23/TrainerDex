@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { blit, buildLayers, RECIPES, S, seeded, type FxEnv, type Layer, type Motion } from '../../battle/fx'
-import type { MoveId } from '../../battle/data'
+import { blit, buildLayers, RECIPES, S, seeded, tempoFor, type FxEnv, type Layer, type Motion } from '../../battle/fx'
+import { moves, type MoveId } from '../../battle/data'
 
 /** Where each side's creature sits on the battle field (fractions of its width and height). */
 const CENTRE: Record<0 | 1, [number, number]> = { 0: [0.26, 0.68], 1: [0.7, 0.32] }
@@ -14,6 +14,10 @@ export interface FxRun {
   /** resolves when the animation has finished and been cleared */
   done: Promise<void>
   motion: Motion
+  /** ms from the start (real time) until the hit lands */
+  impactMs: number
+  /** how much the recipe is stretched to Gen V pacing (1 with reduced motion) */
+  tempo: number
 }
 
 /**
@@ -44,7 +48,8 @@ export function useBattleFx(reducedMotion: boolean) {
       const recipe = RECIPES[move]
       const cv = canvasRef.current
       const ctx = cv?.getContext('2d')
-      if (!cv || !ctx) return { impact: Promise.resolve(), done: Promise.resolve(), motion: recipe.motion }
+      const tempo = reducedMotion ? 1 : tempoFor(recipe, moves[move].power)
+      if (!cv || !ctx) return { impact: Promise.resolve(), done: Promise.resolve(), motion: recipe.motion, impactMs: 0, tempo }
       const box = cv.parentElement?.getBoundingClientRect()
       const W = DS_W
       const H = Math.max(120, Math.round(DS_W * ((box?.height || 192) / (box?.width || 256))))
@@ -79,7 +84,7 @@ export function useBattleFx(reducedMotion: boolean) {
         },
       }
       const frame = () => {
-        const t = (performance.now() - start) * qa.slow
+        const t = ((performance.now() - start) * qa.slow) / tempo
         ctx.clearRect(0, 0, W, H)
         ctx.imageSmoothingEnabled = false
         for (const l of layers) {
@@ -98,9 +103,9 @@ export function useBattleFx(reducedMotion: boolean) {
         run.raf = requestAnimationFrame(frame)
       }
       run.raf = requestAnimationFrame(frame)
-      run.timers.push(window.setTimeout(resolveImpact, impactAt / qa.slow + 60), window.setTimeout(() => (current.current === run ? stop() : resolveDone()), total / qa.slow + 120))
+      run.timers.push(window.setTimeout(resolveImpact, (impactAt * tempo) / qa.slow + 60), window.setTimeout(() => (current.current === run ? stop() : resolveDone()), (total * tempo) / qa.slow + 120))
       current.current = run
-      return { impact, done, motion: reducedMotion ? 'none' : recipe.motion }
+      return { impact, done, motion: reducedMotion ? 'none' : recipe.motion, impactMs: (impactAt * tempo) / qa.slow, tempo }
     },
     [reducedMotion, stop],
   )

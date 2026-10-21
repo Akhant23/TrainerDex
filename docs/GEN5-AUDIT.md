@@ -1,7 +1,8 @@
 # Gen V visual audit
 
 Where the site stands against Pokémon Black and White's visual principles, what the reference
-standard is, and what's still open. Updated 22 Oct 2026.
+standard is, and what's still open. Updated 22 Oct 2026 (second pass: battle flow, poses, idle
+gestures, platforms; see GEN5-TIMING.md and QA-CHECKLIST.md).
 
 ## Ground rules
 
@@ -12,8 +13,9 @@ standard is, and what's still open. Updated 22 Oct 2026.
   Battle Resort is a 2.5D canvas renderer (`src/resort/render.ts`); move effects are canvas recipes
   (`src/battle/fx.ts`). No second engine.
 - **Remotion** is not installed in this project or this Claude Code environment (no package, plugin
-  or skill). It would suit offline previews or demo videos only, not the interactive renderer, so
-  nothing depends on it. The existing preview tooling is `npm run sprites:export` (sprite sheets)
+  or skill); it lives in the owner's Cowork environment. It would suit offline previews or
+  comparison videos only, not the interactive renderer, so nothing depends on it; the timing
+  comparison used in-browser contact sheets instead (GEN5-TIMING.md). The existing preview tooling is `npm run sprites:export` (sprite sheets)
   and `npm run sprites:fx` (every move, frame by frame).
 
 ## Inventory
@@ -66,16 +68,36 @@ standard is, and what's still open. Updated 22 Oct 2026.
 Frame 0 is always the still art, so icons, the Pokédex and reduced motion are unchanged; tests
 check every species and view.
 
+## Battle flow (second pass)
+
+Measured against White 2 footage (GEN5-TIMING.md) and now matched in `Fight.tsx`:
+
+- The HUD hides while a move plays; the camera pushes in on the attacker, cuts to the target just
+  before the hit and eases back; damage (flicker + HP drain) follows the animation.
+- Move effects and battler motion are stretched to Gen V pacing by kind (`tempoFor`).
+- Attack poses (`src/battle/poses.ts`): Byterat (crouch → bite), Megaphawk (wings up → blast),
+  Gavelion (bristle → roar), front and back views, damaging moves only. Everything else keeps
+  the plain motion.
+- Idle gestures (`IDLE_GESTURES`, scheduled by `src/ui/useCreatureIdle.ts`): blinks and one bigger
+  gesture for Byterat, Megaphawk, Gavelion and Helixor; every creature's loop has its own speed
+  and phase. Gestures start on the loop's rest frame, never overlap, pause while that creature
+  acts or poses, and end cleanly when the tab hides.
+- Battle platforms are opaque pixel-art discs matched to the ground (grass, stone, floor), as in
+  BW, replacing translucent banded pads with a dark outline.
+
 ## Open gaps
 
-- **Per-species attack poses.** Move recipes animate the attacker's position (lunge, jump, dive,
-  cast) but creatures don't change pose mid-attack. BW mostly does the same, but some species
-  could get a wind-up frame.
-- **Idle length.** Idles are 4-frame loops; BW's are often 30–90 frames. Longer loops (an
-  occasional blink or a bigger gesture) would need a frame scheduler like the trainer's
-  `useGestures`.
-- **Battle backgrounds and the overworld tileset** were overhauled in earlier passes; they haven't
-  been re-compared against BW screenshots in this pass.
-- **References not reachable from here:** The Spriters Resource sits behind a human check and
-  YouTube footage can't be reviewed frame by frame from this environment, so move timing hasn't been
-  compared against original footage.
+- **Poses and gestures for the other species.** Only the test set has them; the system is
+  validated, so extending it is per-species art work.
+- **Charged special moves** run shorter than BW's (Electro Ball lands at ~2.4 s; the slowest
+  recipe here lands at ~1.3 s), and BW's background dim for special moves isn't reproduced.
+- **Idle length.** Loops are still 4 frames; variation comes from gestures, per-sprite timing and
+  phase, not longer artwork.
+- **Overworld** (compared against Accumula Town, Route 1 and a Pokémon Center from a Black
+  longplay): camera tilt, depth sorting, contact shadows and character-to-building scale follow
+  the same principles. Not changed this pass: BW's softer ledge/building contact shading, denser
+  clustered tree foliage, and its walkers being chunkier than ours (ours were deliberately made
+  more adult). UNVERIFIED in detail: tile palette and seams side by side.
+- **Battle backgrounds** here are the real map behind the battle (reception, tower floors, plaza)
+  rather than BW's generic environments; only the platforms were compared and changed. Each
+  backdrop's horizon and palette are UNVERIFIED against a specific BW environment.

@@ -508,6 +508,18 @@ export function buildLayers(r: Recipe, env: FxEnv): Layer[] {
   return layers
 }
 
+/**
+ * Gen V pacing. Measured frame by frame from Pokémon White 2 footage (docs/GEN5-TIMING.md):
+ * contact moves land about 0.65–0.9 s into the animation and finish by 1.3–1.7 s; a thrown
+ * projectile lands about 1 s in and finishes by about 2 s; status moves run 2–3 s. The recipes
+ * here were authored at roughly half that speed, so playback stretches each one by its kind.
+ * These are approximations of the measured ranges, not frame-exact original values.
+ */
+export function tempoFor(r: Recipe, power: number): number {
+  if (power === 0) return 2.2
+  return r.motion === 'lunge' ? 2.4 : r.motion === 'jump' ? 2 : r.motion === 'dive' ? 1.6 : 1.8
+}
+
 /** The total length of a recipe's animation. */
 export function recipeLength(r: Recipe, env: FxEnv): number {
   return Math.max(r.impact, ...r.layers(env).map((l) => l.t0 + l.dur))

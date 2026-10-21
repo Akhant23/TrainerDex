@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useState, type RefObject } from 'react'
-import { CREATURE_SIZE, idleFrames } from '../../sprites/creatures'
+import { CREATURE_SIZE, gestureFrames, idleFrames, poseFrame } from '../../sprites/creatures'
+import { useCreatureIdle } from '../../ui/useCreatureIdle'
 import { pixelsToDataUrl } from '../../sprites/render'
 import type { Pixels } from '../../sprites/pixels'
 import { useSettings } from '../../systems/settings'
@@ -28,27 +29,66 @@ function idleStrip(id: SpeciesId, hi: boolean, view: 'front' | 'back'): string {
   }
   return url
 }
+/** A one-off strip (an attack pose or an idle gesture), frames side by side. */
+function strip(key: string, make: () => { frames: Pixels[]; palette: Record<string, string> }): string {
+  let url = stripCache.get(key)
+  if (!url) {
+    const { frames, palette } = make()
+    url = pixelsToDataUrl(frames[0].map((_, y) => frames.map((f) => f[y]).join('')), palette)
+    stripCache.set(key, url)
+  }
+  return url
+}
+
+export type CreaturePose = 'windup' | 'strike'
 
 /**
  * A battle creature with a looping idle animation. `scale` is in 40-pixel units; at even
  * scales the 80×80 hi-res art is used, so big sprites get the finer linework. `view="back"`
  * shows it from behind, as your own creature appears in a BW battle.
+ *
+ * Each sprite loops at its own speed and phase, and species with idle gestures blink or do
+ * something bigger now and then (useCreatureIdle). `pose` shows an attack pose instead (a
+ * species without that pose just shows its rest frame); gestures stop while it's set or while
+ * `busy` (its own move is playing).
  */
-export function CreatureSprite({ id, scale, flip = false, still = false, view = 'front', className = '' }: { id: SpeciesId; scale: number; flip?: boolean; still?: boolean; view?: 'front' | 'back'; className?: string }) {
+export function CreatureSprite({ id, scale, flip = false, still = false, view = 'front', pose = null, busy = false, seed, className = '' }: { id: SpeciesId; scale: number; flip?: boolean; still?: boolean; view?: 'front' | 'back'; pose?: CreaturePose | null; busy?: boolean; seed?: number; className?: string }) {
   const { reducedMotion } = useSettings()
   const hi = scale % 2 === 0
+  const k = hi ? 2 : 1
   const size = CREATURE_SIZE * scale
   const url = useMemo(() => idleStrip(id, hi, view), [id, hi, view])
   const animate = !still && !reducedMotion
+  // gestures yield while this creature is posing or its own move is playing
+  const { gesture, epoch, loop } = useCreatureIdle(id, view, animate && !pose && !busy, seed)
   useAssetLoads()
   const handDrawn = view === 'front' ? creatureOverrideUrl(id) : null
   if (handDrawn) return <img src={handDrawn} width={size} height={size} alt={id} draggable={false} className={`pixelated inline-block align-bottom ${flip ? 'flip' : ''} ${className}`} />
+  const box = { width: size, height: size, backgroundRepeat: 'no-repeat', ['--cw' as string]: `${size}px` }
+  const cls = `pixelated inline-block align-bottom ${flip ? 'flip' : ''} ${className}`
+  if (pose) {
+    const p = strip(`pose:${id}:${k}:${view}:${pose}`, () => poseFrame(id, k, view, pose))
+    return <span role="img" aria-label={id} data-pose={pose} className={cls} style={{ ...box, backgroundImage: `url(${p})`, backgroundSize: `${size}px ${size}px` }} />
+  }
+  if (gesture && animate) {
+    const g = strip(`gesture:${id}:${k}:${view}:${gesture.id}`, () => gestureFrames(id, k, view, gesture.id))
+    return (
+      <span
+        role="img"
+        aria-label={id}
+        data-gesture={gesture.id}
+        className={`${cls} ${gesture.frames > 1 ? 'creature-gesture' : ''}`}
+        style={{ ...box, backgroundImage: `url(${g})`, backgroundSize: `${size * gesture.frames}px ${size}px`, ['--n' as string]: gesture.frames, animationDuration: `${gesture.frames * gesture.frameMs}ms`, animationTimingFunction: `steps(${gesture.frames})` }}
+      />
+    )
+  }
   return (
     <span
+      key={epoch}
       role="img"
       aria-label={id}
-      className={`pixelated inline-block align-bottom ${animate ? 'creature-idle' : ''} ${flip ? 'flip' : ''} ${className}`}
-      style={{ width: size, height: size, backgroundImage: `url(${url})`, backgroundSize: `${size * 4}px ${size}px`, backgroundRepeat: 'no-repeat', ['--cw' as string]: `${size}px` }}
+      className={`${cls} ${animate ? 'creature-idle' : ''}`}
+      style={{ ...box, backgroundImage: `url(${url})`, backgroundSize: `${size * 4}px ${size}px`, animationDuration: `${loop.periodMs}ms`, animationDelay: epoch === 0 ? `-${loop.offsetMs}ms` : '0ms' }}
     />
   )
 }

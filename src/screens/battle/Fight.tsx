@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { navigate } from '../../app/router'
 import { menu } from '../../content/menu'
 import { types } from '../../content/pokedex'
@@ -22,9 +22,13 @@ import { resortSave } from '../../systems/resortSave'
 import { DEFAULT_AVATAR } from '../resort/AvatarStudio'
 import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
-import { CreatureSprite, HpBar, useHeightScale } from './BattleBits'
+import { CreatureSprite, HpBar, useHeightScale, type CreaturePose } from './BattleBits'
+import { poseTimeline } from '../../battle/poses'
 import { Backdrop, RECEPTION_ARENA, type Arena } from './Backdrop'
 import { useBattleFx } from './BattleFx'
+import { maps, tileAt } from '../../resort/maps'
+import { platformArt, type PlatformKind } from '../../sprites/platforms'
+import { pixelsToDataUrl } from '../../sprites/render'
 
 const entry = menu.find((m) => m.id === 'battle')!
 
@@ -43,6 +47,14 @@ interface View {
   me: 'intro' | 'throw' | 'gone'
   shake: number
   message: string
+  /** whose move is playing: the HUD hides, as in BW, and that creature's idle gestures pause */
+  acting: SideId | null
+  /** where the battle camera is pushed in (BW pans to the attacker, then cuts to the target) */
+  cam: SideId | null
+  /** how much the current move is stretched to Gen V pacing (scales the battlers' motion too) */
+  tempo: number
+  /** attack poses, for species that have them (battle/poses.ts) */
+  pose: [CreaturePose | null, CreaturePose | null]
 }
 
 export interface FightOpponent {
@@ -93,6 +105,10 @@ export default function Fight({
     me: 'intro',
     shake: 0,
     message: '',
+    acting: null,
+    cam: null,
+    tempo: 1,
+    pose: [null, null],
   }))
   const viewRef = useRef(view)
   viewRef.current = view
@@ -139,6 +155,16 @@ export default function Fight({
     [patch],
   )
 
+  const setPose = useCallback(
+    (side: SideId, pose: CreaturePose | null) =>
+      patch((v) => {
+        const p = [...v.pose] as View['pose']
+        p[side] = pose
+        return { pose: p }
+      }),
+    [patch],
+  )
+
   const tweenHp = useCallback(
     async (side: SideId, to: number) => {
       const from = viewRef.current.hp[side]
@@ -166,13 +192,28 @@ export default function Fight({
             await say(e.text)
             break
           case 'move': {
-            // the move's own animation; the battle carries on when the hit lands
+            // BW's order (from White 2 footage, docs/GEN5-TIMING.md): the HUD hides and the camera
+            // pushes in on the attacker, cuts to the target just before the hit, then pulls back
+            // once the effect has finished; only then does the target flicker and its HP drain
             const mv = moves[e.move]
             const missed = events[i + 1]?.t === 'miss'
+            const foe: SideId = e.side === 0 ? 1 : 0
             const run = fx.play(e.move, e.side, missed)
+            patch({ acting: e.side, cam: reducedMotion ? null : e.side, tempo: run.tempo })
             if (run.motion !== 'none') animate(e.side, run.motion)
             sfx(mv.power ? 'select' : 'cursor')
-            await run.impact
+            const timers: number[] = []
+            if (!reducedMotion && (mv.power > 0 || mv.effect.kind === 'target')) timers.push(window.setTimeout(() => patch({ cam: foe }), Math.max(0, run.impactMs - 260)))
+            // a wind-up and a strike frame, for the species that have them
+            const species = st.sides[e.side].team[viewRef.current.active[e.side]]?.species
+            const steps = reducedMotion || !species ? null : poseTimeline(species, e.move, run.impactMs)
+            for (const step of steps ?? []) timers.push(window.setTimeout(() => setPose(e.side, step.pose), step.at))
+            await run.done
+            timers.forEach((t) => window.clearTimeout(t))
+            setPose(e.side, null)
+            patch({ acting: null, cam: null })
+            // the camera settles back before the damage
+            await wait(reducedMotion ? 0 : 200, false)
             break
           }
           case 'miss':
@@ -253,7 +294,7 @@ export default function Fight({
         hp: [active(st, 0).hp, active(st, 1).hp],
       })
     },
-    [animate, fx, patch, say, sfx, tweenHp, wait],
+    [animate, fx, patch, say, sfx, tweenHp, wait, reducedMotion, setPose],
   )
 
   const afterTurn = useCallback(
@@ -427,6 +468,32 @@ export default function Fight({
 
 /* ---------------- Top screen ---------------- */
 
+/** The ground the battle stands on: grass, paving outdoors, or a polished floor inside. */
+function platformKind(a: Arena): PlatformKind {
+  const m = maps[a.map]
+  if (!m.outdoor) return 'floor'
+  return tileAt(m, a.x, a.y) === ',' ? 'grass' : 'stone'
+}
+const platformUrls = new Map<PlatformKind, string>()
+function platformUrl(kind: PlatformKind): string {
+  let url = platformUrls.get(kind)
+  if (!url) {
+    const { pixels, palette } = platformArt(kind)
+    platformUrls.set(kind, (url = pixelsToDataUrl(pixels, palette)))
+  }
+  return url
+}
+
+/**
+ * Where the battle camera pushes in: toward a battler's spot on the field, closer on the far
+ * (foe's) side since it's smaller on screen. The sprites stay nearest-neighbour scaled, as BW's
+ * 3D camera scales its sprites.
+ */
+function camStyle(cam: SideId | null): CSSProperties {
+  if (cam === null) return { transform: 'none' }
+  return cam === 1 ? { transform: 'scale(1.28)', transformOrigin: '70% 40%' } : { transform: 'scale(1.14)', transformOrigin: '26% 78%' }
+}
+
 function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip }: { battle: BattleState; view: View; encounter: boolean; look?: Appearance; myLook: Appearance; arena: Arena; fxCanvas: RefObject<HTMLCanvasElement | null>; onSkip: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   // in 40px units, always even so the 80×80 hi-res art is used
@@ -449,11 +516,13 @@ function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip 
 
   return (
     <div ref={ref} className="absolute inset-0 flex cursor-pointer flex-col overflow-hidden" onClick={onSkip}>
-      <div key={view.shake} className={`battle-field relative flex-1 ${view.shake ? 'screen-shake' : ''}`}>
+      <div key={view.shake} className={`battle-field relative flex-1 ${view.shake ? 'screen-shake' : ''}`} style={{ ['--tempo' as string]: view.tempo }}>
+        {/* the battle camera: everything on the field moves together, the HUD stays put */}
+        <div className="battle-cam absolute inset-0" style={camStyle(view.cam)}>
         <Backdrop arena={arena} />
         {/* platforms */}
-        <div className="platform" style={{ left: '70%', top: '44%', width: '40%', height: '13%' }} />
-        <div className="platform" style={{ left: '26%', top: '88%', width: '46%', height: '15%' }} />
+        <div className="platform" style={{ left: '70%', top: '44%', width: '40%', height: '13%', backgroundImage: `url(${platformUrl(platformKind(arena))})` }} />
+        <div className="platform" style={{ left: '26%', top: '88%', width: '46%', height: '15%', backgroundImage: `url(${platformUrl(platformKind(arena))})` }} />
 
         {/* opponent trainer */}
         {(view.trainer === 'intro' || view.trainer === 'defeated' || view.trainer === 'victorious') && (
@@ -472,20 +541,22 @@ function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip 
         {/* opponent creature */}
         {view.shown[1] && view.trainer === 'gone' && (
           <div key={`o${view.animKey[1]}`} className={`stand ${animCls(1)}`} style={{ left: '70%', top: '47%' }}>
-            <CreatureSprite id={opp.species} scale={oppScale} />
+            <CreatureSprite id={opp.species} scale={oppScale} pose={view.pose[1]} busy={view.acting === 1} />
           </div>
         )}
         {/* your creature, seen from behind as in BW */}
         {view.shown[0] && (
           <div key={`p${view.animKey[0]}`} className={`stand ${animCls(0)}`} style={{ left: '26%', top: '91%' }}>
-            <CreatureSprite id={ply.species} scale={plyScale} view="back" />
+            <CreatureSprite id={ply.species} scale={plyScale} view="back" pose={view.pose[0]} busy={view.acting === 0} />
           </div>
         )}
 
         {/* move animations, pixel-drawn over the field */}
         <canvas ref={fxCanvas} aria-hidden className="pixelated pointer-events-none absolute inset-0 z-[5] h-full w-full" />
+        </div>
 
-        {/* info boxes */}
+        {/* info boxes (hidden while a move plays, as in BW) */}
+        <div className={`battle-hud ${view.acting !== null ? 'is-hidden' : ''}`}>
         {view.trainer === 'gone' && view.shown[1] && (
           <InfoBox side="foe" className="left-[2%] top-[5%]" name={nameOf(opp)} level={opp.level} hp={view.hp[1]} max={opp.maxHp} team={battle.sides[1].team.map((m) => m.hp > 0)} />
         )}
@@ -502,6 +573,7 @@ function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip 
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* message box */}

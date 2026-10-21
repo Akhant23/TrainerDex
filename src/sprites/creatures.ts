@@ -35,6 +35,45 @@ let RES = 1
 let PHASE = 0
 /** Pick this phase's value from a 4-step cycle. */
 const cyc = <T,>(steps: readonly [T, T, T, T]) => steps[PHASE]
+/** An attack pose being drawn (wind-up or strike), for species that have one (battle/poses.ts). */
+let POSE: 'windup' | 'strike' | null = null
+/** An occasional idle gesture being drawn (see IDLE_GESTURES), and which of its frames. */
+let GESTURE: string | null = null
+let GFRAME = 0
+/** This gesture frame's value, or `rest` when another gesture (or none) is playing. */
+const gest = <T,>(id: string, steps: readonly T[], rest: T) => (GESTURE === id ? steps[GFRAME] : rest)
+
+export interface IdleGesture {
+  id: string
+  frames: number
+  frameMs: number
+  views: Array<'front' | 'back'>
+  /** relative frequency */
+  weight: number
+}
+/**
+ * Occasional idle gestures, layered over the looping idle by the battle sprite's scheduler: a
+ * blink where the species has eyes that can close, and one bigger, rarer gesture. Only the test
+ * species have them so far; the rest keep the plain loop.
+ */
+export const IDLE_GESTURES: Partial<Record<string, IdleGesture[]>> = {
+  byterat: [
+    { id: 'blink', frames: 1, frameMs: 130, views: ['front'], weight: 3 },
+    { id: 'sniff', frames: 4, frameMs: 150, views: ['front', 'back'], weight: 2 },
+  ],
+  megaphawk: [
+    { id: 'blink', frames: 1, frameMs: 130, views: ['front'], weight: 3 },
+    { id: 'squawk', frames: 4, frameMs: 140, views: ['front', 'back'], weight: 1 },
+  ],
+  gavelion: [
+    { id: 'blink', frames: 1, frameMs: 130, views: ['front'], weight: 3 },
+    { id: 'shake', frames: 4, frameMs: 120, views: ['front', 'back'], weight: 2 },
+  ],
+  helixor: [
+    { id: 'blink', frames: 1, frameMs: 130, views: ['front'], weight: 3 },
+    { id: 'tongue', frames: 3, frameMs: 110, views: ['front'], weight: 2 },
+  ],
+}
 function grid() {
   return new HiGrid(CREATURE_SIZE, CREATURE_SIZE, RES)
 }
@@ -62,7 +101,8 @@ function gavelion(): Art {
   g.ellipse(14, 37, 3, 1.5, 'F', 'f').ellipse(26, 37, 3, 1.5, 'F', 'f')
   g.rect(19, 23, 20, 29, 'W')
   // mane with spikes (idle: the side spikes bristle)
-  const m = cyc([0, -1, -1.5, -0.5] as const)
+  // shake gesture: the mane spikes swing; wind-up pose: fully bristled
+  const m = cyc([0, -1, -1.5, -0.5] as const) + gest('shake', [-2, 1, -2, 0], 0) + (POSE === 'windup' ? -2.5 : 0)
   g.poly([[6, 15], [1, 11 + m], [8, 9]], 'M').poly([[34, 15], [39, 11 + m], [32, 9]], 'M')
   g.poly([[7, 22], [3, 24], [9, 18]], 'M').poly([[33, 22], [37, 24], [31, 18]], 'M')
   g.ellipse(20, 15, 13, 11, 'M', 'm')
@@ -75,11 +115,13 @@ function gavelion(): Art {
   hold(g, 'gavelion', 'front')
   g.ellipse(32, 27.6, 2.7, 2.3, 'F', 'f')
   g.outline(OL)
-  // face
-  g.stamp(16, 15, ['WK', 'KK', 'KK'])
-  g.stamp(23, 15, ['WK', 'KK', 'KK'])
+  // face (eyes shut for a blink; brows down and a roar for an attack)
+  if (GESTURE === 'blink') g.stamp(16, 16, ['KK']).stamp(23, 16, ['KK'])
+  else g.stamp(16, 15, ['WK', 'KK', 'KK']).stamp(23, 15, ['WK', 'KK', 'KK'])
+  if (POSE) g.line(15, 13, 18, 14, 'K').line(25, 14, 22, 13, 'K')
   g.stamp(19, 19, ['NN', 'KK'])
-  g.stamp(17, 21, ['K....K', '.KKKK.'])
+  if (POSE === 'strike') g.stamp(17, 21, ['KKKKKK', 'KPPPPK', '.KKKK.'])
+  else g.stamp(17, 21, ['K....K', '.KKKK.'])
   g.set(14, 19, 'P').set(26, 19, 'P')
   g.line(31, 27, 33, 27, 'f')
   return {
@@ -97,7 +139,9 @@ function gavelionBack(): Pixels {
   // robe, with its back seam
   g.ellipse(21, 30, 11, 9, 'R', 'r', 'Q')
   // mane from behind, spikes out to both sides
-  g.poly([[8, 14], [2, 10], [9, 8]], 'M').poly([[35, 13], [40, 9], [33, 7]], 'm')
+  // wind-up: mane bristles; strike: it snaps forward
+  const mb = gest('shake', [-2, 1, -2, 0], 0) + (POSE === 'windup' ? -2.5 : POSE === 'strike' ? 2 : 0)
+  g.poly([[8, 14], [2, 10 + mb], [9, 8]], 'M').poly([[35, 13], [40, 9 + mb], [33, 7]], 'm')
   g.poly([[8, 21], [3, 24], [10, 17]], 'M').poly([[34, 21], [39, 23], [32, 17]], 'm')
   g.ellipse(22, 15, 13.5, 11.5, 'M', 'm')
   // ears poking up
@@ -134,9 +178,12 @@ function helixor(): Art {
   g.ellipse(hx, hy - 2, 7, 6, 'T', 't')
   g.rect(Math.round(hx) - 7, Math.round(hy) - 4, Math.round(hx) + 7, Math.round(hy) - 3, 'K')
   g.ellipse(hx - 3, hy - 3, 2.2, 2.2, 'L', 'l').ellipse(hx + 3, hy - 3, 2.2, 2.2, 'L', 'l')
-  g.line(hx, hy + 4, hx + 1, hy + 7, 'R')
+  // tongue gesture: the forked tongue flicks out further
+  const tongue = gest('tongue', [2, 3.5, 1.5], 0)
+  g.line(hx, hy + 4, hx + 1, hy + 7 + tongue, 'R')
   g.outline(OL)
-  g.set(hx - 3, hy - 3, 'K').set(hx + 3, hy - 3, 'K').set(hx - 4, hy - 4, 'W').set(hx + 2, hy - 4, 'W')
+  if (GESTURE === 'blink') g.line(hx - 5, hy - 3, hx - 1, hy - 3, 'l').line(hx + 1, hy - 3, hx + 5, hy - 3, 'l')
+  else g.set(hx - 3, hy - 3, 'K').set(hx + 3, hy - 3, 'K').set(hx - 4, hy - 4, 'W').set(hx + 2, hy - 4, 'W')
   return {
     pixels: g.toPixels(),
     palette: { K, T: '#3fb8a0', t: '#24806e', P: '#f070a0', Y: '#f8d040', L: '#d8f0ff', l: '#90b8d8', R: '#e0383e', W: '#ffffff' },
@@ -345,21 +392,28 @@ function byterat(): Art {
   const g = grid()
   // idle: the cable tail flicks side to side and one ear twitches
   const tx = cyc([0, 1, 2, 1] as const)
-  const ear = cyc([0, 0, -1, 0] as const)
+  // sniff gesture: both ears twitch and the nose wiggles; wind-up pose: ears flattened back
+  const sniff = gest('sniff', [-1, 0, -1, 0], 0)
+  const ear = cyc([0, 0, -1, 0] as const) + sniff + (POSE === 'windup' ? 1.5 : 0)
+  const earL = sniff + (POSE === 'windup' ? 1.5 : 0)
+  const nose = gest('sniff', [0, -1, 0, -1], 0)
   g.line(26, 33, 34, 32, 'L').line(34, 32, 37 + tx * 0.5, 24, 'L').line(37 + tx * 0.5, 24, 37 + tx, 19, 'L')
   g.ellipse(19, 29, 9, 7, 'S', 's')
   g.ellipse(18, 31, 5, 4, 'W', 'w')
   g.ellipse(12, 37, 3, 1.4, 'S', 's').ellipse(24, 37, 3, 1.4, 'S', 's')
-  g.ellipse(10, 11, 3.5, 3.5, 'S', 's').ellipse(20, 10 + ear, 3.5, 3.5, 'S', 's')
-  g.ellipse(10, 11, 1.8, 1.8, 'P').ellipse(20, 10 + ear, 1.8, 1.8, 'P')
+  g.ellipse(10, 11 + earL, 3.5, 3.5, 'S', 's').ellipse(20, 10 + ear, 3.5, 3.5, 'S', 's')
+  g.ellipse(10, 11 + earL, 1.8, 1.8, 'P').ellipse(20, 10 + ear, 1.8, 1.8, 'P')
   g.ellipse(15, 19, 7, 6, 'S', 's')
-  g.ellipse(8, 21, 2.5, 2, 'S', 's')
+  g.ellipse(8 + nose, 21, 2.5, 2, 'S', 's')
   g.rect(9, 17, 20, 18, 'L')
   g.outline(OL)
   g.rect(9, 16, 20, 16, 'K').rect(9, 19, 20, 19, 'K')
-  g.set(12, 17, 'W').set(17, 17, 'W')
-  g.set(6, 21, 'P')
-  g.stamp(10, 23, ['K.K', '.K.'])
+  // the visor's eye-lights go off for a blink
+  if (GESTURE !== 'blink') g.set(12, 17, 'W').set(17, 17, 'W')
+  g.set(6 + nose, 21, 'P')
+  // strike pose: the bite, mouth open on its front teeth
+  if (POSE === 'strike') g.stamp(9, 22, ['KKKK', 'KWWK', 'KPPK', '.KK.'])
+  else g.stamp(10, 23, ['K.K', '.K.'])
   g.set(34, 32, 'Y').set(37 + tx * 0.5, 24, 'Y').set(37 + tx, 18, 'Y')
   return {
     pixels: g.toPixels(),
@@ -370,12 +424,14 @@ function byterat(): Art {
 function byteratBack(): Pixels {
   const g = grid()
   // the ethernet tail loops out behind, plug and all
-  const tx = cyc([0, -1, -2, -1] as const)
+  // sniff gesture and the strike pose both whip the tail up
+  const tx = cyc([0, -1, -2, -1] as const) + gest('sniff', [-1, -2, -1, 0], 0) + (POSE === 'strike' ? -2 : 0)
   g.line(13, 33, 5, 31, 'L').line(5, 31, 3 + tx, 23, 'L')
   g.rect(2 + tx, 20, 4 + tx, 22, 'Y')
   g.ellipse(21, 29, 9, 7, 'S', 's')
   g.ellipse(14, 37, 3, 1.4, 's').ellipse(26, 37, 3, 1.4, 'S', 's')
-  g.ellipse(14, 10, 3.5, 3.5, 'S', 's').ellipse(26, 10, 3.5, 3.5, 's')
+  const earB = POSE === 'windup' ? 1.5 : 0
+  g.ellipse(14, 10 + earB, 3.5, 3.5, 'S', 's').ellipse(26, 10 + earB, 3.5, 3.5, 's')
   g.ellipse(21, 18, 7.5, 6.5, 'S', 's')
   // visor strap round the back of its head
   g.rect(14, 16, 28, 17, 'L')
@@ -564,7 +620,8 @@ function campflyBack(): Pixels {
 function megaphawk(): Art {
   const g = grid()
   // idle: the wings lift and settle, the crest feathers sway, and the megaphone crackles
-  const lift = cyc([0, -1, -2, -1] as const)
+  // squawk gesture: wings flung up; wind-up pose: wings raised high; strike: wings swept down
+  const lift = cyc([0, -1, -2, -1] as const) + gest('squawk', [-2, -4, -4, -2], 0) + (POSE === 'windup' ? -5 : POSE === 'strike' ? 1 : 0)
   const sway = cyc([0, 0.5, 1, 0.5] as const)
   // wings + body
   g.poly([[8, 22], [1, 34 + lift], [12, 32]], 'D').poly([[30, 22], [38, 33 + lift], [27, 32]], 'd')
@@ -579,9 +636,14 @@ function megaphawk(): Art {
   g.rect(22, 11, 24, 17, 'R')
   g.outline(OL)
   g.rect(36, 7, 37, 20, 'R')
-  g.ellipse(17, 12, 2.4, 2.4, 'W').set(18, 12, 'K').set(18, 13, 'K')
+  if (GESTURE === 'blink') g.line(15, 12, 19, 12, 'K')
+  else g.ellipse(17, 12, 2.4, 2.4, 'W').set(18, 12, 'K').set(18, 13, 'K')
   g.line(13, 9, 19, 10, 'K')
-  if (PHASE % 2 === 0) for (const [x, y] of [[38, 4], [39, 12], [38, 22]]) g.set(x, y, 'Y')
+  const loud = POSE === 'strike' || (GESTURE === 'squawk' && GFRAME > 0)
+  if (loud)
+    // a full-volume blast: sound lines fanning out of the bell
+    for (const [x0, y0, x1, y1] of [[38, 6, 40, 2], [38, 13, 40, 13], [38, 20, 40, 24]]) g.line(x0, y0, x1, y1, 'Y')
+  else if (PHASE % 2 === 0) for (const [x, y] of [[38, 4], [39, 12], [38, 22]]) g.set(x, y, 'Y')
   return {
     pixels: g.toPixels(),
     palette: { K, D: '#8a5430', d: '#5e361c', C: '#f4e2c4', c: '#d8c09c', W: '#f8f8f4', w: '#c8ccd8', R: '#e0383e', Y: '#f8c030' },
@@ -594,7 +656,7 @@ function megaphawkBack(): Pixels {
   g.poly([[13, 34], [27, 34], [24, 40], [16, 40]], 'd')
   g.ellipse(20, 27, 10, 10, 'D', 'd')
   // folded wings down its back, primaries crossed at the tail (they shift as it breathes)
-  const lift = cyc([0, -0.5, -1, -0.5] as const)
+  const lift = cyc([0, -0.5, -1, -0.5] as const) + gest('squawk', [-1, -2, -2, -1], 0) + (POSE === 'windup' ? -3 : POSE === 'strike' ? 1 : 0)
   g.poly([[10, 20 + lift], [19, 24], [17, 37], [8, 33 + lift]], 'd')
   g.poly([[30, 20 + lift], [21, 24], [24, 37], [32, 33 + lift]], 'D')
   g.ellipse(14, 38, 3, 1.3, 'Y').ellipse(26, 38, 3, 1.3, 'Y')
@@ -772,25 +834,30 @@ function build(k: number): Record<string, CreatureArt> {
 }
 
 export const IDLE_FRAMES = 4
-const idleCache = new Map<string, { frames: Pixels[]; palette: Palette }>()
+const frameCache = new Map<string, { frames: Pixels[]; palette: Palette }>()
+
 /**
- * A species' idle loop for one view: four frames of its own signature motion, shaded and
- * outlined like the still art (frame 0 is the still). Built on first use and cached, so the
- * site doesn't pay for every species' animation up front.
+ * Render frames of one species and view: each entry sets the drawing state (idle phase, pose,
+ * gesture frame) before the builder runs. Frames are shaded and outlined like the still art and
+ * share one palette. Built on first use and cached, so the site doesn't pay for every species'
+ * animation up front.
  */
-export function idleFrames(id: string, k: 1 | 2, view: 'front' | 'back'): { frames: Pixels[]; palette: Palette } {
-  const key = `${id}:${k}:${view}`
-  const hit = idleCache.get(key)
+function renderFrames(key: string, id: string, k: 1 | 2, view: 'front' | 'back', states: Array<() => void>): { frames: Pixels[]; palette: Palette } {
+  const hit = frameCache.get(key)
   if (hit) return hit
   const [front, back] = builders[id]
   const shade = (px: Pixels, pal: Palette) => (k > 1 ? formShade(px, pal, k + 1) : { pixels: px, palette: pal })
-  const [prevRes, prevPhase] = [RES, PHASE]
+  const saved = [RES, PHASE, POSE, GESTURE, GFRAME] as const
   const frames: Pixels[] = []
   let pal: Palette = {}
   RES = k
   try {
-    for (let p = 0; p < IDLE_FRAMES; p++) {
-      PHASE = p
+    for (const set of states) {
+      PHASE = 0
+      POSE = null
+      GESTURE = null
+      GFRAME = 0
+      set()
       const f = front()
       const fs = shade(f.pixels, { ...f.palette, ...ITEM_PALETTE, ...pal })
       const fr = selectiveOutline(fs.pixels, fs.palette)
@@ -804,12 +871,28 @@ export function idleFrames(id: string, k: 1 | 2, view: 'front' | 'back'): { fram
       }
     }
   } finally {
-    RES = prevRes
-    PHASE = prevPhase
+    ;[RES, PHASE, POSE, GESTURE, GFRAME] = saved
   }
   const out = { frames, palette: pal }
-  idleCache.set(key, out)
+  frameCache.set(key, out)
   return out
+}
+
+/** A species' looping idle for one view: four frames of its own motion (frame 0 is the still). */
+export function idleFrames(id: string, k: 1 | 2, view: 'front' | 'back'): { frames: Pixels[]; palette: Palette } {
+  return renderFrames(`idle:${id}:${k}:${view}`, id, k, view, [0, 1, 2, 3].map((p) => () => (PHASE = p)))
+}
+
+/** One attack pose (wind-up or strike) for a species that has one; see battle/poses.ts. */
+export function poseFrame(id: string, k: 1 | 2, view: 'front' | 'back', pose: 'windup' | 'strike'): { frames: Pixels[]; palette: Palette } {
+  return renderFrames(`pose:${id}:${k}:${view}:${pose}`, id, k, view, [() => (POSE = pose)])
+}
+
+/** The frames of an occasional idle gesture, drawn over the resting pose. */
+export function gestureFrames(id: string, k: 1 | 2, view: 'front' | 'back', gesture: string): { frames: Pixels[]; palette: Palette } {
+  const g = IDLE_GESTURES[id]?.find((x) => x.id === gesture)
+  const n = g?.frames ?? 0
+  return renderFrames(`gesture:${id}:${k}:${view}:${gesture}`, id, k, view, Array.from({ length: n }, (_, i) => () => ((GESTURE = gesture), (GFRAME = i))))
 }
 
 /** 40×40 art for small icons. */

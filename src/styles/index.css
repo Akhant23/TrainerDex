@@ -738,13 +738,11 @@ body {
 }
 .platform {
   position: absolute;
-  border-radius: 50%;
-  /* Gen V battle pads: stepped terrain bands (lit centre, mid band, darker rim), a defined edge
-     and a hard shadow, translucent enough that the real surroundings show through */
-  background: radial-gradient(ellipse at 50% 40%, rgb(255 255 250 / 0.55) 0 36%, rgb(214 224 176 / 0.55) 37% 68%, rgb(150 166 112 / 0.62) 69% 100%);
-  box-shadow:
-    0 0 0 3px rgb(26 34 18 / 0.55),
-    0 7px 0 2px rgb(8 12 6 / 0.22);
+  /* Gen V battle pads: an opaque pixel-art disc of the ground (sprites/platforms.ts) — lit centre,
+     darker ring, lighter lip, tufts on grass — stretched nearest-neighbour like BW's 3D pads */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
   transform: translate(-50%, -50%);
 }
 /* Gen V battle HUD plate: dark two-tone bar, slanted end, ink outline traced round the slant */
@@ -772,6 +770,33 @@ body {
 }
 .flip {
   transform: scaleX(-1);
+}
+/* the battle camera and HUD (Fight.tsx): the camera eases in like BW's, the HUD blinks out */
+.battle-cam {
+  transition: transform 320ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+.battle-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 100ms steps(2);
+}
+.battle-hud.is-hidden {
+  opacity: 0;
+}
+/* a battler's move motion is stretched to the same Gen V pacing as its effect (--tempo) */
+.battle-field .anim-lunge-right,
+.battle-field .anim-lunge-left,
+.battle-field .anim-cast {
+  animation-duration: calc(360ms * var(--tempo, 1));
+}
+.battle-field .anim-jump-right,
+.battle-field .anim-jump-left {
+  animation-duration: calc(640ms * var(--tempo, 1));
+}
+.battle-field .anim-dive-right,
+.battle-field .anim-dive-left {
+  animation-duration: calc(900ms * var(--tempo, 1));
 }
 .anim-enter {
   animation: b-enter 420ms steps(6);
@@ -987,6 +1012,10 @@ body {
     clip-path: inset(50% 0 50% 0);
   }
 }
+[data-motion='reduced'] .battle-cam {
+  transform: none !important;
+  transition: none;
+}
 [data-motion='reduced'] .anim-enter,
 [data-motion='reduced'] .anim-lunge-right,
 [data-motion='reduced'] .anim-lunge-left,
@@ -1073,6 +1102,16 @@ body {
 @keyframes creature-idle {
   to {
     background-position-x: calc(-4 * var(--cw));
+  }
+}
+/* an occasional idle gesture: its frames once through (duration and steps set inline) */
+.creature-gesture {
+  /* no fill: past the last frame it falls back to frame 0 rather than an empty cell */
+  animation-name: creature-gesture;
+}
+@keyframes creature-gesture {
+  to {
+    background-position-x: calc(-1 * var(--n) * var(--cw));
   }
 }
 
