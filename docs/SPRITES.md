@@ -87,6 +87,36 @@ whole device pixels: at even scales, or at any scale on a high-density screen.
 All sprites are drawn at whole-number scales with `image-rendering: pixelated`, never smoothed.
 The idle animation is only for the large sprites; map walkers stand still, as in BW.
 
+## Idle gestures (main menu)
+
+On the main menu Aaryan breathes by default, and every 7–13 s he plays one of five gestures:
+hands behind the head, ruffling his hair, searching his pockets, smirking and pointing at you, or
+(rarely) waving. Tapping him always waves. The clips are in `src/sprites/gestures.ts` and the
+scheduler is `src/ui/useGestures.ts`.
+
+- A gesture is a list of keyframes: a `PoseFrame` (arm elbow/wrist points and hand shape, plus face
+  overrides: eyes, mouth, brow, hair ruffle, head tilt) and how long to hold it. Arms are tweened
+  between keyframes with 70 ms in-between frames.
+- Every clip starts and ends on the standing idle, so it hands back to breathing without a jump.
+- Gestures never repeat back to back and never interrupt each other: a tap during a gesture is
+  ignored. Weights live in `GESTURE_WEIGHTS`.
+- Only the standing `idle` pose gestures, and nothing plays with reduced motion on, in a hidden
+  tab, or when a hand-drawn sprite replaces the procedural one.
+- Frames are cached per body part and preloaded shortly after the menu opens.
+- To add one: append keyframes to `GESTURES`, give it a weight, and the tests check it starts and
+  ends on idle and renders at 1× and 2×. In dev, `window.__aaryanGesture('wave')` plays one on demand.
+
+`npm run sprites:export` also writes `gesture-<id>@2x.png` strips and a close-up sheet for review.
+
+## Photo portraits
+
+Each album photo has a pixel-art version under its description, drawn by `src/ui/PhotoPortrait.tsx`
+from a scene in `src/content/photoScenes.ts` (keyed by the photo's `id`). A scene is a backdrop, a
+cast of trainer sprites (each with their look from the photo: hair, outfit, accessories, and a
+`PoseFrame` for the pose), optional props, and an `alt` description for screen readers. People are
+the same layered sprite as Aaryan, so proportions match across the site. A photo with no scene
+shows a small "Pixel portrait not drawn yet" plate instead.
+
 ## Battle move animations
 
 Each of the 39 moves has its own animation recipe in `src/battle/fx.ts`, played by

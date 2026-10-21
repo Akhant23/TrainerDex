@@ -54,6 +54,12 @@ shown — don't fill them with guesses.
 ~420px `NN-name-thumb.jpg`, **strip location metadata** (phone photos carry GPS), then edit its entry in
 `photos.ts`. Unused originals from the zip are in `content-source/photos-zip/` (git-ignored).
 
+**Add an album photo's pixel portrait** — give the photo a scene in `photoScenes.ts` under its
+`id` (the file name, e.g. `16-beach`): pick a backdrop, add the people (`me()` for Aaryan with any
+outfit overrides, `friend()` for others), a pose, and props, and write a one-line `alt`. Keep it true
+to the photo: same people, clothes and pose. A test fails if a photo has no scene or a scene has no
+photo.
+
 **Add a Pokédex entry** — append to `pokedex.ts` with the next `no`. Art can be any icon in
 `src/sprites/icons.ts` or a badge id.
 

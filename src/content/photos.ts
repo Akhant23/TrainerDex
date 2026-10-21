@@ -4,6 +4,8 @@
  * Originals: content-source/photos-zip/ (git-ignored).
  */
 export interface Photo {
+  /** stable id (the file name), used to look up the photo's pixel-art portrait (photoScenes.ts) */
+  id: string
   src: string
   thumb: string
   width: number
@@ -20,7 +22,7 @@ export interface Photo {
 
 export const ALBUM_SIZE = 15
 
-const p = (file: string, width: number, height: number) => ({ src: `/photos/${file}.jpg`, thumb: `/photos/${file}-thumb.jpg`, width, height })
+const p = (file: string, width: number, height: number) => ({ id: file, src: `/photos/${file}.jpg`, thumb: `/photos/${file}-thumb.jpg`, width, height })
 
 export const photos: Photo[] = [
   {

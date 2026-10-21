@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { atResolution, CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderBack, renderLayers, renderSide, type Appearance, type ArmPose, type CharacterLayers } from '../sprites/character'
+import { atResolution, CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderArmLayer, renderBack, renderHairBackLayer, renderHeadLayer, renderLayers, renderSide, type Appearance, type ArmPose, type CharacterLayers, type PoseFrame } from '../sprites/character'
+import { GESTURES, type GestureId } from '../sprites/gestures'
+import { useGestures } from './useGestures'
 import { crop, type Pixels } from '../sprites/pixels'
 import { pixelsToDataUrl } from '../sprites/render'
 import { useSettings } from '../systems/settings'
@@ -21,6 +23,32 @@ function layersFor(a: Appearance, pose: ArmPose, hi = false) {
   }
   return hit
 }
+/*
+ * Posed frames (idle gestures) are cached per part — an arm by its position, a head by its
+ * expression — so a gesture only renders the pieces that change, and frames are reused.
+ */
+const partCache = new Map<string, string>()
+function partUrl(key: string, hi: boolean, palette: ReturnType<typeof paletteFor>, draw: () => Pixels): string {
+  const k = key + (hi ? ':2' : ':1')
+  let u = partCache.get(k)
+  if (!u) partCache.set(k, (u = pixelsToDataUrl(atResolution(hi ? 2 : 1, draw), palette)))
+  return u
+}
+type LayerUrls = Record<keyof CharacterLayers, string>
+function frameUrls(a: Appearance, f: PoseFrame, hi: boolean, palette: ReturnType<typeof paletteFor>): Partial<LayerUrls> {
+  const id = JSON.stringify(a)
+  const face: PoseFrame = { eyes: f.eyes, mouth: f.mouth, brow: f.brow, ruffle: f.ruffle, tilt: f.tilt }
+  const fk = JSON.stringify(face)
+  const out: Partial<LayerUrls> = {
+    hairBack: partUrl(`hb:${id}:${f.tilt ?? 0}`, hi, palette, () => renderHairBackLayer(a, f.tilt ?? 0)),
+    head: partUrl(`h:${id}:${fk}`, hi, palette, () => renderHeadLayer(a, false, face)),
+    headBlink: partUrl(`hk:${id}:${fk}`, hi, palette, () => renderHeadLayer(a, true, face)),
+  }
+  if (f.back) out.armBack = partUrl(`ab:${id}:${JSON.stringify(f.back)}`, hi, palette, () => renderArmLayer(a, 'back', f.back))
+  if (f.front) out.armFront = partUrl(`af:${id}:${JSON.stringify(f.front)}`, hi, palette, () => renderArmLayer(a, 'front', f.front))
+  return out
+}
+
 const portraitCache = new Map<string, Pixels>()
 export function portraitPixels(a: Appearance, hi = false): Pixels {
   const key = JSON.stringify(a) + hi
@@ -90,6 +118,10 @@ interface Props {
   still?: boolean
   /** Nod (head and hair dip twice) — the BW battle-intro greeting. */
   nod?: boolean
+  /** Idle gestures (main menu): occasional hair ruffles, pocket checks, waves… between breaths. */
+  gestures?: boolean
+  /** Ask for a specific gesture now (e.g. wave when tapped); change `key` to ask again. */
+  gestureTrigger?: { id: GestureId; key: number }
   className?: string
   style?: CSSProperties
   alt: string
@@ -101,7 +133,7 @@ interface Props {
  */
 const SLOT_FOR: Partial<Record<CharacterPose, AssetSlot>> = { idle: 'aaryan.front', point: 'aaryan.vs', victory: 'aaryan.victory', portrait: 'aaryan.portrait' }
 
-export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill, still = false, nod = false, className = '', style, alt }: Props) {
+export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill, still = false, nod = false, gestures = false, gestureTrigger, className = '', style, alt }: Props) {
   const { reducedMotion } = useSettings()
   useAssetLoads()
   const slot = SLOT_FOR[pose]
@@ -147,6 +179,25 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
   )
   const portraitUrl = useMemo(() => (isPortrait ? pixelsToDataUrl(portraitPixels(appearance, hi), palette) : ''), [isPortrait, appearance, palette, hi])
 
+  // idle gestures: only for the standing pose, never with reduced motion
+  const gesturing = gestures && animate && pose === 'idle' && !handDrawn
+  const frame = useGestures(gesturing, gestureTrigger)
+  // warm the cache with every gesture frame in idle time, so the first gesture plays smoothly
+  useEffect(() => {
+    if (!gesturing) return
+    const todo = Object.values(GESTURES).flatMap((g) => g.map((f) => f.frame))
+    let i = 0
+    let handle = 0
+    const step = () => {
+      const end = Math.min(todo.length, i + 3)
+      for (; i < end; i++) frameUrls(appearance, todo[i], hi, palette)
+      if (i < todo.length) handle = window.setTimeout(step, 30)
+    }
+    handle = window.setTimeout(step, 400)
+    return () => window.clearTimeout(handle)
+  }, [gesturing, appearance, hi, palette])
+  const posed = frame ? { ...urls, ...frameUrls(appearance, frame, hi, palette) } : urls
+
   if (isPortrait) {
     return (
       <div ref={ref} className={className} style={{ width: PORTRAIT.w * scale, height: PORTRAIT.h * scale, ...style }}>
@@ -174,14 +225,23 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
   }
   const layer = (src: string, cls: string) => <img src={src} width={w} height={h} alt="" aria-hidden draggable={false} className={`pixelated absolute inset-0 ${animate ? cls : ''}`} />
 
+  const behind = !!frame?.armsBehind
+  const arms = (
+    <>
+      {layer(posed.armBack, 'bw-arm-a')}
+      {layer(posed.armFront, pose === 'victory' ? 'bw-pump' : pose === 'point' ? '' : 'bw-breathe')}
+    </>
+  )
+  // a gesture's own eyes (glancing down, closed) take over from the random blink
+  const headUrl = blink && !frame?.eyes ? posed.headBlink : posed.head
   return (
     <div ref={ref} role="img" aria-label={alt} className={`relative ${className}`} style={{ width: w, height: h, ['--px' as string]: `${scale}px`, ...style }}>
-      {layer(urls.hairBack, nod ? 'bw-nod' : 'bw-hair')}
-      {layer(urls.legs, '')}
-      {layer(urls.torso, 'bw-breathe')}
-      {layer(urls.armBack, 'bw-arm-a')}
-      {layer(urls.armFront, pose === 'victory' ? 'bw-pump' : pose === 'point' ? '' : 'bw-breathe')}
-      {layer(blink ? urls.headBlink : urls.head, nod ? 'bw-nod' : 'bw-head')}
+      {behind && arms}
+      {layer(posed.hairBack, nod ? 'bw-nod' : 'bw-hair')}
+      {layer(posed.legs, '')}
+      {layer(posed.torso, 'bw-breathe')}
+      {!behind && arms}
+      {layer(headUrl, nod ? 'bw-nod' : 'bw-head')}
     </div>
   )
 }

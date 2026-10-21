@@ -12,6 +12,7 @@ import { useGameKeys } from '../systems/input'
 import { formatPlaytime } from '../systems/format'
 import { PixelBox } from '../ui/PixelBox'
 import { PixelIcon } from '../ui/PixelIcon'
+import type { GestureId } from '../sprites/gestures'
 import { TrainerSprite } from '../ui/TrainerSprite'
 import { progress, useProgress } from '../systems/progress'
 import { medals } from '../content/medals'
@@ -55,7 +56,13 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
     return () => window.removeEventListener('tdx:shiny-charm', on)
   }, [])
   const [bubble, setBubble] = useState<string | null>(null)
-  const [hopKey, setHopKey] = useState(0)
+  // tapping Aaryan makes him wave (if he isn't mid-gesture)
+  const [wave, setWave] = useState<{ id: GestureId; key: number } | undefined>(undefined)
+  // dev only: window.__aaryanGesture('ruffleHair') plays a gesture on demand for QA
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    ;(window as unknown as { __aaryanGesture?: (id: GestureId) => void }).__aaryanGesture = (id) => setWave((w) => ({ id, key: (w?.key ?? 0) + 1 }))
+  }, [])
   const clicks = useRef({ count: 0, last: 0, next: 0 })
   const bubbleTimer = useRef<number | undefined>(undefined)
   const time = formatPlaytime(playtime)
@@ -77,7 +84,7 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
       c.next++
     }
     sfx('bump')
-    setHopKey((k) => k + 1)
+    setWave((w) => ({ id: 'wave', key: (w?.key ?? 0) + 1 }))
     setBubble(fill(line, name))
     window.clearTimeout(bubbleTimer.current)
     bubbleTimer.current = window.setTimeout(() => setBubble(null), 3200)
@@ -95,7 +102,7 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
             aria-label="Talk to Aaryan"
             className="absolute bottom-[10%] left-1/2 flex h-[80%] -translate-x-1/2 cursor-pointer items-end border-0 bg-transparent p-0"
           >
-            <TrainerSprite key={hopKey} fill={0.98} shiny={shiny} className={hopKey ? 'hop' : ''} alt={shiny ? 'Shiny pixel-art sprite of Aaryan' : undefined} />
+            <TrainerSprite fill={0.98} shiny={shiny} gestures gestureTrigger={wave} alt={shiny ? 'Shiny pixel-art sprite of Aaryan' : undefined} />
             {shiny && (
               <span aria-hidden className="sparkle absolute -top-1 -right-1 text-gold text-xl">
                 ✦

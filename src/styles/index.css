@@ -335,6 +335,17 @@ body {
   transform: translateX(-50%) rotate(45deg);
   box-shadow: calc(var(--u) * 0.67) calc(var(--u) * 0.67) 0 0 var(--gv-ink);
 }
+/* a photo print: a thin light mat, an ink line and a hard drop, all following the photo's own
+   edges (box-shadow, so it never changes the layout) */
+.gv-photo {
+  display: block;
+  border-radius: 3px;
+  background: #0c0e18;
+  box-shadow:
+    0 0 0 4px #f2f2ea,
+    0 0 0 7px var(--gv-ink),
+    0 10px 0 7px rgb(4 6 16 / 0.45);
+}
 /* the label on a tile: bold, with a hard dark drop like Gen V menus */
 .gv-label {
   font-family: var(--font-display);

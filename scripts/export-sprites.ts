@@ -11,7 +11,8 @@ import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
 import { creatureArt, creatureArtHi, trainerdexBadge } from '../src/sprites/creatures.ts'
 import { overworldFor, riderFor, RIDER_HIP } from '../src/sprites/overworld.ts'
 import { flightArt, FLYERS } from '../src/sprites/flight.ts'
-import { renderFlat, renderBack, renderSide, paletteFor, atResolution, PORTRAIT } from '../src/sprites/character.ts'
+import { renderFlat, renderBack, renderSide, renderPose, paletteFor, atResolution, PORTRAIT } from '../src/sprites/character.ts'
+import { GESTURES } from '../src/sprites/gestures.ts'
 import { crop } from '../src/sprites/pixels.ts'
 import { ASSET_SLOTS, CREATURE_SPEC, enabledAssets, enabledCreatures, type AssetSlot } from '../src/content/sprites.ts'
 import { signature, shinySignature, towerStages } from '../src/content/aaryan.ts'
@@ -108,6 +109,20 @@ writeFileSync('sprites-export/bw-poses@3x.png', sheet([renderFlat(signature), re
 writeFileSync('sprites-export/bw-hi-poses@2x.png', sheet(atResolution(2, () => [renderFlat(signature), renderSide(signature), renderFlat(signature, 'point'), renderBack(signature), renderBack(signature, true), renderFlat(signature, 'raised')]), paletteFor(signature), 2))
 writeFileSync('sprites-export/bw-shiny@4x.png', sheet([renderFlat(shinySignature)], paletteFor(shinySignature), 4))
 writeFileSync('sprites-export/trainerdex-badge@6x.png', sheet([trainerdexBadge.pixels], trainerdexBadge.palette, 6))
+
+/* Idle gestures: every frame held long enough to read (the keyframes), at 2× detail, plus
+   enlarged upper-body close-ups of each gesture's main pose for checking hands and faces. */
+{
+  // each gesture's main pose: the longest-held frame that moves an arm
+  const peak = (id: keyof typeof GESTURES) => GESTURES[id].filter((f) => f.frame.back || f.frame.front).reduce((a, b) => (b.ms > a.ms ? b : a)).frame
+  const ids = Object.keys(GESTURES) as Array<keyof typeof GESTURES>
+  const frames = atResolution(2, () => ids.map((id) => crop(renderPose(signature, peak(id)), 0, 0, 160, 150)))
+  writeFileSync('sprites-export/gesture-closeups@3x.png', sheet(frames, paletteFor(signature), 3))
+}
+for (const [id, frames] of Object.entries(GESTURES)) {
+  const keys = frames.filter((f) => f.ms >= 100).map((f) => f.frame)
+  writeFileSync(`sprites-export/gesture-${id}@2x.png`, sheet(atResolution(2, () => keys.map((f) => renderPose(signature, f))), paletteFor(signature), 1))
+}
 
 /*
  * Flight cycles: each flyer's four frames side by side (far wing, body, rider, near wing),

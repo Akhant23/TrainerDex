@@ -177,6 +177,33 @@ const mirrorRow = (r: string) => [...r].reverse().join('')
 /* ---------------- Layers ---------------- */
 
 export type ArmPose = 'idle' | 'raised' | 'point'
+
+/** How a hand is drawn at the end of an articulated arm. */
+export type HandShape = 'relaxed' | 'fist' | 'open' | 'pointOut' | 'pocket' | 'hidden'
+/** An arm placed by its elbow and wrist (base pixels); the shoulder is fixed per side. */
+export interface ArmSpec {
+  el: Pt
+  wr: Pt
+  hand: HandShape
+}
+/**
+ * One frame of a gesture. Anything left out keeps the standing idle: the back arm relaxed, the
+ * front hand in its pocket, eyes open, the appearance's own mouth.
+ */
+export interface PoseFrame {
+  back?: ArmSpec
+  front?: ArmSpec
+  /** draw the arms behind the head and back hair (hands behind the head) */
+  armsBehind?: boolean
+  eyes?: 'open' | 'down' | 'closed'
+  mouth?: Appearance['face']
+  /** raise the right brow (a smirk) */
+  brow?: 'up'
+  /** hair being ruffled: which set of tufts is lifted */
+  ruffle?: 0 | 1 | 2
+  /** extra head dip in pixels (glancing down) */
+  tilt?: number
+}
 export interface CharacterLayers {
   hairBack: Pixels
   legs: Pixels
@@ -555,6 +582,84 @@ function arm(a: Appearance, side: 'back' | 'front', pose: ArmPose): Pixels {
   return g.toPixels()
 }
 
+/** Shoulder positions shared by every arm pose, so gestures keep the same build as the idle. */
+const SHOULDER: Record<'back' | 'front', Pt> = { back: [29.2, 41], front: [51.4, 41] }
+
+/**
+ * An arm in any position: shoulder → elbow → wrist capsules with the same widths, sleeve cap,
+ * cuff and outline as the idle arms, and a hand shape at the wrist.
+ */
+function armAt(a: Appearance, side: 'back' | 'front', spec: ArmSpec): Pixels {
+  const g = canvas()
+  const { upper, lower, cuff } = sleeves(a)
+  const tee = TEES.has(a.top)
+  const sh = SHOULDER[side]
+  const { el, wr } = spec
+  const len = Math.hypot(wr[0] - el[0], wr[1] - el[1]) || 1
+  const dir: Pt = [(wr[0] - el[0]) / len, (wr[1] - el[1]) / len]
+  const perp: Pt = [-dir[1], dir[0]]
+  const at = (d: number, o = 0): Pt => [wr[0] + dir[0] * d + perp[0] * o, wr[1] + dir[1] * d + perp[1] * o]
+  capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
+  capsule(g, el, wr, 3.8, 3.0, lower[0], lower[1])
+  if (tee) capsule(g, sh, [sh[0] + (el[0] - sh[0]) * 0.45, sh[1] + (el[1] - sh[1]) * 0.45], 5, 4.5, 'A', 'a', 'Q')
+  if (cuff) {
+    const [c0, c1] = [at(-1.2, 3.4), at(-1.2, -3.4)]
+    g.line(c0[0], c0[1], c1[0], c1[1], cuff, 1.4)
+  }
+  const [hx, hy] = at(3)
+  switch (spec.hand) {
+    case 'relaxed':
+      hand(g, hx, hy, side === 'front')
+      break
+    case 'fist':
+      oval(g, hx, hy, 3.4, 3.6, 'S', 's', 'T')
+      break
+    case 'open': {
+      // an upright open palm, laid out on the design grid: four fingers with a pixel between
+      // each (the outline fills those gaps, so the fingers read as separate) and the thumb
+      // on the side nearer the face
+      const thumbLeft = side === 'front'
+      const rows = ['S.S.S.S', 'S.S.S.S', 'S.S.S.S', 'SSSSSSS', 'SSSSSSS', 'SSSSSS.', '.SSSS..']
+      const palm = thumbLeft ? rows : rows.map(mirrorRow)
+      const x0 = Math.round(hx - 3)
+      const y0 = Math.round(hy - 5)
+      g.stamp(x0, y0, palm)
+      g.stamp(thumbLeft ? x0 - 2 : x0 + 7, y0 + 3, ['SS', 'SS'])
+      break
+    }
+    case 'pointOut': {
+      // a fist with the index finger stretched on along the forearm, out at the viewer
+      oval(g, hx, hy, 3.4, 3.4, 'S', 's', 'T')
+      const [f0, f1] = [at(4.4, -0.6), at(9, -0.6)]
+      g.line(f0[0], f0[1], f1[0], f1[1], 'S', 1.6)
+      break
+    }
+    case 'pocket':
+    case 'hidden':
+      break
+  }
+  g.outline()
+  if (spec.hand === 'pocket') {
+    // the pocket's lip across the wrist: the hand is inside
+    const [p0, p1] = [at(-0.4, 4.2), at(-0.4, -4.2)]
+    g.line(p0[0], p0[1], p1[0], p1[1], 'K', 1)
+  }
+  if (spec.hand === 'pointOut') {
+    const [tx, ty] = at(8.6, -0.6)
+    g.set(Math.round(tx), Math.round(ty), 'T')
+  }
+  if (spec.hand === 'open') g.set(Math.round(hx - 1), Math.round(hy), 's').set(Math.round(hx), Math.round(hy + 1), 's')
+  if (side === 'front' && a.accessories.includes('watch')) {
+    const [w0, w1] = [at(-2.2, 3.2), at(-2.2, -3.2)]
+    g.line(w0[0], w0[1], w1[0], w1[1], 'Z', 1.2)
+  }
+  if (side === 'back' && a.accessories.includes('bracelet')) {
+    const [b0, b1] = [at(-2, 3.2), at(-2, -3.2)]
+    g.line(b0[0], b0[1], b1[0], b1[1], 'X', 1)
+  }
+  return g.toPixels()
+}
+
 const EYES: Record<Appearance['eyes'], string[]> = {
   soft: ['.KKK', 'KWEE', 'KEEE', '.EEK', '..K.'],
   round: ['.KKK.', 'KWEEK', 'KEEEK', 'KEEEK', '.KKK.'],
@@ -651,7 +756,7 @@ function hat(g: Raster, a: Appearance) {
   }
 }
 
-function head(a: Appearance, blink: boolean): Pixels {
+function head(a: Appearance, blink: boolean, f: PoseFrame = {}): Pixels {
   const g = canvas()
   // ears
   oval(g, 30.6, 20.5, 1.9, 2.9, 'S', 's')
@@ -661,22 +766,35 @@ function head(a: Appearance, blink: boolean): Pixels {
   g.poly([[30.8, 19], [49.2, 19], [47.8, 26], [43.6, 30.6], [40, 31.6], [36.4, 30.6], [32.2, 26]], 'S')
   for (let y = 12; y <= 30; y++) for (let x = 46; x <= 49; x++) if (g.get(x, y) === 'S') g.set(x, y, 's')
   frontHair(g, a)
+  if (f.ruffle && a.hair !== 'buzz') {
+    // a hand in the hair lifts a few tufts; they settle as the hand moves
+    const tufts: Array<Array<[number, number]>> =
+      f.ruffle === 1
+        ? [[[34, 6], [36, -1], [39, 5]], [[42, 4], [45, -2], [47, 4]]]
+        : [[[37, 5], [40, -2], [42, 4]], [[45, 5], [49, 0], [49.5, 6]]]
+    for (const t of tufts) g.poly(t, 'H')
+  }
   clipUnderHat(g, a)
   hat(g, a)
   g.outline()
 
   // face details
-  const eye = blink ? ['....', '....', 'KKKK', '.KK.'] : EYES[a.eyes]
+  const closed = blink || f.eyes === 'closed'
+  const base = EYES[a.eyes]
+  // glancing down: a heavy upper lid over the lower half of the eye
+  const down = ['.'.repeat(base[0].length), 'K'.repeat(base[0].length), ...base.slice(2)]
+  const eye = closed ? ['....', '....', 'KKKK', '.KK.'] : f.eyes === 'down' ? down : base
   const ew = eye[0].length
   g.stamp(37 - ew, 18, eye)
   g.stamp(43, 18, eye.map(mirrorRow))
-  if (!blink) {
+  if (!closed) {
     g.line(33, 16, 34, 16, 'j').line(35, 15, 36, 15, 'j')
-    g.line(46, 16, 45, 16, 'j').line(44, 15, 43, 15, 'j')
+    const lift = f.brow === 'up' ? 1 : 0
+    g.line(46, 16 - lift, 45, 16 - lift, 'j').line(44, 15 - lift, 43, 15 - lift, 'j')
   }
   // nose + mouth
   g.set(40, 23, 's').set(40, 24, 'O').set(39, 24, 's')
-  const mouth = MOUTHS[a.face]
+  const mouth = MOUTHS[f.mouth ?? a.face]
   g.stamp(38, 27, mouth)
   if (a.accessories.includes('earring')) {
     // a silver stud on each ear
@@ -706,22 +824,41 @@ function head(a: Appearance, blink: boolean): Pixels {
  * and dropped this many pixels onto the shoulders (scaled with the resolution).
  */
 export const NECK_DROP = 3
-function seat(px: Pixels): Pixels {
-  const n = NECK_DROP * K
+function seat(px: Pixels, extra = 0): Pixels {
+  const n = (NECK_DROP + extra) * K
   const blank = '.'.repeat(px[0].length)
   return [...Array.from({ length: n }, () => blank), ...px.slice(0, px.length - n)]
 }
 
-export function renderLayers(a: Appearance, pose: ArmPose = 'idle'): CharacterLayers {
+export function renderLayers(a: Appearance, pose: ArmPose = 'idle', f?: PoseFrame): CharacterLayers {
+  const tilt = f?.tilt ?? 0
   return {
-    hairBack: seat(hairBack(a)),
+    hairBack: seat(hairBack(a), tilt),
     legs: legs(a),
     torso: torso(a),
-    armBack: arm(a, 'back', 'idle'),
-    armFront: arm(a, 'front', pose),
-    head: seat(head(a, false)),
-    headBlink: seat(head(a, true)),
+    armBack: f?.back ? armAt(a, 'back', f.back) : arm(a, 'back', 'idle'),
+    armFront: f?.front ? armAt(a, 'front', f.front) : arm(a, 'front', pose),
+    head: seat(head(a, false, f), tilt),
+    headBlink: seat(head(a, true, f), tilt),
   }
+}
+
+/* Single layers for posed frames, so a renderer can cache each part separately (an arm by its
+   position, a head by its expression) instead of re-rendering the whole figure per frame. */
+export function renderArmLayer(a: Appearance, side: 'back' | 'front', spec?: ArmSpec, pose: ArmPose = 'idle'): Pixels {
+  return spec ? armAt(a, side, spec) : arm(a, side, side === 'back' ? 'idle' : pose)
+}
+export function renderHeadLayer(a: Appearance, blink: boolean, f: PoseFrame = {}): Pixels {
+  return seat(head(a, blink, f), f.tilt ?? 0)
+}
+export function renderHairBackLayer(a: Appearance, tilt = 0): Pixels {
+  return seat(hairBack(a), tilt)
+}
+
+/** Stack a posed frame into one image, putting the arms behind the head when the pose asks. */
+export function renderPose(a: Appearance, f: PoseFrame): Pixels {
+  const l = renderLayers(a, 'idle', f)
+  return flatten(f.armsBehind ? [l.armBack, l.armFront, l.hairBack, l.legs, l.torso, l.head] : LAYER_ORDER.map((k) => l[k]))
 }
 
 /** Stack layers into one frame (later layers win). */

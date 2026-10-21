@@ -5,6 +5,7 @@ import { ALBUM_SIZE, photos, type Photo } from '../content/photos'
 import { progress, useProgress } from '../systems/progress'
 import { useSettings } from '../systems/settings'
 import { useGameKeys } from '../systems/input'
+import { PhotoPortrait } from '../ui/PhotoPortrait'
 import { Overlay } from '../ui/Overlay'
 import { PixelBox } from '../ui/PixelBox'
 import { PixelIcon } from '../ui/PixelIcon'
@@ -39,7 +40,7 @@ export default function PhotoAlbum({ path }: { path: string }) {
         <div className="bg-stripes absolute inset-0 flex items-center justify-center p-[4%]" style={{ ['--s1' as string]: entry.color[0], ['--s2' as string]: entry.color[1] }}>
           {focused ? (
             <figure className="m-0 flex h-full w-full flex-col items-center justify-center gap-[3%]">
-              <img src={focused.src} alt={focused.alt} className="max-h-[78%] max-w-full bg-paper object-contain p-[1.5%] shadow-[0_0_0_var(--u)_var(--color-ink)]" />
+              <img src={focused.src} alt={focused.alt} width={focused.width} height={focused.height} className="gv-photo h-auto max-h-[78%] w-auto max-w-full" />
               <figcaption className="font-display text-outline text-[clamp(13px,3.6cqi,21px)] text-paper">
                 No.{pad(nav.focus + 1)} {focused.title.toUpperCase()}
               </figcaption>
@@ -114,8 +115,10 @@ function PhotoViewer({ index, onClose }: { index: number; onClose: () => void })
           touchX.current = null
         }}
       >
-        <div key={index} className="flex min-h-0 flex-1 items-center justify-center" style={{ animation: 'photo-in 260ms steps(5)', ['--dx' as string]: `${dir * 24}px` }}>
-          <img src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} className="max-h-full max-w-full bg-paper object-contain p-2 shadow-[0_0_0_var(--u)_var(--color-ink)]" />
+        {/* the frame wraps the photo itself: the box takes the photo's own shape (width/height auto
+            keep its aspect while max-width/height fit it in), so there's no letterboxing to fill */}
+        <div key={index} className="flex min-h-0 flex-1 items-center justify-center p-[14px]" style={{ animation: 'photo-in 260ms steps(5)', ['--dx' as string]: `${dir * 24}px` }}>
+          <img src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} className="gv-photo h-auto max-h-full w-auto max-w-full" />
         </div>
         <PixelBox className="shrink-0 px-5 py-4 lg:w-[340px] lg:self-start">
           <p className="font-display m-0 text-[17px] text-dex-red">
@@ -127,6 +130,8 @@ function PhotoViewer({ index, onClose }: { index: number; onClose: () => void })
           </p>
           <p className="m-0 mt-2 text-[17px]">{photo.caption}</p>
           <p className="m-0 mt-2 text-[15px] italic">{photo.dexEntry}</p>
+          {/* the same moment as pixel art, drawn for this photo (changes with PREV / NEXT) */}
+          <PhotoPortrait key={photo.id} photoId={photo.id} className="mt-3" />
           <div className="mt-3 flex justify-between">
             <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
               ◀ PREV
