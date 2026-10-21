@@ -1,24 +1,26 @@
 ﻿key,speaker,where,text
-intro.part1,AARYAN,"Opening speech, before the visitor types their name",Welcome to the world of AARYAN!
+intro.part1,AARYAN,"Opening speech, before the visitor types their name",Welcome to my TrainerDex!
 intro.part1,AARYAN,"Opening speech, before the visitor types their name","This world is inhabited by people with all kinds of stories, experiences and ambitions."
 intro.part1,AARYAN,"Opening speech, before the visitor types their name","Today, you're about to discover one of them."
+intro.part1,AARYAN,"Opening speech, before the visitor types their name","Here you can find my resume, portfolio and more about me."
+intro.part1,AARYAN,"Opening speech, before the visitor types their name","Oh, and a cool Pokémon-style battle system!"
 intro.part1,AARYAN,"Opening speech, before the visitor types their name",But first — what should I call you?
 intro.part2,AARYAN,"Opening speech, after the name ({name} = the visitor)",{name}! Nice to meet you.
 intro.part2,AARYAN,"Opening speech, after the name ({name} = the visitor)",Your adventure begins now!
 menu.welcome,SYSTEM,Main menu greeting,"Welcome back, {name}! Where to next?"
 menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)","Oh! Hey there, {name}!"
-menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Careful — I bruise easily. I'm a law student.
+menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Careful — we might have to duel next.
 menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Have you checked the PC yet? My resume lives there.
 menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Fun fact: this jersey has a +10 boost to confidence.
 menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Fancy a battle? Head to the BATTLE RESORT and climb the tower.
 menu.secret,AARYAN,Main menu: after 10 clicks in a row,"...OK, you found it. There is no secret. Or IS there?"
-pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),A wild AARYAN appeared!
+pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),A wild Aaryan appeared!
 pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),…He seems to be looking for his phone charger.
 pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),He checked his watch. Something about a deadline.
-pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),Wild AARYAN fled!
-tower.school.intro,AARYAN (SBHS),"Floor 1, before the battle",I’m fresh out of GPS football training — let’s see what you’ve got!
+pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),Wild Aaryan fled!
+tower.school.intro,AARYAN (SBHS),"Floor 1, before the battle",I’m fresh out of football training — let’s see what you’ve got!
 tower.school.defeat,AARYAN (SBHS),"Floor 1, after you win","Not bad! Go on, the lift’s that way."
-tower.first-year.intro,AARYAN (FIRST-YEAR),"Floor 2, before the battle","First year, first semester, and I’m already covered in paint. Let’s battle!"
+tower.first-year.intro,AARYAN (FIRST-YEAR),"Floor 2, before the battle","First year, first term, and I’m already covered in paint. Let’s battle!"
 tower.first-year.defeat,AARYAN (FIRST-YEAR),"Floor 2, after you win","Okay, uni’s harder than it looks. Up you go!"
 tower.marketing.intro,AARYAN (MARKETING),"Floor 3, before the battle",Law Ball’s tonight and the merch sold out. Twice. The Dean wore one. Ready?
 tower.marketing.defeat,AARYAN (MARKETING),"Floor 3, after you win","Okay, that was a strong campaign. Next floor."
