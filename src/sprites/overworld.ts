@@ -90,6 +90,12 @@ function owArm(g: Grid, a: Appearance, sh: Pt, el: Pt, wr: Pt, handAt: Pt) {
   capsule(g, sh, el, 2.7, 2.3, up, up === 'A' ? 'a' : 's')
   capsule(g, el, wr, 2.3, 1.8, low, low === 'A' ? 'a' : 's')
   if (short) capsule(g, sh, lerp(sh, el, 0.55), 3.1, 2.9, 'A', 'a', 'Q', true)
+  if (a.top === 'jersey') {
+    // the kit's stripes over the shoulder and down the sleeve
+    const e = lerp(sh, el, 0.5)
+    const out = sh[0] < 24 ? -1 : sh[0] > 24 ? 1 : 0
+    for (const o of out ? [0.6, 2] : [-0.8, 0.8]) g.line(sh[0] + out * o + (out ? 0 : o), sh[1] - 2, e[0] + out * o + (out ? 0 : o), e[1], 'R')
+  }
   if (BLAZERS.has(a.top)) g.line(wr[0] - 1.6, wr[1], wr[0] + 1.6, wr[1], a.top === 'suit' ? 'V' : 'G')
   oval(g, handAt[0], handAt[1], 2, 2.3, 'S', 's')
 }
@@ -119,8 +125,12 @@ function bodyFrontBack(g: Grid, a: Appearance, step: Step, back: boolean) {
   if (!back) {
     switch (a.top) {
       case 'jersey':
-        g.rect(cx - 8, 36, cx - 7, hem, 'R').rect(cx + 7, 36, cx + 8, hem, 'r')
-        g.poly([[cx - 5, 28], [cx - 2, 27.5], [cx - 2.5, 32], [cx - 4, 31.5]], 'R')
+        // the Japan × Y-3 away kit, simplified: dark red side panels, flame wisps up the wearer's
+        // right side, the crest and the number (the Y-3 mark is too small to read at this size)
+        g.rect(cx - 8, 33, cx - 7, hem, 'r').rect(cx + 7, 33, cx + 8, hem, 'r')
+        g.line(cx - 6, hem, cx - 5, 35, 'R').line(cx - 5, 35, cx - 5.5, 31, 'R').line(cx - 4, hem, cx - 3.5, 38, 'q').line(cx - 2.5, hem, cx - 3, 40, 'R')
+        g.stamp(cx - 1, 27, ['KK', 'KR', '.K'])
+        g.stamp(cx - 1, 32, ['KK', '.K', '.K'])
         break
       case 'tee':
         g.rect(cx - 2, 28.5, cx + 1, 31, 'R').set(cx - 1, 29, 'D').set(cx, 29, 'D')
@@ -167,7 +177,7 @@ function bodyFrontBack(g: Grid, a: Appearance, step: Step, back: boolean) {
   if (TEES.has(a.top))
     for (const side of [-1, 1]) {
       const y = Math.round(SHOULDER_Y + 0.5 + (35 - SHOULDER_Y - 0.5) * 0.55) - 1
-      arms.line(cx + side * 8.2, y, cx + side * 11.6, y, a.top === 'jersey' ? 'R' : 'a')
+      arms.line(cx + side * 8.2, y, cx + side * 11.6, y, a.top === 'jersey' ? 'c' : 'a')
     }
   stampOver(g, arms)
 }
@@ -175,7 +185,11 @@ function bodyFrontBack(g: Grid, a: Appearance, step: Step, back: boolean) {
 function bodyDetails(g: Grid, a: Appearance, back: boolean) {
   const cx = 24
   if (back) {
-    if (a.top === 'jersey') g.stamp(cx - 2, 28, ['KKKK', '...K', '..K.', '..K.', '.K..'])
+    if (a.top === 'jersey') {
+      g.stamp(cx - 2, 28, ['KKKK', '...K', '..K.', '..K.', '.K..'])
+      g.rect(cx - 8, 33, cx - 7, 42, 'r').rect(cx + 7, 33, cx + 8, 42, 'r')
+      g.line(cx + 2, 42, cx + 5, 34, 'R').line(cx + 4, 42, cx + 6, 37, 'q')
+    }
     if (has(a, 'bag')) g.line(cx + 8, 26, cx - 7, 37, 'Z')
     return
   }
@@ -331,7 +345,7 @@ function left(a: Appearance, step: Step, ride = false): Pixels {
   const hem = BLAZERS.has(a.top) ? 44 : 42.5
   g.poly([[cx - 4.5, 24.5], [cx + 5, 24.5], [cx + 6.5, 28], [cx + 6, hem], [cx - 5.5, hem], [cx - 6.5, 30], [cx - 6, 27]], 'A')
   g.poly([[cx + 2.5, 24.5], [cx + 5, 24.5], [cx + 6.5, 28], [cx + 6, hem], [cx + 3, hem]], 'a')
-  if (a.top === 'jersey') g.rect(cx - 5, 24.5, cx + 5, 25.5, 'R')
+  if (a.top === 'jersey') g.line(cx - 5, hem, cx - 4, 33, 'R').line(cx - 3, hem, cx - 3.5, 37, 'q').rect(cx + 4, 33, cx + 5, hem, 'r')
   if (BLAZERS.has(a.top)) g.poly([[cx - 4.5, 24.5], [cx - 1.5, 24.5], [cx - 5, 29.5]], a.top === 'suit' ? 'V' : 'G')
   if (has(a, 'bag')) g.rect(cx + 4.5, 36, cx + 8, 41, 'Z')
   // neck, then the head in profile: hair behind, face toward the left
@@ -360,7 +374,7 @@ function left(a: Appearance, step: Step, ride = false): Pixels {
   arm.outline()
   if (TEES.has(a.top)) {
     const e = lerp(sh, el, 0.55)
-    arm.line(e[0] - 2.2, e[1] - 1, e[0] + 2.2, e[1] - 1, a.top === 'jersey' ? 'R' : 'a')
+    arm.line(e[0] - 2.2, e[1] - 1, e[0] + 2.2, e[1] - 1, a.top === 'jersey' ? 'c' : 'a')
   }
   if (has(a, 'watch') && !ride) arm.rect(wr[0] - 1.6, wr[1], wr[0] + 1.6, wr[1], 'Z')
   stampOver(g, arm)

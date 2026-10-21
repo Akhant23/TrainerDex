@@ -16,6 +16,11 @@ export interface Raster {
   poly(points: Array<[number, number]>, ch: string): Raster
   line(x0: number, y0: number, x1: number, y1: number, ch: string, thick?: number): Raster
   stamp(x: number, y: number, rows: string[]): Raster
+  /**
+   * Small print (logos, numbers): `lo` is drawn in design pixels on a 1× grid; on a hi-res grid
+   * `hi` is drawn in its fine pixels instead (written for k = 2), starting at design (x, y).
+   */
+  fine(x: number, y: number, lo: string[], hi: string[]): Raster
   outline(ch?: string): Raster
   toPixels(): Pixels
   /**
@@ -99,6 +104,9 @@ export class Grid {
   stamp(x: number, y: number, rows: string[]) {
     rows.forEach((r, dy) => [...r].forEach((c, dx) => c !== '.' && this.set(x + dx, y + dy, c)))
     return this
+  }
+  fine(x: number, y: number, lo: string[]) {
+    return this.stamp(Math.round(x), Math.round(y), lo)
   }
 
   sample(x0: number, y0: number, x1: number, y1: number, fn: (x: number, y: number) => string | null) {
@@ -207,6 +215,22 @@ export class HiGrid {
   }
   stamp(x: number, y: number, rows: string[]) {
     rows.forEach((r, dy) => [...r].forEach((c, dx) => c !== '.' && this.set(x + dx, y + dy, c)))
+    return this
+  }
+  fine(x: number, y: number, _lo: string[], hi: string[]) {
+    // hi is drawn for k = 2; other densities scale each fine pixel by k / 2
+    const k = this.k
+    const s = k / 2
+    const x0 = Math.round(x) * k
+    const y0 = Math.round(y) * k
+    hi.forEach((r, dy) =>
+      [...r].forEach((c, dx) => {
+        if (c === '.') return
+        const fx = x0 + Math.floor(dx * s)
+        const fy = y0 + Math.floor(dy * s)
+        this.g.rect(fx, fy, fx + Math.max(1, Math.ceil(s)) - 1, fy + Math.max(1, Math.ceil(s)) - 1, c)
+      }),
+    )
     return this
   }
   mirrorLeft() {

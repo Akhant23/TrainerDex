@@ -69,6 +69,11 @@ export type Appearance = AppearanceData
 
 /* ---------------- Palette ---------------- */
 
+function mix(p: string, q: string, k: number): string {
+  const n = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16)
+  return '#' + [0, 1, 2].map((i) => Math.round(n(p, i) + (n(q, i) - n(p, i)) * k).toString(16).padStart(2, '0')).join('')
+}
+
 function darken(hex: string, k: number): string {
   const n = parseInt(hex.slice(1), 16)
   const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * k))
@@ -87,7 +92,7 @@ export function paletteFor(a: Appearance): Palette {
     K: '#1c1a24', // outline
     S: sk[0], s: sk[1], T: sk[2], O: darken(sk[1], 0.82),
     H: hr[0], j: hr[1], h: hr[2],
-    A: tp[0], a: tp[1], Q: tp[2],
+    A: tp[0], a: tp[1], Q: tp[2], c: mix(tp[0], tp[1], 0.45), // c: a soft fold, between the cloth and its shade
     R: ac[0], r: ac[1], q: ac[2],
     B: bt[0], b: bt[1], P: bt[2],
     F: sh[0], f: sh[1], e: sh[2],
@@ -364,6 +369,86 @@ function tie(g: Raster, school: boolean) {
   void school
 }
 
+/* ---------------- Japan × Y-3 away kit (the 'jersey' top) ---------------- */
+// Off-white with three red stripes over the shoulders, a plain ribbed collar, red flame wisps
+// rising up the wearer's right side, dark red side panels, and the Y-3 mark, JFA crest and the
+// number printed in black, all centred. Logos are drawn in fine pixels on hi-res sprites.
+
+/** Print colour for logos and numbers: black, or white on a dark shirt. */
+function inkOn(a: Appearance): string {
+  const hex = CLOTH_COLOURS[a.topColour][0]
+  const lum = [1, 3, 5].reduce((t, i, j) => t + parseInt(hex.slice(i, i + 2), 16) * [0.3, 0.59, 0.11][j], 0) / 255
+  return lum < 0.4 ? 'W' : 'K'
+}
+const ink = (rows: string[], c: string) => rows.map((r) => r.replaceAll('K', c))
+
+const Y3_LO = ['.K.K.KK.', '..K....K', '..K.KKK.']
+const Y3_HI = ['.KK..KK....KKK..', '..KKKK........K.', '...KK...KK..KK..', '...KK.........K.', '...KK......KKK..']
+// the JFA crest: a shield with the black JAPAN band, the crow and the red ball
+const CREST_LO = ['KKKKK', 'KWKWK', 'KKKRK', 'KWKWK', '.KWK.', '..K..']
+const CREST_HI = ['KKKKKKKKKK', 'KWKWKWKWKK', 'KKKKKKKKKK', 'KWWWKKWWWK', 'KWWKKKKWWK', 'KWKKKKKKWK', 'KWWKKKRRWK', 'KWWWKKRRWK', 'KWKKWKWWWK', '.KWWKKWWK.', '..KWWWWK..', '...KKKK...']
+const SEVEN_LO = ['KKKK', '...K', '..K.', '..K.', '.K..', '.K..']
+const SEVEN_HI = ['KKKKKKKK', 'KKKKKKKK', '.....KK.', '.....KK.', '....KK..', '....KK..', '...KK...', '...KK...', '..KK....', '..KK....', '..KK....', '..KK....']
+
+/**
+ * Flame wisps, the way the kit draws them: hollow tongues of thin red line licking upward with
+ * the white shirt showing through, rather than solid shapes. Each tongue rises from `x` on the
+ * hem to `tip`, bowing by `bend`; every other one is in the lighter red.
+ */
+function flames(g: Raster, hem: number, tongues: Array<{ x: number; tip: Pt; bend: number }>) {
+  const w = K > 1 ? 0.5 : 1
+  tongues.forEach(({ x, tip, bend }, i) => {
+    const col = i % 2 ? 'q' : 'R'
+    const mid = (hem + tip[1]) / 2
+    for (const [x0, cx, cy] of [[x - 1.4, x - 1.4 + bend, mid], [x + 1.4, x + 1.4 + bend * 1.3, mid - 2]]) {
+      let prev: Pt = [x0, hem]
+      for (let t = 1; t <= 10; t++) {
+        const u = t / 10
+        const p: Pt = [(1 - u) * (1 - u) * x0 + 2 * (1 - u) * u * cx + u * u * tip[0], (1 - u) * (1 - u) * hem + 2 * (1 - u) * u * cy + u * u * tip[1]]
+        g.line(prev[0], prev[1], p[0], p[1], col, w)
+        prev = p
+      }
+    }
+  })
+}
+
+function kitFront(g: Raster, a: Appearance, hem: number) {
+  const c = inkOn(a)
+  // ribbed crew neck: the edge, then a band of soft shadow under it
+  g.stamp(34, 36, ['K..........K', '.K........K.', '..KKKKKKKK..'])
+  g.stamp(34, 37, ['c..........c', '.c........c.', '..cccccccc..'])
+  // dark red side panels from the underarm to the hem, curving in toward the waist
+  g.poly([[28.6, 47], [30.2, 47], [30.6, 56], [31.2, hem], [28.6, hem]], 'r')
+  g.poly([[51.4, 47], [49.8, 47], [49.4, 56], [48.8, hem], [51.4, hem]], 'r')
+  // flames rising up the wearer's right side (the viewer's left)
+  flames(g, hem, [
+    { x: 31.5, tip: [32.4, 45], bend: -2.6 },
+    { x: 34, tip: [35.6, 52], bend: 2.2 },
+    { x: 36.2, tip: [36.8, 58.5], bend: -1.8 },
+    { x: 30.4, tip: [29.8, 54], bend: 1.6 },
+  ])
+  // Y-3, the crest under it and the number below, centred on the chest
+  g.fine(36, 42, ink(Y3_LO, c), ink(Y3_HI, c))
+  g.fine(38, 46, CREST_LO, CREST_HI)
+  g.fine(38, 54, ink(SEVEN_LO, c), ink(SEVEN_HI, c))
+  // soft folds where the shirt gathers: under the chest and at the waist
+  g.line(44, 52, 47.5, 50.5, 'c', K > 1 ? 0.5 : 1).line(43, 63, 47, 64, 'c', K > 1 ? 0.5 : 1)
+}
+
+function kitBack(g: Raster, a: Appearance, hem: number) {
+  const c = inkOn(a)
+  g.stamp(35, 44, ink(['KKKKKKKKKK', 'KKKKKKKKKK', '.......KK.', '......KK..', '.....KK...', '....KK....', '....KK....', '...KK.....', '...KK.....', '...KK.....'], c))
+  g.poly([[28.6, 47], [30.2, 47], [30.6, 56], [31.2, hem], [28.6, hem]], 'r')
+  g.poly([[51.4, 47], [49.8, 47], [49.4, 56], [48.8, hem], [51.4, hem]], 'r')
+  // from behind, the flames sweep up from the hem toward the wearer's right shoulder (viewer's right)
+  flames(g, hem, [
+    { x: 44.5, tip: [48, 46], bend: 2.4 },
+    { x: 42, tip: [44.6, 55], bend: 1.6 },
+    { x: 47.4, tip: [48.6, 52], bend: 1 },
+    { x: 39.6, tip: [41.4, 61], bend: 1.2 },
+  ])
+}
+
 function torso(a: Appearance): Pixels {
   const g = canvas()
   // neck (under the chin's shadow)
@@ -419,12 +504,8 @@ function torso(a: Appearance): Pixels {
     case 'jersey':
       // crew neck
       g.stamp(34, 36, ['K..........K', '.K........K.', '..KKKKKKKK..'])
-      if (a.top === 'jersey') {
-        g.stamp(34, 36, ['R..........R', '.R........R.', '..RRRRRRRR..'])
-        g.line(28, 50, 28, hem - 1, 'R').line(52, 50, 52, hem - 1, 'r')
-        // flame print, as on the reference jersey
-        g.stamp(31, 46, ['R......', 'rR.....', '.RR..R.', '.rRRrR.', '..RRRR.', '..rRRR.', '...RRr.', '...rR..', '....R..'])
-      } else if (a.top === 'splash') {
+      if (a.top === 'jersey') kitFront(g, a, hem)
+      else if (a.top === 'splash') {
         // paint-powder splashes, as at a colour run
         const spots: Array<[number, number, string]> = [[32, 44, 'N'], [44, 41, 'J'], [37, 52, 'I'], [47, 55, 'N'], [31, 60, 'C'], [42, 62, 'J'], [49, 47, 'C'], [35, 40, 'I']]
         for (const [x, y, c] of spots) g.rect(x, y, x + 1, y + 1, c).set(x + 2, y + 1, c).set(x, y + 2, c)
@@ -505,7 +586,7 @@ function sleeves(a: Appearance): { upper: [string, string]; lower: [string, stri
 }
 
 function hand(g: Raster, cx: number, cy: number, mirror: boolean) {
-  oval(g, cx, cy, 3, 3.6, 'S', 's', 'T')
+  oval(g, cx, cy, 2.8, 3.4, 'S', 's', 'T')
   // thumb on the inside, a knuckle line
   g.set(Math.floor(mirror ? cx - 3 : cx + 2.5), Math.floor(cy - 1.5), 'S')
   g.set(Math.floor(cx - 1), Math.floor(cy + 1), 's').set(Math.floor(cx), Math.floor(cy + 1), 's')
@@ -541,27 +622,40 @@ function limb(g: Raster, a: Appearance, sh: Pt, el: Pt, wr: Pt) {
   const { lower, cuff } = sleeves(a)
   const short = TEES.has(a.top)
   const up: [string, string] = short || a.top === 'tank' ? ['S', 's'] : ['A', 'a']
-  oval(g, sh[0], sh[1], 4.7, 4.5, up[0], up[1])
-  capsule(g, sh, el, 4.4, 3.6, up[0], up[1])
+  oval(g, sh[0], sh[1], 4.4, 4.2, up[0], up[1])
+  capsule(g, sh, el, 4, 3.3, up[0], up[1])
   const swell = lerpPt(el, wr, 0.3)
-  capsule(g, el, swell, 3.6, 3.7, lower[0], lower[1])
-  capsule(g, swell, wr, 3.7, 2.8, lower[0], lower[1])
-  if (short) capsule(g, sh, lerpPt(sh, el, SLEEVE_END), 5, 4.6, 'A', 'a', 'Q', true)
+  capsule(g, el, swell, 3.3, 3.4, lower[0], lower[1])
+  capsule(g, swell, wr, 3.4, 2.6, lower[0], lower[1])
+  if (short) capsule(g, sh, lerpPt(sh, el, SLEEVE_END), 4.6, 4.2, 'A', 'a', 'Q', true)
   if (cuff) {
     const len = Math.hypot(wr[0] - el[0], wr[1] - el[1]) || 1
     const [dx, dy] = [(wr[0] - el[0]) / len, (wr[1] - el[1]) / len]
     const c: Pt = [wr[0] - dx * 1.2, wr[1] - dy * 1.2]
-    g.line(c[0] - dy * 3.2, c[1] + dx * 3.2, c[0] + dy * 3.2, c[1] - dx * 3.2, cuff, 1.4)
+    g.line(c[0] - dy * 3, c[1] + dx * 3, c[0] + dy * 3, c[1] - dx * 3, cuff, 1.4)
   }
 }
 
-/** A short sleeve's hem, across the arm where the sleeve ends (after outlining). */
-function limbHem(g: Raster, a: Appearance, sh: Pt, el: Pt) {
+/**
+ * A short sleeve's hem, across the arm where the sleeve ends (after outlining). On the kit, the
+ * three stripes run over the top of the shoulder and down the outside of the sleeve to the hem
+ * (`side`: the arm is seen side-on, so they run down the middle of the sleeve).
+ */
+function limbHem(g: Raster, a: Appearance, sh: Pt, el: Pt, side = false) {
   if (!TEES.has(a.top)) return
   const len = Math.hypot(el[0] - sh[0], el[1] - sh[1]) || 1
   const [dx, dy] = [(el[0] - sh[0]) / len, (el[1] - sh[1]) / len]
   const e = lerpPt(sh, el, SLEEVE_END - 0.6 / len)
-  g.line(e[0] - dy * 3.8, e[1] + dx * 3.8, e[0] + dy * 3.8, e[1] - dx * 3.8, a.top === 'jersey' ? 'R' : 'a', 1)
+  if (a.top === 'jersey') {
+    // outward normal: away from the body's centre line
+    const out = side ? 0 : sh[0] < 40 ? -1 : 1
+    const [nx, ny] = dy * out >= 0 ? [dy, -dx] : [-dy, dx]
+    const offs = side ? (K > 1 ? [-1.2, 0, 1.2] : [-1, 1]) : K > 1 ? [1.1, 2.3, 3.5] : [1.4, 3.4]
+    const from: Pt = [sh[0] - dx * 4, sh[1] - dy * 4]
+    const to: Pt = [e[0] - dx * 0.8, e[1] - dy * 0.8]
+    for (const o of offs) g.line(from[0] + nx * o, from[1] + ny * o, to[0] + nx * o, to[1] + ny * o, 'R', K > 1 ? 0.5 : 1)
+  }
+  g.line(e[0] - dy * 3.6, e[1] + dx * 3.6, e[0] + dy * 3.6, e[1] - dx * 3.6, a.top === 'jersey' ? 'c' : 'a', 1)
 }
 
 /** Shoulder positions shared by every arm pose, so gestures keep the same build as the idle. */
@@ -580,13 +674,13 @@ function armAt(a: Appearance, side: 'back' | 'front', spec: ArmSpec): Pixels {
   const perp: Pt = [-dir[1], dir[0]]
   const at = (d: number, o = 0): Pt => [wr[0] + dir[0] * d + perp[0] * o, wr[1] + dir[1] * d + perp[1] * o]
   limb(g, a, sh, el, wr)
-  const [hx, hy] = at(3)
+  const [hx, hy] = at(2.8)
   switch (spec.hand) {
     case 'relaxed':
       hand(g, hx, hy, side === 'front')
       break
     case 'fist':
-      oval(g, hx, hy, 3.4, 3.6, 'S', 's', 'T')
+      oval(g, hx, hy, 3.2, 3.4, 'S', 's', 'T')
       break
     case 'open': {
       // an upright open palm, laid out on the design grid: four fingers with a pixel between
@@ -895,11 +989,7 @@ export function renderBack(a: Appearance, throwing = false): Pixels {
   }
   if (a.top === 'hoodie') oval(g, 40, 40, 9, 5, 'a', undefined, 'A')
   g.outline()
-  if (a.top === 'jersey') {
-    // the number 7 across the back
-    g.stamp(35, 44, ['RRRRRRRRRR', 'RRRRRRRRRR', '.......RR.', '......RR..', '.....RR...', '....RR....', '....RR....', '...RR.....', '...RR.....', '...RR.....'])
-    g.line(28, 50, 28, hem - 1, 'R').line(52, 50, 52, hem - 1, 'r')
-  }
+  if (a.top === 'jersey') kitBack(g, a, hem)
   if (blazer) g.line(40, 60, 40, hem - 1, a.top === 'school' ? 'U' : 'K')
   if (a.top === 'school') g.line(28, hem - 1, 52, hem - 1, 'U')
   if (a.accessories.includes('bag')) g.line(49, 38, 32, 59, 'Z', 2)
@@ -980,7 +1070,16 @@ export function renderSide(a: Appearance): Pixels {
   if (a.top === 'hoodie') oval(body, 33, 39, 4.5, 4, 'a')
   if (a.accessories.includes('bag')) body.rect(27, 58, 33, 67, 'Z')
   body.outline()
-  if (a.top === 'jersey') body.line(48, 46, 49, hem - 1, 'R').stamp(44, 36, ['RRRR'])
+  if (a.top === 'jersey') {
+    // side-on: the collar rib, the side panel under the arm, and the flames up the near side
+    body.stamp(43, 37, ['cccc'])
+    body.poly([[36, 46], [39, 46], [40, hem], [35.5, hem]], 'r')
+    flames(body, hem, [
+      { x: 44, tip: [45, 48], bend: 1.4 },
+      { x: 46.6, tip: [47.4, 55], bend: -1 },
+      { x: 42, tip: [42.4, 58], bend: 1 },
+    ])
+  }
   if (blazer) {
     body.poly([[44, 37], [47.5, 37], [47.5, 52]], a.top === 'suit' ? 'V' : 'G')
     body.line(47, 39, 47, 55, 'R')
@@ -994,7 +1093,7 @@ export function renderSide(a: Appearance): Pixels {
   limb(armG, a, [39.5, 40.5], [38.6, 54], [41, 65])
   oval(armG, 41.8, 68.5, 3.1, 3.7, 'S', 's', 'T')
   armG.outline()
-  limbHem(armG, a, [39.5, 40.5], [38.6, 54])
+  limbHem(armG, a, [39.5, 40.5], [38.6, 54], true)
   if (a.accessories.includes('watch')) armG.rect(38, 62, 43, 63, 'Z').set(42, 62, 'X')
   if (a.accessories.includes('bracelet')) armG.rect(38, 62, 43, 62, 'X')
 

@@ -30,6 +30,12 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
   swells just below the elbow and slims to the wrist, and clothes that follow it (a short sleeve
   squared off at a hem with bare arm below, or a long sleeve with a cuff), so thickness never
   changes between frames.
+- **The jersey** is Aaryan's Japan × Y-3 2024 away shirt (adidas, IU0963), checked against product
+  photos and his own photo: off-white, three red stripes over the shoulders and down the sleeves,
+  a plain ribbed collar, hollow red flame wisps up the wearer's right side (and sweeping to the
+  right shoulder on the back), dark red side panels, and the Y-3 mark, JFA crest and his 7 printed
+  in black down the centre. Logos use `Raster.fine` so the 2× sprite gets fine-pixel versions and
+  the 1× sprite a simpler one; walkers keep the panels, flames, crest, 7 and sleeve stripes.
 - **Hats** always sit on top: any hair above the brim is clipped away before the hat is drawn.
 - **Creatures** — `src/sprites/creatures.ts` builds each creature from shapes, rendered twice: 40×40
   for small icons and 80×80 (`creatureArtHi`, finer outlines) for battles, the party screen and the
