@@ -12,14 +12,24 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
   blinking head) so `src/ui/CharacterSprite.tsx` can animate them like BW: breathing, a head bob,
   hair sway, swinging arms, random blinks, a fist-pump victory pose, and a nod on the VS screen. Animation is off when the
   visitor turns on reduced motion.
-- **Overworld walker** — `src/sprites/overworld.ts` draws a BW-style chibi (big head, small body,
-  arms flared out, outlined and shaded) from the same appearance: 4 directions × 3 frames, used in
-  the resort and the Medal Box room. The art is 48×64 and shown at half size, so walkers keep the
-  same fine detail as the battle sprites.
+- **Overworld walker** — `src/sprites/overworld.ts` draws a BW-style walker from the same
+  appearance: 4 directions × 3 frames, used in the resort and the Medal Box room. They're built to
+  read as older teens and young adults, not chibi kids: about 3¼ heads tall, a head narrower than
+  the shoulders, a short neck, a torso tapering to the waist, arms reaching mid-thigh with a bend
+  at the elbow, longer legs, and smaller eyes with brows and a nose. Every view (front, back,
+  profile, riding) shares the same proportion constants. Arms carry a thin inner outline where they
+  cross the body; the thick outline is only on the outer silhouette. The art is 48×64 and shown at
+  half size, so walkers keep the same fine detail as the battle sprites.
   The idle animation is only for the battle/profile sprite — walkers stand still like in BW.
 - **Proportions** — BW trainers carry their heads low: the head, hair and hat layers are dropped
   `NECK_DROP` (3 px) onto the shoulders, so the chin tucks onto the collar and only a sliver of neck
-  shows under the jaw (front, side and back views alike). Walkers have no visible neck.
+  shows under the jaw (front, side and back views alike).
+- **Arms** — every arm on the large sprite, in every pose and view (idle, VS point, fist pump,
+  throw, side view and all the idle gestures), is built by one function (`limb` in `character.ts`):
+  a rounded deltoid that sits into the torso, an upper arm narrowing to the elbow, a forearm that
+  swells just below the elbow and slims to the wrist, and clothes that follow it (a short sleeve
+  squared off at a hem with bare arm below, or a long sleeve with a cuff), so thickness never
+  changes between frames.
 - **Hats** always sit on top: any hair above the brim is clipped away before the hat is drawn.
 - **Creatures** — `src/sprites/creatures.ts` builds each creature from shapes, rendered twice: 40×40
   for small icons and 80×80 (`creatureArtHi`, finer outlines) for battles, the party screen and the
@@ -60,6 +70,11 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
   forward holding on) is drawn between the body and the near wing, so the wing sweeps over their
   legs and the pair move as one. Surfers (Riffin, Subwoof, Wicketoad) carry a seated rider behind
   their head, low in the water. `npm run sprites:export` writes `flight-<id>.png` previews.
+- **Distance** — flyers are drawn smaller the further away they are, with mount and rider always
+  sharing one scale: sky flyers (beyond the map) at about 0.42–0.62× ground size (`skyScale`), and
+  travellers flying in at about half size at cruising height, growing smoothly to full size as
+  they touch down (`airScale` in `src/resort/ambient.ts`, by altitude); take-off runs it backwards.
+  Arrivals are depth-sorted by their landing spot, so buildings in front of it still cover them.
 - **Side view** — `renderSide` draws the same appearance in profile (hair falling down the back,
   glasses arm, one shoe forward). The back view (`renderBack`) and ball throw are used at the start
   of battles.

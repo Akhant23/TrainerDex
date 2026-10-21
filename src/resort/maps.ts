@@ -217,24 +217,50 @@ export function hash(s: string): number {
   return h >>> 0
 }
 
+export type VisitorSpot = Spot & { facing: Facing }
+
 /** Pick distinct walkable tiles in the visitor area for each id (deterministic). */
-export function placeVisitors(m: ResortMap, ids: string[], blocked: Spot[] = []): Map<string, Spot & { facing: Facing }> {
-  const out = new Map<string, Spot & { facing: Facing }>()
+export function placeVisitors(m: ResortMap, ids: string[], blocked: Spot[] = []): Map<string, VisitorSpot> {
+  return settleVisitors(m, ids, new Map(), blocked)
+}
+
+/**
+ * Like placeVisitors, but visitors already standing somewhere keep their spot: only newcomers are
+ * placed, on tiles nobody holds. `fixed` tiles are always off limits (staff, spawn, doorways);
+ * `avoid` tiles are only kept clear for newcomers (where the player and travelling trainers are
+ * standing right now). This is what stops the whole crowd reshuffling whenever someone arrives or
+ * leaves, since the player's current tile would otherwise change every visitor's hashed spot.
+ */
+export function settleVisitors(m: ResortMap, ids: string[], prev: ReadonlyMap<string, VisitorSpot>, fixed: Spot[] = [], avoid: Spot[] = []): Map<string, VisitorSpot> {
+  const out = new Map<string, VisitorSpot>()
   const area = m.visitorArea
   if (!area) return out
+  const key = (s: Spot) => `${s.x},${s.y}`
+  const fixedSet = new Set(fixed.map(key))
+  const taken = new Set<string>()
+  for (const id of ids) {
+    const p = prev.get(id)
+    if (!p || fixedSet.has(key(p)) || taken.has(key(p))) continue
+    out.set(id, p)
+    taken.add(key(p))
+  }
+  const avoidSet = new Set(avoid.map(key))
   const free: Spot[] = []
   for (let y = area.y0; y <= area.y1; y++)
     for (let x = area.x0; x <= area.x1; x++) {
-      const t = tileAt(m, x, y)
-      if (!isSolidTile(m, x, y) && t !== '=' && !blocked.some((b) => b.x === x && b.y === y)) free.push({ x, y })
+      const k = `${x},${y}`
+      if (!isSolidTile(m, x, y) && tileAt(m, x, y) !== '=' && !fixedSet.has(k) && !avoidSet.has(k)) free.push({ x, y })
     }
-  const taken = new Set<string>()
   const facings: Facing[] = ['down', 'left', 'right', 'up']
+  const open = free.filter((f) => !taken.has(key(f))).length
+  let placed = 0
   for (const id of ids) {
-    if (taken.size >= free.length) break
+    if (out.has(id)) continue
+    if (placed >= open) break
     let i = hash(id) % free.length
-    while (taken.has(`${free[i].x},${free[i].y}`)) i = (i + 1) % free.length
-    taken.add(`${free[i].x},${free[i].y}`)
+    while (taken.has(key(free[i]))) i = (i + 1) % free.length
+    taken.add(key(free[i]))
+    placed++
     out.set(id, { ...free[i], facing: facings[hash(id + 'f') % 4] })
   }
   return out

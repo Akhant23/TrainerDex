@@ -125,8 +125,11 @@ export function oval(g: Raster, cx: number, cy: number, rx: number, ry: number, 
   })
 }
 
-/** A tapered capsule from p0 (radius r0) to p1 (radius r1), shaded on its right side. */
-export function capsule(g: Raster, p0: Pt, p1: Pt, r0: number, r1: number, ch: string, shade?: string, light?: string) {
+/**
+ * A tapered capsule from p0 (radius r0) to p1 (radius r1), shaded on its right side. With `cut`,
+ * the p1 end is squared off instead of rounded (a sleeve's hem).
+ */
+export function capsule(g: Raster, p0: Pt, p1: Pt, r0: number, r1: number, ch: string, shade?: string, light?: string, cut = false) {
   const [x0, y0] = p0
   const [x1, y1] = p1
   const vx = x1 - x0
@@ -134,7 +137,9 @@ export function capsule(g: Raster, p0: Pt, p1: Pt, r0: number, r1: number, ch: s
   const len2 = vx * vx + vy * vy || 1
   const r = Math.max(r0, r1)
   g.sample(Math.min(x0, x1) - r - 1, Math.min(y0, y1) - r - 1, Math.max(x0, x1) + r, Math.max(y0, y1) + r, (px, py) => {
-    const t = Math.max(0, Math.min(1, ((px - x0) * vx + (py - y0) * vy) / len2))
+    const raw = ((px - x0) * vx + (py - y0) * vy) / len2
+    if (cut && raw > 1) return null
+    const t = Math.max(0, Math.min(1, raw))
     const cx = x0 + vx * t
     const cy = y0 + vy * t
     const rr = r0 + (r1 - r0) * t
@@ -179,7 +184,7 @@ const mirrorRow = (r: string) => [...r].reverse().join('')
 export type ArmPose = 'idle' | 'raised' | 'point'
 
 /** How a hand is drawn at the end of an articulated arm. */
-export type HandShape = 'relaxed' | 'fist' | 'open' | 'pointOut' | 'pocket' | 'hidden'
+export type HandShape = 'relaxed' | 'fist' | 'open' | 'pointOut' | 'pocket' | 'hooked' | 'hidden'
 /** An arm placed by its elbow and wrist (base pixels); the shoulder is fixed per side. */
 export interface ArmSpec {
   el: Pt
@@ -506,80 +511,57 @@ function hand(g: Raster, cx: number, cy: number, mirror: boolean) {
   g.set(Math.floor(cx - 1), Math.floor(cy + 1), 's').set(Math.floor(cx), Math.floor(cy + 1), 's')
 }
 
+/** The fixed arm poses (idle, VS point, victory fist), as articulated specs. */
+const ARM_POSES: Record<ArmPose, { back: ArmSpec; front: ArmSpec }> = {
+  // the far arm hangs relaxed close to the body with a soft bend; the near hand hooks a thumb in the pocket
+  idle: { back: { el: [25.4, 54], wr: [25.8, 65.5], hand: 'relaxed' }, front: { el: [56.4, 53], wr: [51.6, 64], hand: 'hooked' } },
+  // VS screen: arm thrust out to the side, finger pointing at the challenger
+  point: { back: { el: [25.4, 54], wr: [25.8, 65.5], hand: 'relaxed' }, front: { el: [61, 44], wr: [69.5, 41], hand: 'pointOut' } },
+  // fist pump
+  raised: { back: { el: [25.4, 54], wr: [25.8, 65.5], hand: 'relaxed' }, front: { el: [59.5, 32], wr: [58, 22.5], hand: 'fist' } },
+}
+
 function arm(a: Appearance, side: 'back' | 'front', pose: ArmPose): Pixels {
-  const g = canvas()
-  const { upper, lower, cuff } = sleeves(a)
-  const tee = TEES.has(a.top)
+  return armAt(a, side, ARM_POSES[pose][side])
+}
 
-  if (side === 'back') {
-    // relaxed arm with a soft elbow bend
-    const sh: Pt = [29.2, 41]
-    const el: Pt = [24.2, 54]
-    const wr: Pt = [24.8, 65.5]
-    capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
-    capsule(g, el, wr, 3.8, 3.0, lower[0], lower[1])
-    if (tee) capsule(g, sh, [25.8, 49], 5, 4.5, 'A', 'a', 'Q') // short sleeve sits a little wider than the arm
-    if (cuff) g.rect(21, 63, 28, 64, cuff)
-    hand(g, 25.2, 69, false)
-    g.outline()
-    if (tee) g.line(21, 50, 29, 51, a.top === 'jersey' ? 'R' : 'a')
-    if (a.accessories.includes('bracelet')) {
-      g.line(21, 63, 28, 64, 'X').line(21, 65, 28, 66, 'x')
-      g.set(23, 63, 'W')
-    }
-    return g.toPixels()
-  }
+const lerpPt = (p: Pt, q: Pt, k: number): Pt => [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k]
+/** How far down the upper arm a short sleeve reaches. */
+const SLEEVE_END = 0.55
 
-  if (pose === 'raised') {
-    // fist pump
-    const sh: Pt = [51.4, 41]
-    const el: Pt = [59.5, 32]
-    const wr: Pt = [58, 22]
-    capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
-    capsule(g, el, wr, 3.8, 3.1, lower[0], lower[1])
-    if (tee) capsule(g, sh, [56, 36], 5, 4.5, 'A', 'a', 'Q')
-    if (cuff) g.rect(55, 22, 61, 23, cuff)
-    oval(g, 57.8, 18, 3.8, 4, 'S', 's', 'T')
-    g.outline()
-    g.line(55, 17, 60, 17, 's').line(55, 19, 60, 19, 's')
-    if (a.accessories.includes('watch')) g.rect(55, 22, 61, 23, 'Z').set(56, 22, 'X').set(57, 22, 'X')
-    return g.toPixels()
+/**
+ * One arm, shoulder → elbow → wrist, built the same way in every pose and view so it never
+ * changes thickness between frames: a rounded deltoid that sits into the torso, an upper arm that
+ * narrows to the elbow, a forearm that swells just below the elbow and slims to the wrist (so the
+ * hand reads as a hand rather than the end of a tube), and clothes that follow it: a short sleeve
+ * hugging the top of the upper arm with bare skin below, or a long sleeve with a cuff at the wrist.
+ * Call `limbHem` after outlining to draw the short sleeve's hem across the arm.
+ */
+function limb(g: Raster, a: Appearance, sh: Pt, el: Pt, wr: Pt) {
+  const { lower, cuff } = sleeves(a)
+  const short = TEES.has(a.top)
+  const up: [string, string] = short || a.top === 'tank' ? ['S', 's'] : ['A', 'a']
+  oval(g, sh[0], sh[1], 4.7, 4.5, up[0], up[1])
+  capsule(g, sh, el, 4.4, 3.6, up[0], up[1])
+  const swell = lerpPt(el, wr, 0.3)
+  capsule(g, el, swell, 3.6, 3.7, lower[0], lower[1])
+  capsule(g, swell, wr, 3.7, 2.8, lower[0], lower[1])
+  if (short) capsule(g, sh, lerpPt(sh, el, SLEEVE_END), 5, 4.6, 'A', 'a', 'Q', true)
+  if (cuff) {
+    const len = Math.hypot(wr[0] - el[0], wr[1] - el[1]) || 1
+    const [dx, dy] = [(wr[0] - el[0]) / len, (wr[1] - el[1]) / len]
+    const c: Pt = [wr[0] - dx * 1.2, wr[1] - dy * 1.2]
+    g.line(c[0] - dy * 3.2, c[1] + dx * 3.2, c[0] + dy * 3.2, c[1] - dx * 3.2, cuff, 1.4)
   }
+}
 
-  if (pose === 'point') {
-    // the VS-screen pose: arm thrust out to the side, finger pointing at the challenger
-    const sh: Pt = [51.4, 41]
-    const el: Pt = [61, 44]
-    const wr: Pt = [70, 41]
-    capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
-    capsule(g, el, wr, 3.8, 3.1, lower[0], lower[1])
-    if (tee) capsule(g, sh, [57, 42.5], 5, 4.5, 'A', 'a', 'Q')
-    if (cuff) g.rect(67, 38, 68, 44, cuff)
-    oval(g, 72.5, 40.5, 3.2, 3, 'S', 's', 'T')
-    g.rect(74, 39, 78, 40, 'S')
-    g.outline()
-    g.set(73, 42, 's').set(72, 42, 's')
-    if (a.accessories.includes('watch')) g.rect(67, 38, 68, 44, 'Z').set(67, 40, 'X')
-    return g.toPixels()
-  }
-
-  // front arm: hand tucked in the pocket, elbow out
-  const sh: Pt = [51.4, 41]
-  const el: Pt = [56.4, 53]
-  const wr: Pt = [51.6, 64]
-  capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
-  capsule(g, el, wr, 3.8, 3.0, lower[0], lower[1])
-  if (tee) capsule(g, sh, [54.4, 48.5], 5, 4.5, 'A', 'a', 'Q')
-  if (cuff) g.rect(48, 62, 53, 63, cuff)
-  // the thumb hooks over the pocket edge
-  g.rect(50, 66, 52, 68, 'S').set(52, 68, 's')
-  g.outline()
-  if (tee) g.line(50, 50, 59, 48, a.top === 'jersey' ? 'R' : 'a')
-  if (a.accessories.includes('watch')) {
-    g.line(48, 61, 54, 63, 'Z').line(48, 62, 54, 64, 'Z')
-    g.set(51, 62, 'X').set(52, 62, 'X').set(51, 63, 'W')
-  }
-  return g.toPixels()
+/** A short sleeve's hem, across the arm where the sleeve ends (after outlining). */
+function limbHem(g: Raster, a: Appearance, sh: Pt, el: Pt) {
+  if (!TEES.has(a.top)) return
+  const len = Math.hypot(el[0] - sh[0], el[1] - sh[1]) || 1
+  const [dx, dy] = [(el[0] - sh[0]) / len, (el[1] - sh[1]) / len]
+  const e = lerpPt(sh, el, SLEEVE_END - 0.6 / len)
+  g.line(e[0] - dy * 3.8, e[1] + dx * 3.8, e[0] + dy * 3.8, e[1] - dx * 3.8, a.top === 'jersey' ? 'R' : 'a', 1)
 }
 
 /** Shoulder positions shared by every arm pose, so gestures keep the same build as the idle. */
@@ -591,21 +573,13 @@ const SHOULDER: Record<'back' | 'front', Pt> = { back: [29.2, 41], front: [51.4,
  */
 function armAt(a: Appearance, side: 'back' | 'front', spec: ArmSpec): Pixels {
   const g = canvas()
-  const { upper, lower, cuff } = sleeves(a)
-  const tee = TEES.has(a.top)
   const sh = SHOULDER[side]
   const { el, wr } = spec
   const len = Math.hypot(wr[0] - el[0], wr[1] - el[1]) || 1
   const dir: Pt = [(wr[0] - el[0]) / len, (wr[1] - el[1]) / len]
   const perp: Pt = [-dir[1], dir[0]]
   const at = (d: number, o = 0): Pt => [wr[0] + dir[0] * d + perp[0] * o, wr[1] + dir[1] * d + perp[1] * o]
-  capsule(g, sh, el, 4.6, 3.8, upper[0], upper[1])
-  capsule(g, el, wr, 3.8, 3.0, lower[0], lower[1])
-  if (tee) capsule(g, sh, [sh[0] + (el[0] - sh[0]) * 0.45, sh[1] + (el[1] - sh[1]) * 0.45], 5, 4.5, 'A', 'a', 'Q')
-  if (cuff) {
-    const [c0, c1] = [at(-1.2, 3.4), at(-1.2, -3.4)]
-    g.line(c0[0], c0[1], c1[0], c1[1], cuff, 1.4)
-  }
+  limb(g, a, sh, el, wr)
   const [hx, hy] = at(3)
   switch (spec.hand) {
     case 'relaxed':
@@ -634,11 +608,25 @@ function armAt(a: Appearance, side: 'back' | 'front', spec: ArmSpec): Pixels {
       g.line(f0[0], f0[1], f1[0], f1[1], 'S', 1.6)
       break
     }
+    case 'hooked': {
+      // the hand is in the pocket; only the thumb hooks over its edge
+      const [t0, t1] = [at(1.4, -0.4), at(3.6, -0.4)]
+      g.line(t0[0], t0[1], t1[0], t1[1], 'S', 2.4)
+      break
+    }
     case 'pocket':
     case 'hidden':
       break
   }
   g.outline()
+  limbHem(g, a, sh, el)
+  if (spec.hand === 'fist') {
+    // knuckle creases across the fist
+    for (const d of [2.4, 4]) {
+      const [k0, k1] = [at(d, 2), at(d, -2)]
+      g.line(k0[0], k0[1], k1[0], k1[1], 's', 1)
+    }
+  }
   if (spec.hand === 'pocket') {
     // the pocket's lip across the wrist: the hand is inside
     const [p0, p1] = [at(-0.4, 4.2), at(-0.4, -4.2)]
@@ -939,16 +927,14 @@ export function renderBack(a: Appearance, throwing = false): Pixels {
   let right: Pixels
   if (throwing) {
     const r = canvas()
-    const { upper, lower } = sleeves(a)
-    capsule(r, [51, 41], [60, 33], 4.6, 3.8, upper[0], upper[1])
-    capsule(r, [60, 33], [62, 21], 3.8, 3.1, lower[0], lower[1])
-    if (TEES.has(a.top)) capsule(r, [51, 41], [56, 37], 5, 4.5, 'A', 'a', 'Q')
-    oval(r, 62, 17, 3.6, 3.8, 'S', 's')
+    limb(r, a, [50.8, 41], [60, 33], [62, 21.5])
+    oval(r, 62, 17.5, 3.6, 3.8, 'S', 's')
     // the ball, red over white
     oval(r, 64, 12, 4.6, 4.6, 'G', 'g')
     r.poly([[59.4, 12], [68.6, 12], [67, 8], [61, 8]], 'R')
     oval(r, 64, 9.5, 4, 2.8, 'R', 'r')
     r.outline()
+    limbHem(r, a, [50.8, 41], [60, 33])
     r.line(59, 12, 69, 12, 'K').set(64, 12, 'W')
     right = r.toPixels()
   } else right = left.map((row) => [...row].reverse().join(''))
@@ -962,7 +948,6 @@ export function renderSide(a: Appearance): Pixels {
   const blazer = BLAZERS.has(a.top)
   const hem = blazer ? 72 : UNTUCKED.has(a.top) ? 68 : 64
   const bare = a.bottom === 'shorts' || a.bottom === 'skirt'
-  const { upper, lower, cuff } = sleeves(a)
 
   // legs: the far leg a step behind and in shadow, the near leg in front
   const legs = canvas()
@@ -1006,12 +991,10 @@ export function renderSide(a: Appearance): Pixels {
 
   // the near arm hangs at the side with a soft bend
   const armG = canvas()
-  capsule(armG, [39.5, 40], [38.5, 54], 4.4, 3.6, upper[0], upper[1])
-  capsule(armG, [38.5, 54], [41, 65], 3.6, 2.9, lower[0], lower[1])
-  if (TEES.has(a.top)) capsule(armG, [39.5, 40], [39, 49], 4.9, 4.4, 'A', 'a', 'Q')
-  if (cuff) armG.rect(38, 63, 43, 64, cuff)
-  oval(armG, 41.8, 68.5, 3, 3.6, 'S', 's', 'T')
+  limb(armG, a, [39.5, 40.5], [38.6, 54], [41, 65])
+  oval(armG, 41.8, 68.5, 3.1, 3.7, 'S', 's', 'T')
   armG.outline()
+  limbHem(armG, a, [39.5, 40.5], [38.6, 54])
   if (a.accessories.includes('watch')) armG.rect(38, 62, 43, 63, 'Z').set(42, 62, 'X')
   if (a.accessories.includes('bracelet')) armG.rect(38, 62, 43, 62, 'X')
 

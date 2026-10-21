@@ -12,8 +12,8 @@ import type { ArmSpec, PoseFrame, Pt } from './character.ts'
 export type GestureId = 'wave' | 'handsBehindHead' | 'ruffleHair' | 'pockets' | 'smirkPoint'
 
 /** The standing idle arms, as articulated specs (to tween from and back to). */
-const IDLE_BACK: ArmSpec = { el: [24.2, 54], wr: [24.8, 65.5], hand: 'relaxed' }
-const IDLE_FRONT: ArmSpec = { el: [56.4, 53], wr: [51.6, 64], hand: 'pocket' }
+const IDLE_BACK: ArmSpec = { el: [25.4, 54], wr: [25.8, 65.5], hand: 'relaxed' }
+const IDLE_FRONT: ArmSpec = { el: [56.4, 53], wr: [51.6, 64], hand: 'hooked' }
 
 interface Key {
   frame: PoseFrame
@@ -34,7 +34,7 @@ function lerpArm(a: ArmSpec | undefined, b: ArmSpec | undefined, idle: ArmSpec, 
   const x = a ?? idle
   const y = b ?? idle
   // the hand takes the shape it's heading to once it's most of the way there
-  return { el: lerpPt(x.el, y.el, k), wr: lerpPt(x.wr, y.wr, k), hand: k < 0.6 ? (x.hand === 'pocket' || x.hand === 'hidden' ? 'fist' : x.hand) : y.hand }
+  return { el: lerpPt(x.el, y.el, k), wr: lerpPt(x.wr, y.wr, k), hand: k < 0.6 ? (x.hand === 'pocket' || x.hand === 'hooked' || x.hand === 'hidden' ? 'fist' : x.hand) : y.hand }
 }
 
 /** Expand keyframes into frames: tweened arms in between, face and hair changes on arrival. */

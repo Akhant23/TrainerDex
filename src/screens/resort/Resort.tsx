@@ -7,7 +7,7 @@ import { species, type SpeciesId } from '../../battle/data'
 import { challengeSetup, floors, floorSetup, unlockedSpecies } from '../../battle/tower'
 import { regulars } from '../../resort/regulars'
 import { formatRecord, type BattleRecord } from '../../../supabase/functions/_shared/trainer'
-import { maps, placeVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, type MapId, type ResortMap, type Warp } from '../../resort/maps'
+import { maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, type MapId, type ResortMap, type VisitorSpot, type Warp } from '../../resort/maps'
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { skyAt, skyLabel } from '../../resort/sky'
@@ -235,10 +235,13 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const guestsRef = useRef(guests)
   guestsRef.current = guests
   const ambient = useRef(newAmbient(performance.now()))
-  // dev only: lets QA park a flyer or trigger a traveller (window.__resortAmbient)
+  // dev only: lets QA park a flyer or trigger a traveller (window.__resortAmbient), and read
+  // where everyone on the map is standing (window.__resortChars)
   useEffect(() => {
     if (!import.meta.env.DEV) return
-    ;(window as unknown as { __resortAmbient?: AmbientState }).__resortAmbient = ambient.current
+    const w = window as unknown as { __resortAmbient?: AmbientState; __resortChars?: () => Char[] }
+    w.__resortAmbient = ambient.current
+    w.__resortChars = () => charsRef.current
   }, [])
   const sky = useRef(skyAt())
   const [skyStatus, setSkyStatus] = useState(() => skyLabel(sky.current))
@@ -302,6 +305,8 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   }, [])
 
   /* ----- characters on this map ----- */
+  // where each plaza visitor is standing: the one record of NPC spots, kept across re-renders
+  const placements = useRef<Map<string, VisitorSpot>>(new Map())
   const chars: Char[] = useMemo(() => {
     const list: Char[] = staff.filter((s) => s.map === mapId).map((s) => ({ id: s.id, x: s.x, y: s.y, facing: s.facing, look: s.look, name: s.name, kind: 'staff' as const, lines: lines(s.linesKey) }))
     const n = floorNumber(mapId)
@@ -312,8 +317,11 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         ...online,
         ...regulars.map((r) => ({ id: `regular-${r.id}`, name: r.name, appearance: r.look, party: r.party, greeting: line(`regular.${r.id}`), record: r.record, regular: true })),
       ]
-      const blockedSpots = [...list, maps.plaza.spawn!, { x: me.current.x, y: me.current.y }, ...(maps.plaza.portals ?? []).map((p) => ({ x: p.x, y: p.y + 1 }))]
-      const placed = placeVisitors(maps.plaza, everyone.map((o) => o.id), blockedSpots)
+      // visitors keep the spot they were given for as long as they're here; only newcomers are
+      // placed (away from the player and the travelling trainers), so arrivals don't reshuffle anyone
+      const fixedSpots = [...list, maps.plaza.spawn!, ...(maps.plaza.portals ?? []).map((p) => ({ x: p.x, y: p.y + 1 }))]
+      const placed = settleVisitors(maps.plaza, everyone.map((o) => o.id), placements.current, fixedSpots, [{ x: me.current.x, y: me.current.y }, ...guests])
+      placements.current = placed
       for (const o of everyone) {
         const p = placed.get(o.id)
         if (p) list.push({ id: o.id, ...p, look: o.appearance, name: o.name, kind: 'visitor', party: o.party, greeting: o.greeting, message: o.message, record: o.record, regular: o.regular })

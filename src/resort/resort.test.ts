@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { maps, isSolidTile, placeVisitors, size, tileAt, warpAt, FLOOR_ARRIVAL, FLOOR_BOSS, RECEPTIONIST } from './maps'
+import { maps, isSolidTile, placeVisitors, settleVisitors, size, tileAt, warpAt, FLOOR_ARRIVAL, FLOOR_BOSS, RECEPTIONIST } from './maps'
 import { tiles, tilePalette, TILE } from './tiles'
 import { structureArt } from './structures'
 import { validate } from '../sprites/pixels'
@@ -82,6 +82,25 @@ describe('maps', () => {
       expect(isSolidTile(maps.plaza, p.x, p.y)).toBe(false)
       expect(tileAt(maps.plaza, p.x, p.y)).not.toBe('=')
     }
+  })
+  it('keeps visitors where they are when someone arrives, leaves, or the player moves', () => {
+    const ids = Array.from({ length: 12 }, (_, i) => `t${i}`)
+    const first = settleVisitors(maps.plaza, ids, new Map(), [], [{ x: 18, y: 14 }])
+    // a travelling trainer lands, and the player has walked somewhere else since
+    const landed = { x: 12, y: 10 }
+    const after = settleVisitors(maps.plaza, ids, first, [], [{ x: 20, y: 12 }, landed])
+    for (const id of ids) expect(after.get(id), id).toEqual(first.get(id))
+    // one leaves, one new visitor turns up: everyone else stays put, the newcomer gets a free tile
+    const next = settleVisitors(maps.plaza, [...ids.slice(1), 'new'], after, [], [{ x: 20, y: 12 }, landed])
+    for (const id of ids.slice(1)) expect(next.get(id), id).toEqual(first.get(id))
+    const spot = next.get('new')!
+    expect([...next.entries()].filter(([id, p]) => id !== 'new' && p.x === spot.x && p.y === spot.y)).toHaveLength(0)
+    expect(spot).not.toEqual({ ...landed, facing: spot.facing })
+    expect(spot).not.toEqual({ x: 20, y: 12, facing: spot.facing })
+  })
+  it('a newly opened plaza places visitors the same way as before', () => {
+    const ids = Array.from({ length: 20 }, (_, i) => `t${i}`)
+    expect([...settleVisitors(maps.plaza, ids, new Map(), [{ x: 3, y: 3 }]).entries()]).toEqual([...placeVisitors(maps.plaza, ids, [{ x: 3, y: 3 }]).entries()])
   })
 })
 

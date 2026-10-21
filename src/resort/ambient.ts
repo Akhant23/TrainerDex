@@ -96,7 +96,7 @@ export function tripPosition(t: Trip, now: number): { x: number; y: number; alt:
     const side = t.fromX < 18 ? -1 : 1
     const e = easeOut(p)
     const facing: Facing = (side < 0) !== t.leaving ? 'right' : 'left'
-    return { x: gx + side * (1 - e) * 120, y: gy, alt: (1 - e) * 150, facing, surfing: false, flying: p < 1 }
+    return { x: gx + side * (1 - e) * 120, y: gy, alt: (1 - e) * CRUISE_ALT, facing, surfing: false, flying: p < 1 }
   }
   // by sea: ride along the water to below the landing spot, then hop up the beach
   const sx = t.fromX * TILE + 8
@@ -110,6 +110,25 @@ export function tripPosition(t: Trip, now: number): { x: number; y: number; alt:
 }
 
 const easeOut = (x: number) => 1 - (1 - x) * (1 - x)
+
+/** Highest a traveller flies on the way in (world pixels above their landing spot). */
+export const CRUISE_ALT = 150
+/**
+ * How big a flying traveller looks, relative to their size on the ground: high up they're still
+ * far off, so mount and rider start at about half size and grow smoothly to full size as they come
+ * down; taking off runs the same curve backwards. Applies to mount and rider together, so the
+ * rider never drifts off the saddle.
+ */
+export function airScale(alt: number): number {
+  const k = Math.max(0, Math.min(1, alt / CRUISE_ALT))
+  return 1 - 0.48 * k * (2 - k)
+}
+
+/**
+ * Sky flyers are past the far edge of the map, so they're drawn smaller than anything on the
+ * ground: from ~0.42× (skimming the horizon) to ~0.62× (high and nearer).
+ */
+export const skyScale = (near: number) => 0.42 + 0.2 * Math.max(0, Math.min(1, (near - 0.55) / 0.45))
 
 /* ---------------- sprites ---------------- */
 
@@ -172,7 +191,7 @@ export function drawSkyFlyers(ctx: CanvasRenderingContext2D, a: AmbientState, no
     const t = now + f.phase
     // gliding birds drift; insects bob quickly; moths rise and fall with each beat
     const sway = art.style === 'flap' ? Math.sin(t / 900) * 4 : art.style === 'buzz' ? Math.sin(t / 140) * 1.5 + Math.sin(t / 700) * 3 : Math.sin(t / 300) * 3
-    const s = RES * f.near * 0.9
+    const s = RES * skyScale(f.near)
     // keep the whole sprite (wings up) inside the sky band
     const top = FLIGHT_H * 0.62 * art.world * s
     const y = Math.min(horizonY - 4 * RES, Math.max(top, horizonY * f.y + top * 0.5)) + sway * f.near * RES * 0.5
@@ -211,7 +230,9 @@ export function ambientItems(a: AmbientState, now: number, proj: (wx: number, wy
         ctx.fill()
         const faceRight = pos.facing === 'right'
         if (pos.flying && t.species in flightArt) {
-          drawFlyer(ctx, t.species as FlyerId, now + t.t0, p.x * RES, p.y * RES - lift - 8 * s, s, faceRight, t.look)
+          // the height is measured at the landing spot's scale; the sprite shrinks with distance
+          const fs = s * airScale(pos.alt)
+          drawFlyer(ctx, t.species as FlyerId, now + t.t0, p.x * RES, p.y * RES - lift - 8 * fs, fs, faceRight, t.look)
           return
         }
         if (pos.surfing) {
