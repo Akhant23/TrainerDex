@@ -27,6 +27,14 @@ export interface CreatureArt {
 
 /** Resolution the builders below draw at (1 = 40×40, 2 = 80×80 hi-res). */
 let RES = 1
+/**
+ * Idle phase the builders draw (0–3). Like BW battle sprites, each species' idle moves its own
+ * signature parts (a tail flick, an ear twitch, wings shifting) rather than bobbing as a whole;
+ * phase 0 is the resting pose used for stills and icons.
+ */
+let PHASE = 0
+/** Pick this phase's value from a 4-step cycle. */
+const cyc = <T,>(steps: readonly [T, T, T, T]) => steps[PHASE]
 function grid() {
   return new HiGrid(CREATURE_SIZE, CREATURE_SIZE, RES)
 }
@@ -53,8 +61,9 @@ function gavelion(): Art {
   g.ellipse(20, 30, 10, 8, 'R', 'r', 'Q')
   g.ellipse(14, 37, 3, 1.5, 'F', 'f').ellipse(26, 37, 3, 1.5, 'F', 'f')
   g.rect(19, 23, 20, 29, 'W')
-  // mane with spikes
-  g.poly([[6, 15], [1, 11], [8, 9]], 'M').poly([[34, 15], [39, 11], [32, 9]], 'M')
+  // mane with spikes (idle: the side spikes bristle)
+  const m = cyc([0, -1, -1.5, -0.5] as const)
+  g.poly([[6, 15], [1, 11 + m], [8, 9]], 'M').poly([[34, 15], [39, 11 + m], [32, 9]], 'M')
   g.poly([[7, 22], [3, 24], [9, 18]], 'M').poly([[33, 22], [37, 24], [31, 18]], 'M')
   g.ellipse(20, 15, 13, 11, 'M', 'm')
   g.ellipse(20, 17, 8, 7, 'F', 'f')
@@ -82,8 +91,9 @@ function gavelion(): Art {
 function gavelionBack(): Pixels {
   const g = grid()
   // tail with a tuft, sweeping out to the lower left
-  g.line(13, 34, 5, 31, 'F', 1.6)
-  g.ellipse(4, 29, 2.8, 2.8, 'M', 'm')
+  const t = cyc([0, -0.5, -1, -0.5] as const)
+  g.line(13, 34, 5 + t, 31, 'F', 1.6)
+  g.ellipse(4 + t, 29 + t * 0.5, 2.8, 2.8, 'M', 'm')
   // robe, with its back seam
   g.ellipse(21, 30, 11, 9, 'R', 'r', 'Q')
   // mane from behind, spikes out to both sides
@@ -109,7 +119,8 @@ function helixorPoints(): Array<[number, number]> {
   const pts: Array<[number, number]> = []
   for (let i = 0; i <= 28; i++) {
     const t = i / 28
-    pts.push([20 + 9 * Math.sin(t * Math.PI * 2.2), 36 - t * 24])
+    // idle: the strand turns slowly, so the twist travels up its body
+    pts.push([20 + 9 * Math.sin(t * Math.PI * 2.2 + PHASE * 0.22), 36 - t * 24])
   }
   return pts
 }
@@ -149,8 +160,10 @@ function helixorBack(): Pixels {
 
 function brushfox(): Art {
   const g = grid()
-  g.ellipse(31, 27, 6, 8, 'O', 'o')
-  g.ellipse(33, 20, 4, 4, 'V', 'v')
+  // idle: the paint-tipped tail sways
+  const tw = cyc([0, 0.5, 1, 0.5] as const)
+  g.ellipse(31 + tw * 0.5, 27, 6, 8, 'O', 'o')
+  g.ellipse(33 + tw, 20, 4, 4, 'V', 'v')
   g.ellipse(19, 29, 8, 7, 'O', 'o')
   g.ellipse(18, 31, 4, 4, 'W', 'w')
   g.rect(13, 34, 15, 38, 'O').rect(21, 34, 23, 38, 'o')
@@ -174,8 +187,9 @@ function brushfox(): Art {
 function brushfoxBack(): Pixels {
   const g = grid()
   // the paint-tipped tail curls up beside it
-  g.ellipse(9, 27, 6, 8, 'O', 'o')
-  g.ellipse(7, 19, 4, 4, 'V', 'v')
+  const tw = cyc([0, -0.5, -1, -0.5] as const)
+  g.ellipse(9 + tw * 0.5, 27, 6, 8, 'O', 'o')
+  g.ellipse(7 + tw, 19, 4, 4, 'V', 'v')
   g.ellipse(21, 29, 8.5, 7.5, 'O', 'o')
   g.rect(15, 34, 17, 38, 'o').rect(23, 34, 25, 38, 'O')
   // ears from behind (no pink), the beret on top
@@ -192,7 +206,9 @@ function subwoof(): Art {
   const g = grid()
   g.rect(12, 37, 15, 38, 'B').rect(25, 37, 28, 38, 'B')
   g.rect(10, 20, 30, 36, 'D').rect(29, 20, 30, 36, 'd')
-  g.ellipse(20, 29, 5, 5, 'g', 'G')
+  // idle: the speaker cone pulses with the beat
+  const beat = cyc([0, 0.7, 0, 0.7] as const)
+  g.ellipse(20, 29, 5 + beat, 5 + beat, 'g', 'G')
   g.ellipse(20, 29, 2, 2, 'K')
   g.ellipse(11, 16, 3, 5, 'b').ellipse(29, 16, 3, 5, 'b')
   g.ellipse(20, 13, 8, 7, 'B', 'b')
@@ -204,7 +220,8 @@ function subwoof(): Art {
   g.stamp(23, 12, ['WK', 'KK'])
   g.stamp(19, 15, ['KK'])
   g.stamp(18, 17, ['K..K', '.KK.'])
-  g.stamp(1, 26, ['Y..', '.Y.', 'Y..']).stamp(36, 26, ['..Y', '.Y.', '..Y'])
+  const out = cyc([0, 1, 0, 1] as const)
+  g.stamp(1 - out, 26, ['Y..', '.Y.', 'Y..']).stamp(36 + out, 26, ['..Y', '.Y.', '..Y'])
   return {
     pixels: g.toPixels(),
     palette: { K, D: '#383848', d: '#24242e', g: '#a8b0c0', G: '#707888', B: '#b07848', b: '#805030', W: '#f8f0e0', w: '#d8c8b0', R: '#e05890', r: '#a02858', Y: '#f8d040' },
@@ -219,7 +236,7 @@ function subwoofBack(): Pixels {
   g.rect(13, 23, 27, 33, 'd')
   g.ellipse(20, 28, 2, 2, 'G', 'g')
   // a stubby wagging tail
-  g.ellipse(31, 33, 2.4, 1.6, 'B', 'b')
+  g.ellipse(31 + cyc([0, 1, 0, -1] as const), 33, 2.4, 1.6, 'B', 'b')
   g.ellipse(11, 16, 3, 5, 'b').ellipse(29, 16, 3, 5, 'B', 'b')
   g.ellipse(20, 13, 8, 7, 'B', 'b')
   g.line(12, 9, 20, 4, 'R', 2).line(20, 4, 28, 9, 'R', 2)
@@ -232,19 +249,22 @@ function subwoofBack(): Pixels {
 
 function strikaroo(): Art {
   const g = grid()
-  g.line(12, 35, 3, 28, 'B', 3)
+  // idle: the tail tip lifts and one ear twitches
+  const tl = cyc([0, -1, -2, -1] as const)
+  const ear = cyc([0, 0, -1, 0] as const)
+  g.line(12, 35, 3, 28 + tl, 'B', 3)
   g.ellipse(15, 37, 5, 1.6, 'B', 'b').ellipse(24, 37, 4, 1.6, 'B', 'b')
   g.ellipse(18, 26, 7, 9, 'J', 'j')
   g.rect(12, 24, 24, 25, 'Y')
   g.ellipse(25, 22, 2, 3, 'B', 'b')
-  g.ellipse(16, 5, 1.8, 4.5, 'B', 'b').ellipse(22, 4, 1.8, 4.5, 'B', 'b')
+  g.ellipse(16, 5, 1.8, 4.5, 'B', 'b').ellipse(22, 4 + ear, 1.8, 4.5, 'B', 'b')
   g.ellipse(20, 12, 6, 5, 'B', 'b')
   g.ellipse(24, 14, 3, 2, 'C', 'c')
   // the ball rests against its right foot
   hold(g, 'strikaroo', 'front')
   g.outline(OL)
   holdInk(g, 'strikaroo', 'front')
-  g.set(16, 3, 'P').set(16, 4, 'P').set(22, 2, 'P').set(22, 3, 'P')
+  g.set(16, 3, 'P').set(16, 4, 'P').set(22, 2 + ear, 'P').set(22, 3 + ear, 'P')
   g.stamp(18, 10, ['WK', 'KK'])
   g.stamp(26, 13, ['K'])
   g.stamp(17, 29, ['KKK', '..K', '.K.', '.K.'])
@@ -257,7 +277,7 @@ function strikaroo(): Art {
 function strikarooBack(): Pixels {
   const g = grid()
   // the long tail props it up from behind
-  g.line(15, 34, 3, 38, 'B', 3)
+  g.line(15, 34, 3, 38 + cyc([0, -0.5, -1, -0.5] as const), 'B', 3)
   g.ellipse(17, 37, 4, 1.6, 'b').ellipse(26, 37, 5, 1.6, 'B', 'b')
   g.ellipse(20, 26, 7.5, 9, 'J', 'j')
   g.rect(13, 23, 27, 24, 'Y')
@@ -274,11 +294,14 @@ function strikarooBack(): Pixels {
 
 function hootour(): Art {
   const g = grid()
-  g.poly([[10, 13], [11, 4], [16, 11]], 'H').poly([[30, 13], [29, 4], [24, 11]], 'H')
+  // idle: the ear tufts quiver and it glances about
+  const tuft = cyc([0, -1, 0, -1] as const)
+  const look = cyc([0, 0, 1, 0] as const)
+  g.poly([[10, 13], [11, 4 + tuft], [16, 11]], 'H').poly([[30, 13], [29, 4 + tuft], [24, 11]], 'H')
   g.ellipse(20, 24, 11, 13, 'H', 'h')
   g.ellipse(20, 27, 7, 8, 'C', 'c')
   g.ellipse(15, 18, 4, 4, 'W', 'w').ellipse(25, 18, 4, 4, 'W', 'w')
-  g.ellipse(15, 18, 1.6, 1.6, 'K').ellipse(25, 18, 1.6, 1.6, 'K')
+  g.ellipse(15 + look, 18, 1.6, 1.6, 'K').ellipse(25 + look, 18, 1.6, 1.6, 'K')
   g.poly([[18, 21], [22, 21], [20, 25]], 'O')
   g.rect(10, 29, 30, 31, 'Y').rect(10, 31, 30, 31, 'y')
   g.rect(24, 31, 26, 36, 'Y')
@@ -288,7 +311,7 @@ function hootour(): Art {
   g.ellipse(32, 26, 3, 5.5, 'H', 'h')
   g.ellipse(31.5, 27.5, 1.6, 1.4, 'C')
   g.outline(OL)
-  g.set(14, 17, 'W').set(24, 17, 'W')
+  g.set(14 + look, 17, 'W').set(24 + look, 17, 'W')
   g.stamp(16, 24, ['c.c', '.c.']).stamp(21, 26, ['c.c', '.c.'])
   return {
     pixels: g.toPixels(),
@@ -298,7 +321,8 @@ function hootour(): Art {
 
 function hootourBack(): Pixels {
   const g = grid()
-  g.poly([[11, 13], [12, 4], [17, 11]], 'H').poly([[31, 13], [30, 4], [25, 11]], 'h')
+  const tuft = cyc([0, -1, 0, -1] as const)
+  g.poly([[11, 13], [12, 4 + tuft], [17, 11]], 'H').poly([[31, 13], [30, 4 + tuft], [25, 11]], 'h')
   g.ellipse(21, 24, 11, 13, 'H', 'h')
   // folded wings and the tail
   g.ellipse(11, 27, 3, 7.5, 'h').ellipse(31, 26, 3, 7.5, 'H', 'h')
@@ -319,12 +343,15 @@ function hootourBack(): Pixels {
 
 function byterat(): Art {
   const g = grid()
-  g.line(26, 33, 34, 32, 'L').line(34, 32, 37, 24, 'L').line(37, 24, 37, 19, 'L')
+  // idle: the cable tail flicks side to side and one ear twitches
+  const tx = cyc([0, 1, 2, 1] as const)
+  const ear = cyc([0, 0, -1, 0] as const)
+  g.line(26, 33, 34, 32, 'L').line(34, 32, 37 + tx * 0.5, 24, 'L').line(37 + tx * 0.5, 24, 37 + tx, 19, 'L')
   g.ellipse(19, 29, 9, 7, 'S', 's')
   g.ellipse(18, 31, 5, 4, 'W', 'w')
   g.ellipse(12, 37, 3, 1.4, 'S', 's').ellipse(24, 37, 3, 1.4, 'S', 's')
-  g.ellipse(10, 11, 3.5, 3.5, 'S', 's').ellipse(20, 10, 3.5, 3.5, 'S', 's')
-  g.ellipse(10, 11, 1.8, 1.8, 'P').ellipse(20, 10, 1.8, 1.8, 'P')
+  g.ellipse(10, 11, 3.5, 3.5, 'S', 's').ellipse(20, 10 + ear, 3.5, 3.5, 'S', 's')
+  g.ellipse(10, 11, 1.8, 1.8, 'P').ellipse(20, 10 + ear, 1.8, 1.8, 'P')
   g.ellipse(15, 19, 7, 6, 'S', 's')
   g.ellipse(8, 21, 2.5, 2, 'S', 's')
   g.rect(9, 17, 20, 18, 'L')
@@ -333,7 +360,7 @@ function byterat(): Art {
   g.set(12, 17, 'W').set(17, 17, 'W')
   g.set(6, 21, 'P')
   g.stamp(10, 23, ['K.K', '.K.'])
-  g.set(34, 32, 'Y').set(37, 24, 'Y').set(37, 18, 'Y')
+  g.set(34, 32, 'Y').set(37 + tx * 0.5, 24, 'Y').set(37 + tx, 18, 'Y')
   return {
     pixels: g.toPixels(),
     palette: { K, S: '#7088b0', s: '#4a5e88', W: '#e8eef8', w: '#b8c4d8', P: '#f0a0b8', L: '#40e0f0', Y: '#f8d040' },
@@ -343,8 +370,9 @@ function byterat(): Art {
 function byteratBack(): Pixels {
   const g = grid()
   // the ethernet tail loops out behind, plug and all
-  g.line(13, 33, 5, 31, 'L').line(5, 31, 3, 23, 'L')
-  g.rect(2, 20, 4, 22, 'Y')
+  const tx = cyc([0, -1, -2, -1] as const)
+  g.line(13, 33, 5, 31, 'L').line(5, 31, 3 + tx, 23, 'L')
+  g.rect(2 + tx, 20, 4 + tx, 22, 'Y')
   g.ellipse(21, 29, 9, 7, 'S', 's')
   g.ellipse(14, 37, 3, 1.4, 's').ellipse(26, 37, 3, 1.4, 'S', 's')
   g.ellipse(14, 10, 3.5, 3.5, 'S', 's').ellipse(26, 10, 3.5, 3.5, 's')
@@ -358,20 +386,23 @@ function byteratBack(): Pixels {
 
 function beakerbun(): Art {
   const g = grid()
-  g.ellipse(17, 3, 1.6, 4.5, 'W', 'w').ellipse(23, 3, 1.6, 4.5, 'W', 'w')
+  // idle: bubbles rise through the liquid, which sloshes, and an ear twitches
+  const ear = cyc([0, 0, -1, 0] as const)
+  const rise = cyc([0, 1, 2, 3] as const)
+  g.ellipse(17, 3, 1.6, 4.5, 'W', 'w').ellipse(23, 3 + ear, 1.6, 4.5, 'W', 'w')
   g.ellipse(20, 9, 5.5, 4.5, 'W', 'w')
   g.ellipse(20, 29, 11, 9, 'L', 'l')
   g.rect(16, 14, 24, 21, 'L').rect(23, 14, 24, 21, 'l')
   // liquid fills the bottom of the flask
-  fill(g, 28, 'L', 'G')
-  fill(g, 28, 'l', 'g')
+  fill(g, 28 + cyc([0, 0, 1, 0] as const), 'L', 'G')
+  fill(g, 28 + cyc([0, 0, 1, 0] as const), 'l', 'g')
   g.rect(15, 13, 25, 13, 'w')
   g.outline(OL)
-  g.set(17, 1, 'P').set(17, 2, 'P').set(23, 1, 'P').set(23, 2, 'P')
+  g.set(17, 1, 'P').set(17, 2, 'P').set(23, 1 + ear, 'P').set(23, 2 + ear, 'P')
   g.stamp(17, 8, ['K....K'])
   g.stamp(19, 10, ['PK'])
   g.stamp(13, 22, ['W', 'W', 'W']).stamp(14, 25, ['W'])
-  g.stamp(18, 31, ['.W.', 'W.W', '.W.']).stamp(24, 34, ['W']).stamp(14, 33, ['W'])
+  g.stamp(18, 31 - rise * 0.5, ['.W.', 'W.W', '.W.']).stamp(24, 34 - rise, ['W']).stamp(14, 33 - (rise % 2), ['W'])
   return {
     pixels: g.toPixels(),
     palette: { K, W: '#ffffff', w: '#d0d8e0', P: '#f8a0b8', L: '#c8ecff', l: '#88c0e8', G: '#58c870', g: '#2f9048' },
@@ -389,8 +420,8 @@ function beakerbunBack(): Pixels {
   g.ellipse(21, 9, 5.5, 4.5, 'W', 'w')
   g.ellipse(20, 29, 11, 9, 'L', 'l')
   g.rect(16, 14, 24, 21, 'L').rect(16, 14, 17, 21, 'l')
-  fill(g, 26, 'L', 'G')
-  fill(g, 26, 'l', 'g')
+  fill(g, 26 + cyc([0, 0, 1, 0] as const), 'L', 'G')
+  fill(g, 26 + cyc([0, 0, 1, 0] as const), 'l', 'g')
   g.rect(15, 13, 25, 13, 'w')
   g.outline(OL)
   // a cotton tail pressed to the glass, and the light catching the far side
@@ -408,7 +439,8 @@ function riffin(): Art {
   g.ellipse(17, 13, 4.5, 4, 'W', 'w')
   g.poly([[21, 10], [30, 13], [21, 17]], 'O')
   g.rect(21, 12, 22, 15, 'Y')
-  g.ellipse(13, 26, 3, 5, 'D', 'd')
+  // idle: the free flipper strums
+  g.ellipse(13, 26 + cyc([0, 1, 2, 1] as const), 3, 5, 'D', 'd')
   // the guitar against its belly, its right flipper on the neck
   hold(g, 'riffin', 'front')
   g.ellipse(27.5, 24.5, 2.4, 4.2, 'D', 'd')
@@ -429,7 +461,7 @@ function riffinBack(): Pixels {
   g.ellipse(21, 12, 7, 6, 'D', 'd')
   g.ellipse(26, 13, 2.4, 3, 'W', 'w')
   g.poly([[27, 11], [33, 13], [27, 15]], 'O')
-  g.ellipse(12, 26, 3, 5, 'D', 'd')
+  g.ellipse(12, 26 + cyc([0, 1, 2, 1] as const), 3, 5, 'D', 'd')
   // the guitar neck sticks out past its shoulder, flipper wrapped round it
   hold(g, 'riffin', 'back')
   g.ellipse(28, 23.5, 2.6, 4.4, 'D', 'd')
@@ -450,7 +482,8 @@ function wicketoad(): Art {
   g.ellipse(13, 11, 4, 4, 'G', 'g').ellipse(25, 11, 4, 4, 'G', 'g')
   // a navy cap
   g.ellipse(19, 9, 6, 3, 'N', 'n').rect(19, 10, 28, 11, 'n')
-  g.ellipse(19, 22, 6, 2.6, 'L', 'l')
+  // idle: the throat sac swells and settles
+  g.ellipse(19, 22, 6, 2.6 + cyc([0, 0.6, 1.2, 0.6] as const), 'L', 'l')
   // the hand round the handle
   g.ellipse(30, 30, 3, 2.6, 'G', 'g')
   g.outline(OL)
@@ -470,7 +503,8 @@ function wicketoadBack(): Pixels {
   g.ellipse(20, 29, 12, 9, 'G', 'g')
   g.ellipse(11, 37, 4, 1.6, 'g').ellipse(29, 37, 4, 1.6, 'G', 'g')
   g.ellipse(20, 17, 10, 7, 'G', 'g')
-  g.ellipse(14, 11, 4, 4, 'G', 'g').ellipse(26, 11, 4, 4, 'G', 'g')
+  // idle: one eye bump twitches up
+  g.ellipse(14, 11, 4, 4, 'G', 'g').ellipse(26, 11 + cyc([0, 0, -1, 0] as const), 4, 4, 'G', 'g')
   // the cap from behind, with its strap gap
   g.ellipse(20, 10, 6.5, 3.4, 'N', 'n')
   g.ellipse(30, 29, 3, 2.6, 'G', 'g')
@@ -482,9 +516,12 @@ function wicketoadBack(): Pixels {
 
 function campfly(): Art {
   const g = grid()
+  // idle: the wings buzz and the lantern glow pulses
+  const buzz = cyc([0, -1.5, 0, -1.5] as const)
+  const glow = cyc([0, 0.8, 1.4, 0.8] as const)
   // glow
-  g.ellipse(25, 29, 11, 9, 'g')
-  g.ellipse(11, 12, 7, 4.5, 'V', 'v').ellipse(27, 11, 7, 4.5, 'V', 'v')
+  g.ellipse(25, 29, 11 + glow, 9 + glow, 'g')
+  g.ellipse(11, 12 + buzz * 0.5, 7, 4.5 + buzz, 'V', 'v').ellipse(27, 11 + buzz * 0.5, 7, 4.5 + buzz, 'V', 'v')
   g.ellipse(25, 29, 7.5, 6.5, 'Y', 'y', 'W')
   g.ellipse(18, 21, 6, 5, 'B', 'b')
   g.ellipse(15, 14, 6.5, 6, 'B', 'b')
@@ -507,14 +544,16 @@ function campfly(): Art {
 
 function campflyBack(): Pixels {
   const g = grid()
-  g.ellipse(15, 30, 11, 9, 'g')
+  const glow = cyc([0, 0.8, 1.4, 0.8] as const)
+  g.ellipse(15, 30, 11 + glow, 9 + glow, 'g')
   g.ellipse(15, 30, 7.5, 6.5, 'Y', 'y', 'W')
   g.ellipse(22, 21, 6, 5, 'B', 'b')
   g.ellipse(25, 14, 6.5, 6, 'B', 'b')
   g.line(25, 8, 24, 2, 'B').line(29, 9, 34, 3, 'B')
   g.ellipse(24, 2, 1.5, 1.5, 'Y').ellipse(34, 3, 1.5, 1.5, 'Y')
   // wings fold over its back from this side
-  g.ellipse(14, 17, 8, 4.5, 'V', 'v').ellipse(28, 20, 7, 4, 'V', 'v')
+  const buzz = cyc([0, -1.2, 0, -1.2] as const)
+  g.ellipse(14, 17, 8, 4.5 + buzz, 'V', 'v').ellipse(28, 20, 7, 4 + buzz, 'V', 'v')
   hold(g, 'campfly', 'back')
   g.line(26, 24, 31, 25, 'B')
   g.ellipse(31, 25, 1.4, 1.4, 'B')
@@ -524,13 +563,16 @@ function campflyBack(): Pixels {
 
 function megaphawk(): Art {
   const g = grid()
+  // idle: the wings lift and settle, the crest feathers sway, and the megaphone crackles
+  const lift = cyc([0, -1, -2, -1] as const)
+  const sway = cyc([0, 0.5, 1, 0.5] as const)
   // wings + body
-  g.poly([[8, 22], [1, 34], [12, 32]], 'D').poly([[30, 22], [38, 33], [27, 32]], 'd')
+  g.poly([[8, 22], [1, 34 + lift], [12, 32]], 'D').poly([[30, 22], [38, 33 + lift], [27, 32]], 'd')
   g.ellipse(19, 27, 10, 10, 'D', 'd')
   g.ellipse(19, 30, 6, 6.5, 'C', 'c')
   g.ellipse(14, 38, 3, 1.3, 'Y').ellipse(24, 38, 3, 1.3, 'Y')
   g.ellipse(17, 13, 8, 7.5, 'D', 'd')
-  g.poly([[12, 7], [9, 0], [16, 5]], 'D').poly([[16, 6], [16, 0], [20, 5]], 'd')
+  g.poly([[12, 7], [9 + sway, 0], [16, 5]], 'D').poly([[16, 6], [16 + sway, 0], [20, 5]], 'd')
   // megaphone beak
   g.poly([[23, 11], [37, 6], [37, 21], [23, 17]], 'W')
   g.poly([[23, 15], [37, 15], [37, 21], [23, 17]], 'w')
@@ -539,7 +581,7 @@ function megaphawk(): Art {
   g.rect(36, 7, 37, 20, 'R')
   g.ellipse(17, 12, 2.4, 2.4, 'W').set(18, 12, 'K').set(18, 13, 'K')
   g.line(13, 9, 19, 10, 'K')
-  for (const [x, y] of [[38, 4], [39, 12], [38, 22]]) g.set(x, y, 'Y')
+  if (PHASE % 2 === 0) for (const [x, y] of [[38, 4], [39, 12], [38, 22]]) g.set(x, y, 'Y')
   return {
     pixels: g.toPixels(),
     palette: { K, D: '#8a5430', d: '#5e361c', C: '#f4e2c4', c: '#d8c09c', W: '#f8f8f4', w: '#c8ccd8', R: '#e0383e', Y: '#f8c030' },
@@ -551,9 +593,10 @@ function megaphawkBack(): Pixels {
   // tail fan
   g.poly([[13, 34], [27, 34], [24, 40], [16, 40]], 'd')
   g.ellipse(20, 27, 10, 10, 'D', 'd')
-  // folded wings down its back, primaries crossed at the tail
-  g.poly([[10, 20], [19, 24], [17, 37], [8, 33]], 'd')
-  g.poly([[30, 20], [21, 24], [24, 37], [32, 33]], 'D')
+  // folded wings down its back, primaries crossed at the tail (they shift as it breathes)
+  const lift = cyc([0, -0.5, -1, -0.5] as const)
+  g.poly([[10, 20 + lift], [19, 24], [17, 37], [8, 33 + lift]], 'd')
+  g.poly([[30, 20 + lift], [21, 24], [24, 37], [32, 33 + lift]], 'D')
   g.ellipse(14, 38, 3, 1.3, 'Y').ellipse(26, 38, 3, 1.3, 'Y')
   g.ellipse(21, 13, 8, 7.5, 'D', 'd')
   g.poly([[17, 7], [15, 0], [21, 5]], 'D').poly([[22, 6], [23, 0], [26, 6]], 'd')
@@ -580,8 +623,10 @@ function stitchick(): Art {
   g.outline(OL)
   g.rect(14, 29, 26, 29, 'K')
   g.line(17, 25, 17, 30, 'W').line(23, 25, 23, 30, 'W')
-  g.ellipse(15, 18, 1.8, 2.2, 'K').ellipse(25, 18, 1.8, 2.2, 'K')
-  g.set(15, 17, 'W').set(25, 17, 'W')
+  // idle: it glances one way, then the other
+  const look = cyc([0, 1, 0, -1] as const)
+  g.ellipse(15 + look * 0.6, 18, 1.8, 2.2, 'K').ellipse(25 + look * 0.6, 18, 1.8, 2.2, 'K')
+  g.set(15 + look * 0.6, 17, 'W').set(25 + look * 0.6, 17, 'W')
   g.poly([[18, 20], [22, 20], [20, 23]], 'O')
   g.set(11, 21, 'P').set(29, 21, 'P')
   return {
@@ -598,7 +643,8 @@ function stitchickBack(): Pixels {
   g.poly([[24, 15], [31, 15], [28, 27], [24, 29]], 'h')
   g.poly([[7, 27], [33, 27], [32, 36], [8, 36]], 'H')
   g.rect(26, 27, 32, 36, 'h')
-  g.ellipse(14, 38, 2.5, 1.3, 'O').ellipse(26, 38, 2.5, 1.3, 'O')
+  // idle: it shifts its weight, tapping one foot
+  g.ellipse(14, 38, 2.5, 1.3, 'O').ellipse(26, 38 + cyc([0, -0.8, 0, 0] as const), 2.5, 1.3, 'O')
   hold(g, 'stitchick', 'back')
   g.ellipse(32, 23, 2.6, 3.6, 'Y', 'y')
   g.outline(OL)
@@ -608,9 +654,11 @@ function stitchickBack(): Pixels {
 
 function diplomoth(): Art {
   const g = grid()
-  g.ellipse(10, 15, 9, 9, 'M', 'm').ellipse(30, 15, 9, 9, 'M', 'm')
-  g.ellipse(11, 29, 7, 6, 'M', 'm').ellipse(29, 29, 7, 6, 'M', 'm')
-  g.ellipse(10, 15, 4, 4, 'V', 'v').ellipse(30, 15, 4, 4, 'V', 'v')
+  // idle: the wings flutter, narrowing as they tilt toward you
+  const f = cyc([0, -0.8, -1.6, -0.8] as const)
+  g.ellipse(10 - f * 0.5, 15, 9 + f, 9, 'M', 'm').ellipse(30 + f * 0.5, 15, 9 + f, 9, 'M', 'm')
+  g.ellipse(11, 29, 7 + f * 0.5, 6, 'M', 'm').ellipse(29, 29, 7 + f * 0.5, 6, 'M', 'm')
+  g.ellipse(10 - f * 0.5, 15, 4 + f * 0.4, 4, 'V', 'v').ellipse(30 + f * 0.5, 15, 4 + f * 0.4, 4, 'V', 'v')
   g.ellipse(20, 24, 4, 10, 'G', 'g')
   g.ellipse(20, 15, 6, 3, 'W', 'w')
   g.ellipse(20, 10, 5, 4.5, 'G', 'g')
@@ -631,9 +679,10 @@ function diplomoth(): Art {
 function diplomothBack(): Pixels {
   const g = grid()
   // wings spread, seen from above and behind: the paler underside pattern
-  g.ellipse(10, 16, 9, 9, 'M', 'm').ellipse(30, 15, 9, 9, 'M', 'm')
-  g.ellipse(11, 29, 7, 6, 'm').ellipse(29, 29, 7, 6, 'M', 'm')
-  g.ellipse(10, 16, 2.6, 2.6, 'v').ellipse(30, 15, 2.6, 2.6, 'v')
+  const f = cyc([0, -0.8, -1.6, -0.8] as const)
+  g.ellipse(10 - f * 0.5, 16, 9 + f, 9, 'M', 'm').ellipse(30 + f * 0.5, 15, 9 + f, 9, 'M', 'm')
+  g.ellipse(11, 29, 7 + f * 0.5, 6, 'm').ellipse(29, 29, 7 + f * 0.5, 6, 'M', 'm')
+  g.ellipse(10 - f * 0.5, 16, 2.6, 2.6, 'v').ellipse(30 + f * 0.5, 15, 2.6, 2.6, 'v')
   g.ellipse(20, 24, 4, 10, 'G', 'g')
   g.ellipse(21, 15, 6, 3, 'W', 'w')
   g.ellipse(21, 10, 5, 4.5, 'G', 'g')
@@ -653,12 +702,17 @@ function datadillo(): Art {
   for (let x = 12; x <= 32; x += 5) g.line(x, 15, x + 1, 35, 'a')
   g.ellipse(8, 29, 6, 5, 'S', 's')
   g.ellipse(6, 22, 2, 3, 'S', 's')
-  g.line(35, 30, 39, 33, 'A', 2)
+  // idle: the tail flicks and a pulse runs along the circuit lines
+  g.line(35, 30, 39, 33 + cyc([0, -1, -1, 0] as const), 'A', 2)
   g.ellipse(12, 37, 2.5, 1.5, 'S', 's').ellipse(30, 37, 2.5, 1.5, 'S', 's')
   g.outline(OL)
   // circuit lines glowing across the plates
   g.line(17, 18, 17, 24, 'C').line(17, 24, 23, 24, 'C').line(23, 24, 23, 30, 'C').line(28, 17, 28, 22, 'C')
-  g.set(17, 18, 'W').set(23, 30, 'W').set(28, 17, 'W')
+  g.set(17, 18, 'W').set(23, 30, 'W').set(28, 17 + PHASE, 'W')
+  // the pulse travels down the line (the still frame shows none)
+  const pulse: Array<[number, number] | null> = [null, [17, 22], [20, 24], [23, 27]]
+  const at = pulse[PHASE]
+  if (at) g.set(at[0], at[1], 'W')
   g.set(6, 28, 'K').set(2, 31, 'P')
   return {
     pixels: g.toPixels(),
@@ -668,7 +722,7 @@ function datadillo(): Art {
 
 function datadilloBack(): Pixels {
   const g = grid()
-  g.line(6, 31, 1, 35, 'A', 2)
+  g.line(6, 31, 1, 35 + cyc([0, -1, -1, 0] as const), 'A', 2)
   g.ellipse(20, 25, 15, 12, 'A', 'a', 'Q')
   // plate bands curve over its back
   for (const y of [17, 22, 27, 32]) g.line(7, y + 1, 33, y - 1, 'a')
@@ -677,7 +731,7 @@ function datadilloBack(): Pixels {
   g.ellipse(10, 37, 2.5, 1.5, 's').ellipse(29, 37, 2.5, 1.5, 'S', 's')
   g.outline(OL)
   g.line(12, 19, 12, 25, 'C').line(12, 25, 20, 25, 'C').line(26, 18, 26, 29, 'C')
-  g.set(12, 19, 'W').set(26, 29, 'W')
+  g.set(12, 19 + PHASE * 2, 'W').set(26, 29 - PHASE * 3, 'W')
   return g.toPixels()
 }
 
@@ -714,6 +768,47 @@ function build(k: number): Record<string, CreatureArt> {
     out[id] = { pixels: fr.pixels, back: bk.pixels, palette: bk.palette }
   }
   RES = 1
+  return out
+}
+
+export const IDLE_FRAMES = 4
+const idleCache = new Map<string, { frames: Pixels[]; palette: Palette }>()
+/**
+ * A species' idle loop for one view: four frames of its own signature motion, shaded and
+ * outlined like the still art (frame 0 is the still). Built on first use and cached, so the
+ * site doesn't pay for every species' animation up front.
+ */
+export function idleFrames(id: string, k: 1 | 2, view: 'front' | 'back'): { frames: Pixels[]; palette: Palette } {
+  const key = `${id}:${k}:${view}`
+  const hit = idleCache.get(key)
+  if (hit) return hit
+  const [front, back] = builders[id]
+  const shade = (px: Pixels, pal: Palette) => (k > 1 ? formShade(px, pal, k + 1) : { pixels: px, palette: pal })
+  const [prevRes, prevPhase] = [RES, PHASE]
+  const frames: Pixels[] = []
+  let pal: Palette = {}
+  RES = k
+  try {
+    for (let p = 0; p < IDLE_FRAMES; p++) {
+      PHASE = p
+      const f = front()
+      const fs = shade(f.pixels, { ...f.palette, ...ITEM_PALETTE, ...pal })
+      const fr = selectiveOutline(fs.pixels, fs.palette)
+      pal = fr.palette
+      if (view === 'front') frames.push(fr.pixels)
+      else {
+        const bs = shade(back(), pal)
+        const bk = selectiveOutline(bs.pixels, bs.palette)
+        pal = bk.palette
+        frames.push(bk.pixels)
+      }
+    }
+  } finally {
+    RES = prevRes
+    PHASE = prevPhase
+  }
+  const out = { frames, palette: pal }
+  idleCache.set(key, out)
   return out
 }
 

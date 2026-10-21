@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useState, type RefObject } from 'react'
-import { creatureArt, creatureArtHi, CREATURE_SIZE } from '../../sprites/creatures'
+import { CREATURE_SIZE, idleFrames } from '../../sprites/creatures'
 import { pixelsToDataUrl } from '../../sprites/render'
 import type { Pixels } from '../../sprites/pixels'
 import { useSettings } from '../../systems/settings'
@@ -18,12 +18,12 @@ function idleStrip(id: SpeciesId, hi: boolean, view: 'front' | 'back'): string {
   const key = `${id}:${hi}:${view}`
   let url = stripCache.get(key)
   if (!url) {
-    const art = (hi ? creatureArtHi : creatureArt)[id]
-    const px = view === 'back' ? art.back : art.pixels
+    // each species' own idle motion (tail, ears, wings…), with the breath on top:
     // rest → up → further up → up (looping)
+    const { frames: own, palette } = idleFrames(id, hi ? 2 : 1, view)
     const lift = hi ? [0, 2, 3, 2] : [0, 1, 1, 1]
-    const frames = lift.map((d) => breathe(px, d))
-    url = pixelsToDataUrl(frames[0].map((_, y) => frames.map((f) => f[y]).join('')), art.palette)
+    const frames = lift.map((d, i) => breathe(own[i], d))
+    url = pixelsToDataUrl(frames[0].map((_, y) => frames.map((f) => f[y]).join('')), palette)
     stripCache.set(key, url)
   }
   return url

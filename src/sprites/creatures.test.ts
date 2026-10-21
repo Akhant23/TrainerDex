@@ -4,7 +4,7 @@
  * frames of three layers, and every rideable mount has a saddle on every frame.
  */
 import { describe, expect, it } from 'vitest'
-import { creatureArtHi, creatureArt } from './creatures'
+import { creatureArtHi, creatureArt, CREATURE_SIZE, idleFrames, IDLE_FRAMES } from './creatures'
 import { HOLDS, ITEM_PALETTE } from './held'
 import { flightArt, FLYERS, FLIGHT_H, FLIGHT_W, RIDEABLE } from './flight'
 import { validate } from './pixels'
@@ -92,5 +92,20 @@ describe('pixel weight', () => {
     const row = g.toPixels()[9] // fine row through the middle of the square
     // left edge: two fine outline pixels, then the fill
     expect(row.slice(4, 8)).toBe('KKAA')
+  })
+})
+
+describe('species idle animations', () => {
+  it('every species has its own idle: frame 0 is the still, and the loop actually moves', () => {
+    for (const id of Object.keys(creatureArt))
+      for (const k of [1, 2] as const)
+        for (const view of ['front', 'back'] as const) {
+          const art = (k === 1 ? creatureArt : creatureArtHi)[id]
+          const { frames, palette } = idleFrames(id, k, view)
+          expect(frames, `${id} ${k}x ${view}`).toHaveLength(IDLE_FRAMES)
+          expect(frames[0], `${id} ${k}x ${view} still`).toEqual(view === 'front' ? art.pixels : art.back)
+          expect(new Set(frames.map((f) => f.join('\n'))).size, `${id} ${k}x ${view} moves`).toBeGreaterThan(1)
+          for (const f of frames) expect(validate(f, palette, CREATURE_SIZE * k, CREATURE_SIZE * k), id).toEqual([])
+        }
   })
 })
