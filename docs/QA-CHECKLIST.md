@@ -62,5 +62,9 @@ Use a 1280×800 desktop window and a 375×812 phone viewport.
     stone one; no dark outline around platforms.
 13. **Overworld scene**: walk the plaza: buildings occlude walkers and flyers behind them, the
     camera follows, lighting doesn't jump near buildings.
-14. **Reduced motion**: Settings → reduced motion. No camera moves, short effect timings, no
+14. **Walkers**: in the plaza, walkers are ~1½ tiles tall with big heads; name tags sit just
+    above them; walk each direction (left and right show different sides of the jersey).
+15. **Charged move + dimming**: OVERCLOCK: long charge with the background dimmed behind the
+    battlers (HUD and creatures not dimmed), quick throw, dim gone before the HP drains.
+16. **Reduced motion**: Settings → reduced motion. No camera moves, short effect timings, no
     gestures or idles.

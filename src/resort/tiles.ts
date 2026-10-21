@@ -199,13 +199,30 @@ function suggestionBox(): Prop {
   return { px: g.outline().toPixels(), anchorX: 8 }
 }
 
-/** BW's round town tree: a short trunk under a big layered canopy. */
+/**
+ * BW's round town tree: a short trunk under a dense canopy. Gen V foliage is many small leaf
+ * clumps, each lit on its upper left and shaded below, with a scalloped edge, rather than a few
+ * big blobs; the underside is darker where the canopy shades itself.
+ */
 function roundTree(): Prop {
   const g = grid(32, 46)
   g.rect(13, 32, 18, 45, 't').rect(16, 32, 18, 45, 'u')
-  g.ellipse(15.5, 20, 15, 14, 'e', '3', 'E')
-  g.ellipse(9, 14, 7, 6, 'E', 'e').ellipse(22, 13, 7, 6, 'e', '3').ellipse(15, 8, 8, 6, 'E', 'e')
-  g.ellipse(15.5, 28, 12, 5, '3', 'N')
+  // the canopy's mass, then its shaded underside
+  g.ellipse(15.5, 20, 15, 14, 'e', '3')
+  g.ellipse(15.5, 28, 12.5, 5, '3', 'N')
+  // clumps, back row first: each a small lit ball with a dark lower rim
+  const clumps: Array<[number, number, number]> = [
+    [8, 9, 4.2], [15.5, 6.5, 4.6], [23, 9, 4.2],
+    [4.5, 16, 4], [11, 14, 4.4], [19, 13.5, 4.4], [26.5, 16, 4],
+    [6, 23, 4.2], [13, 21, 4.6], [20.5, 21, 4.6], [27, 23, 3.8],
+    [10, 27, 3.8], [17, 27.5, 4], [23.5, 27, 3.6],
+  ]
+  for (const [x, y, r] of clumps) {
+    const low = y > 24
+    g.ellipse(x, y, r, r * 0.9, low ? 'e' : 'E', low ? 'N' : '3', low ? undefined : 'g')
+  }
+  // a few leaf-tip highlights on the lit side
+  for (const [x, y] of [[7, 7], [14, 4], [10, 12], [17, 11], [4, 14], [12, 19], [19, 19], [24, 7]]) g.set(x, y, 'g')
   return { px: g.outline().toPixels(), anchorX: 16 }
 }
 

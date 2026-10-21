@@ -55,6 +55,8 @@ interface View {
   tempo: number
   /** attack poses, for species that have them (battle/poses.ts) */
   pose: [CreaturePose | null, CreaturePose | null]
+  /** how far the battle background is dimmed for the current move (0 = not at all) */
+  dim: number
 }
 
 export interface FightOpponent {
@@ -109,6 +111,7 @@ export default function Fight({
     cam: null,
     tempo: 1,
     pose: [null, null],
+    dim: 0,
   }))
   const viewRef = useRef(view)
   viewRef.current = view
@@ -203,6 +206,11 @@ export default function Fight({
             if (run.motion !== 'none') animate(e.side, run.motion)
             sfx(mv.power ? 'select' : 'cursor')
             const timers: number[] = []
+            // BW dims the background behind the battlers for some specials (STAGING in fx.ts)
+            if (run.dim) {
+              const d = run.dim
+              timers.push(window.setTimeout(() => patch({ dim: d.amount }), d.fromMs), window.setTimeout(() => patch({ dim: 0 }), d.toMs))
+            }
             if (!reducedMotion && (mv.power > 0 || mv.effect.kind === 'target')) timers.push(window.setTimeout(() => patch({ cam: foe }), Math.max(0, run.impactMs - 260)))
             // a wind-up and a strike frame, for the species that have them
             const species = st.sides[e.side].team[viewRef.current.active[e.side]]?.species
@@ -211,7 +219,8 @@ export default function Fight({
             await run.done
             timers.forEach((t) => window.clearTimeout(t))
             setPose(e.side, null)
-            patch({ acting: null, cam: null })
+            // everything the move changed goes back, even if a timer never fired
+            patch({ acting: null, cam: null, dim: 0 })
             // the camera settles back before the damage
             await wait(reducedMotion ? 0 : 200, false)
             break
@@ -523,6 +532,8 @@ function Scene({ battle, view, encounter, look, myLook, arena, fxCanvas, onSkip 
         {/* platforms */}
         <div className="platform" style={{ left: '70%', top: '44%', width: '40%', height: '13%', backgroundImage: `url(${platformUrl(platformKind(arena))})` }} />
         <div className="platform" style={{ left: '26%', top: '88%', width: '46%', height: '15%', backgroundImage: `url(${platformUrl(platformKind(arena))})` }} />
+        {/* background dimming for some specials: over the scenery and platforms, under the battlers */}
+        <div aria-hidden className="battle-dim" style={{ opacity: view.dim }} />
 
         {/* opponent trainer */}
         {(view.trainer === 'intro' || view.trainer === 'defeated' || view.trainer === 'victorious') && (

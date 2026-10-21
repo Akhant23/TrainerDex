@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { moves, species, type MoveId, type SpeciesId } from './data'
-import { RECIPES, recipeLength, seeded, tempoFor } from './fx'
+import { RECIPES, recipeLength, seeded, STAGING, toReal, toRecipe, warpFor } from './fx'
 import { ATTACK_POSES, poseTimeline } from './poses'
 import { CREATURE_SIZE, gestureFrames, IDLE_GESTURES, idleFrames, poseFrame } from '../sprites/creatures'
 import { validate } from '../sprites/pixels'
@@ -16,14 +16,51 @@ const env = { from: [46, 82] as [number, number], to: [123, 38] as [number, numb
 describe('Gen V pacing', () => {
   it('every move lands and finishes within the ranges measured from the original', () => {
     for (const [id, r] of Object.entries(RECIPES)) {
-      const t = tempoFor(r, moves[id as MoveId].power)
-      const total = recipeLength(r, env) * t
+      const w = warpFor(id as MoveId, r, moves[id as MoveId].power)
+      const total = toReal(w, recipeLength(r, env))
       // measured: contact 1.3–1.7 s, projectile ~2 s, charged special ~3.8 s, status 2–3 s
       expect(total, id).toBeGreaterThanOrEqual(900)
       expect(total, id).toBeLessThanOrEqual(4000)
-      expect(r.impact * t, id).toBeLessThan(total + 1)
+      expect(toReal(w, r.impact), id).toBeLessThan(total + 1)
       if (moves[id as MoveId].power === 0) expect(total, id).toBeGreaterThanOrEqual(1500)
     }
+  })
+
+  it('charged moves get a long wind-up but a quick throw (Electro Ball: impact ~2.4 s)', () => {
+    const r = RECIPES.overclock
+    const w = warpFor('overclock', r, moves.overclock.power)
+    const impact = toReal(w, r.impact)
+    expect(impact).toBeGreaterThan(1900)
+    expect(impact).toBeLessThan(2700)
+    // the part after the wind-up runs at the normal pace, not the charge's
+    expect(toReal(w, r.impact) - toReal(w, w.a)).toBeLessThan(600)
+    for (const [id, st] of Object.entries(STAGING)) {
+      if (!st?.charge) continue
+      const rr = RECIPES[id as MoveId]
+      expect(toReal(warpFor(id as MoveId, rr, moves[id as MoveId].power), rr.impact), id).toBeGreaterThan(1300)
+    }
+  })
+
+  it('the warp is continuous and invertible', () => {
+    for (const id of Object.keys(STAGING) as MoveId[]) {
+      const w = warpFor(id, RECIPES[id], moves[id].power)
+      for (let t = 0; t <= 1400; t += 70) expect(toRecipe(w, toReal(w, t)), id).toBeCloseTo(t, 6)
+      expect(toReal(w, w.a + 1e-6) - toReal(w, w.a - 1e-6), id).toBeLessThan(0.01)
+    }
+  })
+
+  it('dimming is limited to chosen moves and ends within the move', () => {
+    const dimmed = Object.entries(STAGING).filter(([, st]) => st?.dim)
+    expect(dimmed.length).toBeGreaterThan(0)
+    expect(dimmed.length).toBeLessThan(Object.keys(RECIPES).length / 4)
+    for (const [id, st] of dimmed) {
+      const r = RECIPES[id as MoveId]
+      expect(st!.dim!.from, id).toBeLessThan(st!.dim!.to)
+      expect(st!.dim!.to, id).toBeLessThanOrEqual(recipeLength(r, env))
+      expect(st!.dim!.amount, id).toBeLessThanOrEqual(0.5)
+    }
+    // BASS DROP darkens the screen itself: it must not be dimmed on top
+    expect(STAGING.bassDrop?.dim).toBeUndefined()
   })
 })
 

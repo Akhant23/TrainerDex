@@ -600,7 +600,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         const el = tagRefs.current.get(c.id)
         if (!el) continue
         const p = project(cam, c.x * TILE + 8, c.y * TILE + 14, viewH.current)
-        el.style.transform = `translate(${p.x * k2}px, ${(p.y - 40 * p.s) * k2}px) translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.1, p.s))})`
+        el.style.transform = `translate(${p.x * k2}px, ${(p.y - 31 * p.s) * k2}px) translate(-50%, -100%) scale(${Math.max(0.75, Math.min(1.1, p.s))})`
         el.style.opacity = p.y < 0 || p.y > viewH.current + 20 ? '0' : '1'
       }
     }

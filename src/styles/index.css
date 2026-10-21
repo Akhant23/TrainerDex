@@ -775,6 +775,13 @@ body {
 .battle-cam {
   transition: transform 320ms cubic-bezier(0.3, 0.7, 0.4, 1);
 }
+.battle-dim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgb(10 10 26);
+  transition: opacity 180ms steps(3);
+}
 .battle-hud {
   position: absolute;
   inset: 0;

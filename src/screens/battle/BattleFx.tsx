@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { blit, buildLayers, RECIPES, S, seeded, tempoFor, type FxEnv, type Layer, type Motion } from '../../battle/fx'
+import { blit, buildLayers, RECIPES, S, seeded, STAGING, toReal, toRecipe, warpFor, type FxEnv, type Layer, type Motion, type Warp } from '../../battle/fx'
 import { moves, type MoveId } from '../../battle/data'
 
 /** Where each side's creature sits on the battle field (fractions of its width and height). */
@@ -16,8 +16,11 @@ export interface FxRun {
   motion: Motion
   /** ms from the start (real time) until the hit lands */
   impactMs: number
-  /** how much the recipe is stretched to Gen V pacing (1 with reduced motion) */
+  /** how much the recipe is stretched to Gen V pacing (1 with reduced motion); for charged
+   * moves, the wind-up's stretch (it drives the battler's cast motion) */
   tempo: number
+  /** background dimming for this move, in real ms (none with reduced motion) */
+  dim: { fromMs: number; toMs: number; amount: number } | null
 }
 
 /**
@@ -48,8 +51,11 @@ export function useBattleFx(reducedMotion: boolean) {
       const recipe = RECIPES[move]
       const cv = canvasRef.current
       const ctx = cv?.getContext('2d')
-      const tempo = reducedMotion ? 1 : tempoFor(recipe, moves[move].power)
-      if (!cv || !ctx) return { impact: Promise.resolve(), done: Promise.resolve(), motion: recipe.motion, impactMs: 0, tempo }
+      const warp: Warp = reducedMotion ? { a: 0, k1: 1, k2: 1 } : warpFor(move, recipe, moves[move].power)
+      const tempo = warp.k1
+      const st = STAGING[move]?.dim
+      const dim = !reducedMotion && st ? { fromMs: toReal(warp, st.from) / qa.slow, toMs: toReal(warp, st.to) / qa.slow, amount: st.amount } : null
+      if (!cv || !ctx) return { impact: Promise.resolve(), done: Promise.resolve(), motion: recipe.motion, impactMs: 0, tempo, dim }
       const box = cv.parentElement?.getBoundingClientRect()
       const W = DS_W
       const H = Math.max(120, Math.round(DS_W * ((box?.height || 192) / (box?.width || 256))))
@@ -84,7 +90,7 @@ export function useBattleFx(reducedMotion: boolean) {
         },
       }
       const frame = () => {
-        const t = ((performance.now() - start) * qa.slow) / tempo
+        const t = toRecipe(warp, (performance.now() - start) * qa.slow)
         ctx.clearRect(0, 0, W, H)
         ctx.imageSmoothingEnabled = false
         for (const l of layers) {
@@ -103,9 +109,9 @@ export function useBattleFx(reducedMotion: boolean) {
         run.raf = requestAnimationFrame(frame)
       }
       run.raf = requestAnimationFrame(frame)
-      run.timers.push(window.setTimeout(resolveImpact, (impactAt * tempo) / qa.slow + 60), window.setTimeout(() => (current.current === run ? stop() : resolveDone()), (total * tempo) / qa.slow + 120))
+      run.timers.push(window.setTimeout(resolveImpact, toReal(warp, impactAt) / qa.slow + 60), window.setTimeout(() => (current.current === run ? stop() : resolveDone()), toReal(warp, total) / qa.slow + 120))
       current.current = run
-      return { impact, done, motion: reducedMotion ? 'none' : recipe.motion, impactMs: (impactAt * tempo) / qa.slow, tempo }
+      return { impact, done, motion: reducedMotion ? 'none' : recipe.motion, impactMs: toReal(warp, impactAt) / qa.slow, tempo, dim }
     },
     [reducedMotion, stop],
   )

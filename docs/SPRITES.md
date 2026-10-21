@@ -12,15 +12,14 @@ staff and every visitor's avatar share one Black & White–style model. Nothing 
   blinking head) so `src/ui/CharacterSprite.tsx` can animate them like BW: breathing, a head bob,
   hair sway, swinging arms, random blinks, a fist-pump victory pose, and a nod on the VS screen. Animation is off when the
   visitor turns on reduced motion.
-- **Overworld walker** — `src/sprites/overworld.ts` draws a BW-style walker from the same
-  appearance: 4 directions × 3 frames, used in the resort and the Medal Box room. They're built to
-  read as older teens and young adults, not chibi kids: about 3¼ heads tall, a head narrower than
-  the shoulders, a short neck, a torso tapering to the waist, arms reaching mid-thigh with a bend
-  at the elbow, longer legs, and smaller eyes with brows and a nose. Every view (front, back,
-  profile, riding) shares the same proportion constants. Arms carry a thin inner outline where they
-  cross the body; the thick outline is only on the outer silhouette. The art is 48×64 and shown at
-  half size, so walkers keep the same fine detail as the battle sprites.
-  The idle animation is only for the battle/profile sprite — walkers stand still like in BW.
+- **Overworld walker**: `src/sprites/overworld.ts` draws a BW-style walker from the same
+  appearance: 4 directions × 3 frames, used in the resort, the Medal Box room and the Avatar
+  Studio. Built to Gen V's compact overworld proportions, measured from Pokémon Black footage
+  (docs/GEN5-SPRITES.md): about 24 world px tall, the head and hair about half of that and sitting
+  straight on the shoulders, a short torso, stub arms, short legs, and a face that's just two tall
+  eyes with a glint. Heads are drawn in their own design space and re-rasterised at these
+  proportions (`HeadSpace`), so every hair style and hat matches across directions. Left and right
+  profiles each show their own side's details. The art is 48×64 and shown at half size.
 - **Proportions** — BW trainers carry their heads low: the head, hair and hat layers are dropped
   `NECK_DROP` (3 px) onto the shoulders, so the chin tucks onto the collar and only a sliver of neck
   shows under the jaw (front, side and back views alike).
@@ -95,7 +94,7 @@ whole device pixels: at even scales, or at any scale on a high-density screen.
 
 | Context | What's used | Size |
 |---|---|---|
-| Map (walking) | overworld walker, 4 directions × 3 frames | 48×64 art, shown at 24×32 |
+| Map (walking) | overworld walker, 4 directions × 3 frames | 48×64 art frame (character ~48 art px tall), shown at 24×32 |
 | Profile, menu, Trainer Card | battle sprite, `idle` (breathing, blinking) | 80×120 (or 2×) |
 | Trainer Card ID photo, messages | `portrait`, a head-and-shoulders crop | 40×46 (or 2×) |
 | Avatar Studio turnaround | `idle` → `side` → `back` → `side` mirrored | 80×120 at 2× |

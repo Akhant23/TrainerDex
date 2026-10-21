@@ -85,19 +85,70 @@ Measured against White 2 footage (GEN5-TIMING.md) and now matched in `Fight.tsx`
 - Battle platforms are opaque pixel-art discs matched to the ground (grass, stone, floor), as in
   BW, replacing translucent banded pads with a dark outline.
 
+## Third pass (compact walkers, staging, poses, idles, scenery)
+
+### Attack poses by species
+
+| Species | Status | Pose |
+|---|---|---|
+| Byterat | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | crouch, ears flat → bite |
+| Megaphawk | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | wings up → megaphone blast |
+| Gavelion | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | mane bristles → roar |
+| Helixor | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED (subtle) | coils → springs up, tongue out |
+| Brushfox | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | tail cocked → brush sweep |
+| Subwoof | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED (subtle) | cone draws in → pushes out |
+| Strikaroo | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | tail high → kick |
+| Beakerbun | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED (subtle) | liquid churns → bubbles burst |
+| Riffin | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | flipper up → strum |
+| Wicketoad | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | sac swells → empties |
+| Campfly | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | lantern blazes → wings snap down |
+| Diplomoth | SPECIES-SPECIFIC POSE IMPLEMENTED AND VISUALLY CHECKED | wings spread → fold for the gust |
+| Hootour | FALLBACK ANIMATION USED, ARTWORK REQUIRED | the held flag would have to move with the wing |
+| Stitchick | FALLBACK ANIMATION USED, ARTWORK REQUIRED | needle and thread in the wing |
+| Datadillo | FALLBACK ANIMATION USED, ARTWORK REQUIRED | a rolled-up ball form |
+
+All poses are original art drawn for this site, checked in enlarged previews
+(`docs/qa/creature-poses-gestures.png`, `creature-poses-batch2.png`); there are no original-game
+attack frames for these creatures to compare against.
+
+### Idle animations
+
+Repetition came mainly from the base loop playing uninterrupted (only 4 species had gestures),
+not from the loop length. **Artwork:** loops are still 4 frames; no frames were duplicated to
+fake length. **Scheduling:** 12 of 15 species now blink now and then (8 added this pass) and 4 also
+have a bigger gesture; every sprite loops at its own speed and phase; gestures yield while that
+creature acts and resume after. Beakerbun, Diplomoth and Datadillo have no blink (their eyes are
+1–2 px marks that can't close convincingly).
+
+### Overworld (vs Accumula Town, Route 1, a Pokémon Center)
+
+| Aspect | Result |
+|---|---|
+| Walker proportions | Redesigned to BW's compact build (GEN5-SPRITES.md). Measured from footage: approximate. |
+| Tree foliage | Rebuilt as dense, scalloped leaf clumps lit upper-left (was three big blobs). Compared visually. |
+| Building contact shading | Added: two stepped bands along each building's base outdoors. Compared visually. |
+| Character-to-building scale | Walkers ~1½ tiles; doors and buildings unchanged. Consistent with the footage. |
+| Tile palette and seams | UNVERIFIED: not compared side by side; no change. |
+| Ledge shading | UNVERIFIED: the plaza has no ledges like Accumula's raised plaza. |
+
+### Battle backgrounds
+
+The backdrops are deliberately location-specific: each battle shows the real map behind it.
+They're not meant to reproduce particular BW environments, and they aren't claimed to.
+
+| Backdrop | Location | Kind | Compared |
+|---|---|---|---|
+| Reception | tower lobby (quick battles) | deliberate location-specific | platform only (BW indoor-style floor disc); horizon and palette UNVERIFIED |
+| Tower floors 1–5 | each floor's room | deliberate location-specific | platform only; UNVERIFIED |
+| Plaza | the resort plaza (visitor challenges) | deliberate location-specific | platform only (stone); UNVERIFIED |
+
+Foe platform at 44% of the field height and yours cut off by the bottom edge, as in the BW
+footage frames.
+
 ## Open gaps
 
-- **Poses and gestures for the other species.** Only the test set has them; the system is
-  validated, so extending it is per-species art work.
-- **Charged special moves** run shorter than BW's (Electro Ball lands at ~2.4 s; the slowest
-  recipe here lands at ~1.3 s), and BW's background dim for special moves isn't reproduced.
-- **Idle length.** Loops are still 4 frames; variation comes from gestures, per-sprite timing and
-  phase, not longer artwork.
-- **Overworld** (compared against Accumula Town, Route 1 and a Pokémon Center from a Black
-  longplay): camera tilt, depth sorting, contact shadows and character-to-building scale follow
-  the same principles. Not changed this pass: BW's softer ledge/building contact shading, denser
-  clustered tree foliage, and its walkers being chunkier than ours (ours were deliberately made
-  more adult). UNVERIFIED in detail: tile palette and seams side by side.
-- **Battle backgrounds** here are the real map behind the battle (reception, tower floors, plaza)
-  rather than BW's generic environments; only the platforms were compared and changed. Each
-  backdrop's horizon and palette are UNVERIFIED against a specific BW environment.
+- Original BW overworld sprite sheets weren't reachable; walker numbers are footage-measured.
+- Poses for Hootour, Stitchick and Datadillo need new artwork.
+- Which BW moves dim the background was only observed for Electro Ball.
+- Tile palette and seam fidelity, and each backdrop's horizon and palette, are unverified.
+- Riders are mirrored when flying right (the walk cycle draws each side; the riding pose doesn't).

@@ -40,6 +40,8 @@ let POSE: 'windup' | 'strike' | null = null
 /** An occasional idle gesture being drawn (see IDLE_GESTURES), and which of its frames. */
 let GESTURE: string | null = null
 let GFRAME = 0
+/** An attack pose's offset: `w` for the wind-up, `k` for the strike, 0 otherwise. */
+const pz = (w: number, k: number) => (POSE === 'windup' ? w : POSE === 'strike' ? k : 0)
 /** This gesture frame's value, or `rest` when another gesture (or none) is playing. */
 const gest = <T,>(id: string, steps: readonly T[], rest: T) => (GESTURE === id ? steps[GFRAME] : rest)
 
@@ -56,6 +58,7 @@ export interface IdleGesture {
  * blink where the species has eyes that can close, and one bigger, rarer gesture. Only the test
  * species have them so far; the rest keep the plain loop.
  */
+const BLINK: IdleGesture = { id: 'blink', frames: 1, frameMs: 130, views: ['front'], weight: 3 }
 export const IDLE_GESTURES: Partial<Record<string, IdleGesture[]>> = {
   byterat: [
     { id: 'blink', frames: 1, frameMs: 130, views: ['front'], weight: 3 },
@@ -73,6 +76,15 @@ export const IDLE_GESTURES: Partial<Record<string, IdleGesture[]>> = {
     { id: 'blink', frames: 1, frameMs: 130, views: ['front'], weight: 3 },
     { id: 'tongue', frames: 3, frameMs: 110, views: ['front'], weight: 2 },
   ],
+  // blinks only: eyes that close in their own art
+  brushfox: [BLINK],
+  subwoof: [BLINK],
+  strikaroo: [BLINK],
+  hootour: [BLINK],
+  riffin: [BLINK],
+  wicketoad: [BLINK],
+  campfly: [BLINK],
+  stitchick: [BLINK],
 }
 function grid() {
   return new HiGrid(CREATURE_SIZE, CREATURE_SIZE, RES)
@@ -164,7 +176,8 @@ function helixorPoints(): Array<[number, number]> {
   for (let i = 0; i <= 28; i++) {
     const t = i / 28
     // idle: the strand turns slowly, so the twist travels up its body
-    pts.push([20 + 9 * Math.sin(t * Math.PI * 2.2 + PHASE * 0.22), 36 - t * 24])
+    // attack: it coils lower for the wind-up and springs up for the strike
+    pts.push([20 + 9 * Math.sin(t * Math.PI * 2.2 + PHASE * 0.22), 36 - t * (24 + pz(-3, 2))])
   }
   return pts
 }
@@ -179,7 +192,7 @@ function helixor(): Art {
   g.rect(Math.round(hx) - 7, Math.round(hy) - 4, Math.round(hx) + 7, Math.round(hy) - 3, 'K')
   g.ellipse(hx - 3, hy - 3, 2.2, 2.2, 'L', 'l').ellipse(hx + 3, hy - 3, 2.2, 2.2, 'L', 'l')
   // tongue gesture: the forked tongue flicks out further
-  const tongue = gest('tongue', [2, 3.5, 1.5], 0)
+  const tongue = gest('tongue', [2, 3.5, 1.5], 0) + pz(-1, 4)
   g.line(hx, hy + 4, hx + 1, hy + 7 + tongue, 'R')
   g.outline(OL)
   if (GESTURE === 'blink') g.line(hx - 5, hy - 3, hx - 1, hy - 3, 'l').line(hx + 1, hy - 3, hx + 5, hy - 3, 'l')
@@ -208,9 +221,11 @@ function helixorBack(): Pixels {
 function brushfox(): Art {
   const g = grid()
   // idle: the paint-tipped tail sways
-  const tw = cyc([0, 0.5, 1, 0.5] as const)
-  g.ellipse(31 + tw * 0.5, 27, 6, 8, 'O', 'o')
-  g.ellipse(33 + tw, 20, 4, 4, 'V', 'v')
+  // attack: the brush tail cocks up and back, then sweeps forward and low
+  const tw = cyc([0, 0.5, 1, 0.5] as const) + pz(2, -2)
+  const ty = pz(-3, 3)
+  g.ellipse(31 + tw * 0.5, 27 + ty * 0.5, 6, 8, 'O', 'o')
+  g.ellipse(33 + tw, 20 + ty, 4, 4, 'V', 'v')
   g.ellipse(19, 29, 8, 7, 'O', 'o')
   g.ellipse(18, 31, 4, 4, 'W', 'w')
   g.rect(13, 34, 15, 38, 'O').rect(21, 34, 23, 38, 'o')
@@ -221,8 +236,8 @@ function brushfox(): Art {
   g.ellipse(17, 7, 6, 2.5, 'R', 'r')
   g.outline(OL)
   g.set(17, 4, 'K')
-  g.stamp(14, 15, ['WK', 'KK'])
-  g.stamp(21, 15, ['WK', 'KK'])
+  if (GESTURE === 'blink') g.stamp(14, 16, ['KK']).stamp(21, 16, ['KK'])
+  else g.stamp(14, 15, ['WK', 'KK']).stamp(21, 15, ['WK', 'KK'])
   g.stamp(17, 18, ['KK'])
   g.set(35, 30, 'V').set(36, 33, 'v').set(29, 37, 'V')
   return {
@@ -234,9 +249,10 @@ function brushfox(): Art {
 function brushfoxBack(): Pixels {
   const g = grid()
   // the paint-tipped tail curls up beside it
-  const tw = cyc([0, -0.5, -1, -0.5] as const)
-  g.ellipse(9 + tw * 0.5, 27, 6, 8, 'O', 'o')
-  g.ellipse(7 + tw, 19, 4, 4, 'V', 'v')
+  const tw = cyc([0, -0.5, -1, -0.5] as const) + pz(-2, 2)
+  const ty = pz(-3, 3)
+  g.ellipse(9 + tw * 0.5, 27 + ty * 0.5, 6, 8, 'O', 'o')
+  g.ellipse(7 + tw, 19 + ty, 4, 4, 'V', 'v')
   g.ellipse(21, 29, 8.5, 7.5, 'O', 'o')
   g.rect(15, 34, 17, 38, 'o').rect(23, 34, 25, 38, 'O')
   // ears from behind (no pink), the beret on top
@@ -254,7 +270,8 @@ function subwoof(): Art {
   g.rect(12, 37, 15, 38, 'B').rect(25, 37, 28, 38, 'B')
   g.rect(10, 20, 30, 36, 'D').rect(29, 20, 30, 36, 'd')
   // idle: the speaker cone pulses with the beat
-  const beat = cyc([0, 0.7, 0, 0.7] as const)
+  // attack: the cone draws in, then pushes out with the sound marks thrown wide
+  const beat = cyc([0, 0.7, 0, 0.7] as const) + pz(-1, 1.6)
   g.ellipse(20, 29, 5 + beat, 5 + beat, 'g', 'G')
   g.ellipse(20, 29, 2, 2, 'K')
   g.ellipse(11, 16, 3, 5, 'b').ellipse(29, 16, 3, 5, 'b')
@@ -263,11 +280,11 @@ function subwoof(): Art {
   g.line(12, 9, 20, 4, 'R', 2).line(20, 4, 28, 9, 'R', 2)
   g.ellipse(11, 12, 2.2, 3, 'R', 'r').ellipse(29, 12, 2.2, 3, 'R', 'r')
   g.outline(OL)
-  g.stamp(16, 12, ['WK', 'KK'])
-  g.stamp(23, 12, ['WK', 'KK'])
+  if (GESTURE === 'blink') g.stamp(16, 13, ['KK']).stamp(23, 13, ['KK'])
+  else g.stamp(16, 12, ['WK', 'KK']).stamp(23, 12, ['WK', 'KK'])
   g.stamp(19, 15, ['KK'])
   g.stamp(18, 17, ['K..K', '.KK.'])
-  const out = cyc([0, 1, 0, 1] as const)
+  const out = cyc([0, 1, 0, 1] as const) + pz(-1, 2)
   g.stamp(1 - out, 26, ['Y..', '.Y.', 'Y..']).stamp(36 + out, 26, ['..Y', '.Y.', '..Y'])
   return {
     pixels: g.toPixels(),
@@ -283,7 +300,7 @@ function subwoofBack(): Pixels {
   g.rect(13, 23, 27, 33, 'd')
   g.ellipse(20, 28, 2, 2, 'G', 'g')
   // a stubby wagging tail
-  g.ellipse(31 + cyc([0, 1, 0, -1] as const), 33, 2.4, 1.6, 'B', 'b')
+  g.ellipse(31 + cyc([0, 1, 0, -1] as const) + pz(1, -1), 33 + pz(-1, 0), 2.4, 1.6, 'B', 'b')
   g.ellipse(11, 16, 3, 5, 'b').ellipse(29, 16, 3, 5, 'B', 'b')
   g.ellipse(20, 13, 8, 7, 'B', 'b')
   g.line(12, 9, 20, 4, 'R', 2).line(20, 4, 28, 9, 'R', 2)
@@ -297,8 +314,8 @@ function subwoofBack(): Pixels {
 function strikaroo(): Art {
   const g = grid()
   // idle: the tail tip lifts and one ear twitches
-  const tl = cyc([0, -1, -2, -1] as const)
-  const ear = cyc([0, 0, -1, 0] as const)
+  const tl = cyc([0, -1, -2, -1] as const) + pz(-4, 2)
+  const ear = cyc([0, 0, -1, 0] as const) + pz(1, -1)
   g.line(12, 35, 3, 28 + tl, 'B', 3)
   g.ellipse(15, 37, 5, 1.6, 'B', 'b').ellipse(24, 37, 4, 1.6, 'B', 'b')
   g.ellipse(18, 26, 7, 9, 'J', 'j')
@@ -312,7 +329,8 @@ function strikaroo(): Art {
   g.outline(OL)
   holdInk(g, 'strikaroo', 'front')
   g.set(16, 3, 'P').set(16, 4, 'P').set(22, 2 + ear, 'P').set(22, 3 + ear, 'P')
-  g.stamp(18, 10, ['WK', 'KK'])
+  if (GESTURE === 'blink') g.stamp(18, 11, ['KK'])
+  else g.stamp(18, 10, ['WK', 'KK'])
   g.stamp(26, 13, ['K'])
   g.stamp(17, 29, ['KKK', '..K', '.K.', '.K.'])
   return {
@@ -324,7 +342,7 @@ function strikaroo(): Art {
 function strikarooBack(): Pixels {
   const g = grid()
   // the long tail props it up from behind
-  g.line(15, 34, 3, 38 + cyc([0, -0.5, -1, -0.5] as const), 'B', 3)
+  g.line(15, 34, 3, 38 + cyc([0, -0.5, -1, -0.5] as const) + pz(-4, 1), 'B', 3)
   g.ellipse(17, 37, 4, 1.6, 'b').ellipse(26, 37, 5, 1.6, 'B', 'b')
   g.ellipse(20, 26, 7.5, 9, 'J', 'j')
   g.rect(13, 23, 27, 24, 'Y')
@@ -347,8 +365,8 @@ function hootour(): Art {
   g.poly([[10, 13], [11, 4 + tuft], [16, 11]], 'H').poly([[30, 13], [29, 4 + tuft], [24, 11]], 'H')
   g.ellipse(20, 24, 11, 13, 'H', 'h')
   g.ellipse(20, 27, 7, 8, 'C', 'c')
-  g.ellipse(15, 18, 4, 4, 'W', 'w').ellipse(25, 18, 4, 4, 'W', 'w')
-  g.ellipse(15 + look, 18, 1.6, 1.6, 'K').ellipse(25 + look, 18, 1.6, 1.6, 'K')
+  if (GESTURE === 'blink') g.ellipse(15, 18, 4, 4, 'H', 'h').ellipse(25, 18, 4, 4, 'H', 'h')
+  else g.ellipse(15, 18, 4, 4, 'W', 'w').ellipse(25, 18, 4, 4, 'W', 'w').ellipse(15 + look, 18, 1.6, 1.6, 'K').ellipse(25 + look, 18, 1.6, 1.6, 'K')
   g.poly([[18, 21], [22, 21], [20, 25]], 'O')
   g.rect(10, 29, 30, 31, 'Y').rect(10, 31, 30, 31, 'y')
   g.rect(24, 31, 26, 36, 'Y')
@@ -358,7 +376,8 @@ function hootour(): Art {
   g.ellipse(32, 26, 3, 5.5, 'H', 'h')
   g.ellipse(31.5, 27.5, 1.6, 1.4, 'C')
   g.outline(OL)
-  g.set(14 + look, 17, 'W').set(24 + look, 17, 'W')
+  if (GESTURE === 'blink') g.line(12, 18, 18, 18, 'K').line(22, 18, 28, 18, 'K')
+  else g.set(14 + look, 17, 'W').set(24 + look, 17, 'W')
   g.stamp(16, 24, ['c.c', '.c.']).stamp(21, 26, ['c.c', '.c.'])
   return {
     pixels: g.toPixels(),
@@ -443,15 +462,16 @@ function byteratBack(): Pixels {
 function beakerbun(): Art {
   const g = grid()
   // idle: bubbles rise through the liquid, which sloshes, and an ear twitches
-  const ear = cyc([0, 0, -1, 0] as const)
-  const rise = cyc([0, 1, 2, 3] as const)
+  // attack: ears flatten while the liquid churns, then the bubbles burst up out of it
+  const ear = cyc([0, 0, -1, 0] as const) + pz(1.5, -1)
+  const rise = cyc([0, 1, 2, 3] as const) + pz(0, 5)
   g.ellipse(17, 3, 1.6, 4.5, 'W', 'w').ellipse(23, 3 + ear, 1.6, 4.5, 'W', 'w')
   g.ellipse(20, 9, 5.5, 4.5, 'W', 'w')
   g.ellipse(20, 29, 11, 9, 'L', 'l')
   g.rect(16, 14, 24, 21, 'L').rect(23, 14, 24, 21, 'l')
   // liquid fills the bottom of the flask
-  fill(g, 28 + cyc([0, 0, 1, 0] as const), 'L', 'G')
-  fill(g, 28 + cyc([0, 0, 1, 0] as const), 'l', 'g')
+  fill(g, 28 + cyc([0, 0, 1, 0] as const) + pz(-2, 1), 'L', 'G')
+  fill(g, 28 + cyc([0, 0, 1, 0] as const) + pz(-2, 1), 'l', 'g')
   g.rect(15, 13, 25, 13, 'w')
   g.outline(OL)
   g.set(17, 1, 'P').set(17, 2, 'P').set(23, 1 + ear, 'P').set(23, 2 + ear, 'P')
@@ -476,8 +496,8 @@ function beakerbunBack(): Pixels {
   g.ellipse(21, 9, 5.5, 4.5, 'W', 'w')
   g.ellipse(20, 29, 11, 9, 'L', 'l')
   g.rect(16, 14, 24, 21, 'L').rect(16, 14, 17, 21, 'l')
-  fill(g, 26 + cyc([0, 0, 1, 0] as const), 'L', 'G')
-  fill(g, 26 + cyc([0, 0, 1, 0] as const), 'l', 'g')
+  fill(g, 26 + cyc([0, 0, 1, 0] as const) + pz(-2, 1), 'L', 'G')
+  fill(g, 26 + cyc([0, 0, 1, 0] as const) + pz(-2, 1), 'l', 'g')
   g.rect(15, 13, 25, 13, 'w')
   g.outline(OL)
   // a cotton tail pressed to the glass, and the light catching the far side
@@ -496,12 +516,14 @@ function riffin(): Art {
   g.poly([[21, 10], [30, 13], [21, 17]], 'O')
   g.rect(21, 12, 22, 15, 'Y')
   // idle: the free flipper strums
-  g.ellipse(13, 26 + cyc([0, 1, 2, 1] as const), 3, 5, 'D', 'd')
+  // attack: the flipper rises high, then strums down hard
+  g.ellipse(13, 26 + cyc([0, 1, 2, 1] as const) + pz(-4, 3), 3, 5, 'D', 'd')
   // the guitar against its belly, its right flipper on the neck
   hold(g, 'riffin', 'front')
   g.ellipse(27.5, 24.5, 2.4, 4.2, 'D', 'd')
   g.outline(OL)
-  g.stamp(16, 12, ['KR', 'KK'])
+  if (GESTURE === 'blink') g.stamp(16, 13, ['KK'])
+  else g.stamp(16, 12, ['KR', 'KK'])
   return {
     pixels: g.toPixels(),
     palette: { K, D: '#2a2a3a', d: '#18181f', W: '#f8f8f4', w: '#c8ccd8', O: '#f07828', Y: '#f8d040', R: '#e04040', r: '#a02828', G: '#8a5a2a' },
@@ -517,7 +539,7 @@ function riffinBack(): Pixels {
   g.ellipse(21, 12, 7, 6, 'D', 'd')
   g.ellipse(26, 13, 2.4, 3, 'W', 'w')
   g.poly([[27, 11], [33, 13], [27, 15]], 'O')
-  g.ellipse(12, 26 + cyc([0, 1, 2, 1] as const), 3, 5, 'D', 'd')
+  g.ellipse(12, 26 + cyc([0, 1, 2, 1] as const) + pz(-4, 3), 3, 5, 'D', 'd')
   // the guitar neck sticks out past its shoulder, flipper wrapped round it
   hold(g, 'riffin', 'back')
   g.ellipse(28, 23.5, 2.6, 4.4, 'D', 'd')
@@ -539,12 +561,13 @@ function wicketoad(): Art {
   // a navy cap
   g.ellipse(19, 9, 6, 3, 'N', 'n').rect(19, 10, 28, 11, 'n')
   // idle: the throat sac swells and settles
-  g.ellipse(19, 22, 6, 2.6 + cyc([0, 0.6, 1.2, 0.6] as const), 'L', 'l')
+  // attack: the sac swells full for the wind-up and empties on the strike
+  g.ellipse(19, 22, 6 + pz(1, -1), 2.6 + cyc([0, 0.6, 1.2, 0.6] as const) + pz(2, -1), 'L', 'l')
   // the hand round the handle
   g.ellipse(30, 30, 3, 2.6, 'G', 'g')
   g.outline(OL)
-  g.ellipse(13, 12, 2.2, 2.2, 'W').ellipse(25, 12, 2.2, 2.2, 'W')
-  g.set(13, 12, 'K').set(14, 12, 'K').set(25, 12, 'K').set(26, 12, 'K')
+  if (GESTURE === 'blink') g.line(11, 12, 15, 12, 'K').line(23, 12, 27, 12, 'K')
+  else g.ellipse(13, 12, 2.2, 2.2, 'W').ellipse(25, 12, 2.2, 2.2, 'W').set(13, 12, 'K').set(14, 12, 'K').set(25, 12, 'K').set(26, 12, 'K')
   g.stamp(14, 19, ['K..........K', '.KKKKKKKKKK.'])
   g.line(29, 30, 31, 30, 'g')
   return {
@@ -560,7 +583,7 @@ function wicketoadBack(): Pixels {
   g.ellipse(11, 37, 4, 1.6, 'g').ellipse(29, 37, 4, 1.6, 'G', 'g')
   g.ellipse(20, 17, 10, 7, 'G', 'g')
   // idle: one eye bump twitches up
-  g.ellipse(14, 11, 4, 4, 'G', 'g').ellipse(26, 11 + cyc([0, 0, -1, 0] as const), 4, 4, 'G', 'g')
+  g.ellipse(14, 11 + pz(-1, 1), 4, 4, 'G', 'g').ellipse(26, 11 + cyc([0, 0, -1, 0] as const) + pz(-1, 1), 4, 4, 'G', 'g')
   // the cap from behind, with its strap gap
   g.ellipse(20, 10, 6.5, 3.4, 'N', 'n')
   g.ellipse(30, 29, 3, 2.6, 'G', 'g')
@@ -573,8 +596,9 @@ function wicketoadBack(): Pixels {
 function campfly(): Art {
   const g = grid()
   // idle: the wings buzz and the lantern glow pulses
-  const buzz = cyc([0, -1.5, 0, -1.5] as const)
-  const glow = cyc([0, 0.8, 1.4, 0.8] as const)
+  // attack: the lantern blazes and the wings lift, then they snap down
+  const buzz = cyc([0, -1.5, 0, -1.5] as const) + pz(1.5, -2.5)
+  const glow = cyc([0, 0.8, 1.4, 0.8] as const) + pz(2.4, 0.8)
   // glow
   g.ellipse(25, 29, 11 + glow, 9 + glow, 'g')
   g.ellipse(11, 12 + buzz * 0.5, 7, 4.5 + buzz, 'V', 'v').ellipse(27, 11 + buzz * 0.5, 7, 4.5 + buzz, 'V', 'v')
@@ -589,8 +613,8 @@ function campfly(): Art {
   g.line(15, 24, 10, 26, 'B')
   g.ellipse(9, 26, 1.4, 1.4, 'B')
   g.outline(OL)
-  g.ellipse(12, 14, 2, 2.2, 'W').ellipse(18, 14, 2, 2.2, 'W')
-  g.set(12, 15, 'K').set(18, 15, 'K')
+  if (GESTURE === 'blink') g.line(10, 14, 14, 14, 'K').line(16, 14, 20, 14, 'K')
+  else g.ellipse(12, 14, 2, 2.2, 'W').ellipse(18, 14, 2, 2.2, 'W').set(12, 15, 'K').set(18, 15, 'K')
   g.stamp(13, 18, ['K..K', '.KK.'])
   return {
     pixels: g.toPixels(),
@@ -600,7 +624,7 @@ function campfly(): Art {
 
 function campflyBack(): Pixels {
   const g = grid()
-  const glow = cyc([0, 0.8, 1.4, 0.8] as const)
+  const glow = cyc([0, 0.8, 1.4, 0.8] as const) + pz(2.4, 0.8)
   g.ellipse(15, 30, 11 + glow, 9 + glow, 'g')
   g.ellipse(15, 30, 7.5, 6.5, 'Y', 'y', 'W')
   g.ellipse(22, 21, 6, 5, 'B', 'b')
@@ -608,7 +632,7 @@ function campflyBack(): Pixels {
   g.line(25, 8, 24, 2, 'B').line(29, 9, 34, 3, 'B')
   g.ellipse(24, 2, 1.5, 1.5, 'Y').ellipse(34, 3, 1.5, 1.5, 'Y')
   // wings fold over its back from this side
-  const buzz = cyc([0, -1.2, 0, -1.2] as const)
+  const buzz = cyc([0, -1.2, 0, -1.2] as const) + pz(1, -2)
   g.ellipse(14, 17, 8, 4.5 + buzz, 'V', 'v').ellipse(28, 20, 7, 4 + buzz, 'V', 'v')
   hold(g, 'campfly', 'back')
   g.line(26, 24, 31, 25, 'B')
@@ -687,8 +711,11 @@ function stitchick(): Art {
   g.line(17, 25, 17, 30, 'W').line(23, 25, 23, 30, 'W')
   // idle: it glances one way, then the other
   const look = cyc([0, 1, 0, -1] as const)
-  g.ellipse(15 + look * 0.6, 18, 1.8, 2.2, 'K').ellipse(25 + look * 0.6, 18, 1.8, 2.2, 'K')
-  g.set(15 + look * 0.6, 17, 'W').set(25 + look * 0.6, 17, 'W')
+  if (GESTURE === 'blink') g.line(13, 18, 17, 18, 'K').line(23, 18, 27, 18, 'K')
+  else {
+    g.ellipse(15 + look * 0.6, 18, 1.8, 2.2, 'K').ellipse(25 + look * 0.6, 18, 1.8, 2.2, 'K')
+    g.set(15 + look * 0.6, 17, 'W').set(25 + look * 0.6, 17, 'W')
+  }
   g.poly([[18, 20], [22, 20], [20, 23]], 'O')
   g.set(11, 21, 'P').set(29, 21, 'P')
   return {
@@ -717,7 +744,8 @@ function stitchickBack(): Pixels {
 function diplomoth(): Art {
   const g = grid()
   // idle: the wings flutter, narrowing as they tilt toward you
-  const f = cyc([0, -0.8, -1.6, -0.8] as const)
+  // attack: the wings spread wide, then fold in for the gust
+  const f = cyc([0, -0.8, -1.6, -0.8] as const) + pz(1.5, -3)
   g.ellipse(10 - f * 0.5, 15, 9 + f, 9, 'M', 'm').ellipse(30 + f * 0.5, 15, 9 + f, 9, 'M', 'm')
   g.ellipse(11, 29, 7 + f * 0.5, 6, 'M', 'm').ellipse(29, 29, 7 + f * 0.5, 6, 'M', 'm')
   g.ellipse(10 - f * 0.5, 15, 4 + f * 0.4, 4, 'V', 'v').ellipse(30 + f * 0.5, 15, 4 + f * 0.4, 4, 'V', 'v')
@@ -741,7 +769,7 @@ function diplomoth(): Art {
 function diplomothBack(): Pixels {
   const g = grid()
   // wings spread, seen from above and behind: the paler underside pattern
-  const f = cyc([0, -0.8, -1.6, -0.8] as const)
+  const f = cyc([0, -0.8, -1.6, -0.8] as const) + pz(1.5, -3)
   g.ellipse(10 - f * 0.5, 16, 9 + f, 9, 'M', 'm').ellipse(30 + f * 0.5, 15, 9 + f, 9, 'M', 'm')
   g.ellipse(11, 29, 7 + f * 0.5, 6, 'm').ellipse(29, 29, 7 + f * 0.5, 6, 'M', 'm')
   g.ellipse(10 - f * 0.5, 16, 2.6, 2.6, 'v').ellipse(30 + f * 0.5, 15, 2.6, 2.6, 'v')

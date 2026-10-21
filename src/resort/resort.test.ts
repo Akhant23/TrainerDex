@@ -7,6 +7,7 @@ import { renderLayers, renderFlat, renderSide, renderBack, atResolution, palette
 import { ASSET_SLOTS } from '../content/sprites'
 import { overworldFor, OW_W, OW_H } from '../sprites/overworld'
 import { signature, towerStages } from '../content/aaryan'
+import { regulars } from './regulars'
 import { SKINS, HAIR_COLOURS, CLOTH_COLOURS, EYE_COLOURS } from '../sprites/character'
 import * as OPTIONS from '../../supabase/functions/_shared/appearance'
 import { SKIN_IDS, HAIR_COLOUR_IDS, CLOTH_COLOUR_IDS, EYE_COLOUR_IDS, parseAppearance, parseParty, type AppearanceData } from '../../supabase/functions/_shared/appearance'
@@ -185,5 +186,33 @@ describe('trainer save validation', async () => {
   it('defaults an empty greeting', () => {
     const r = validateTrainer({ ...good, greeting: '' })
     expect(r.ok && r.value.greeting).toBe('Hi!')
+  })
+})
+
+describe('compact Gen V walkers', () => {
+  const rows = (px: string[]) => px.map((r, y) => (/[^.]/.test(r) ? y : -1)).filter((y) => y >= 0)
+  it('stand ~1½ tiles tall with the head about half the height, feet on the same line', () => {
+    for (const look of [signature, ...regulars.map((r) => r.look)]) {
+      const ow = overworldFor(look)
+      for (const f of [ow.down[0], ow.up[0], ow.left[0], ow.right[0]]) {
+        const ys = rows(f)
+        const h = ys[ys.length - 1] - ys[0] + 1
+        // 44–54 art px = 22–27 world px (BW measured ~23–26)
+        expect(h).toBeGreaterThanOrEqual(44)
+        expect(h).toBeLessThanOrEqual(54)
+        expect(ys[ys.length - 1]).toBeGreaterThanOrEqual(60)
+      }
+      // the widest row is the head (hair), not the shoulders: Gen V's big-headed build
+      const f = ow.down[0]
+      const width = (y: number) => (f[y].match(/[^.]/g) ?? []).length
+      const head = Math.max(...Array.from({ length: 22 }, (_, i) => width(14 + i)))
+      const body = Math.max(...Array.from({ length: 10 }, (_, i) => width(38 + i)))
+      expect(head).toBeGreaterThanOrEqual(body - 6)
+    }
+  })
+  it('each profile shows its own side: right is not just the left mirrored', () => {
+    const ow = overworldFor(signature)
+    const mirrored = ow.left[0].map((r) => [...r].reverse().join(''))
+    expect(ow.right[0]).not.toEqual(mirrored)
   })
 })

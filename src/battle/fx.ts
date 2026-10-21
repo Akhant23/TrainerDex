@@ -520,6 +520,49 @@ export function tempoFor(r: Recipe, power: number): number {
   return r.motion === 'lunge' ? 2.4 : r.motion === 'jump' ? 2 : r.motion === 'dive' ? 1.6 : 1.8
 }
 
+/**
+ * Per-move staging on top of the general pacing. Charged moves get a longer wind-up without
+ * slowing their throw: in BW, Electro Ball charges on the user for ~1.2 s, then the ball crosses in
+ * ~0.3 s and lands ~2.4 s in (GEN5-TIMING.md). `launch` is the fraction of the time to impact that
+ * is wind-up; `charge` is how much that part is stretched (the rest uses tempoFor). `dim` darkens
+ * the battle background (not the battlers or HUD) from/to recipe ms, as BW does for electric and
+ * beam-type specials. BASS DROP isn't dimmed: its own effect already darkens the screen.
+ */
+export interface Staging {
+  charge?: number
+  launch?: number
+  dim?: { from: number; to: number; amount: number }
+}
+export const STAGING: Partial<Record<MoveId, Staging>> = {
+  // charged, electric: the Electro Ball analogue
+  overclock: { charge: 5, launch: 0.6, dim: { from: 0, to: 780, amount: 0.42 } },
+  // charged specials that build up on the user before throwing
+  bassDrop: { charge: 3.2, launch: 0.5 },
+  hypeCampaign: { charge: 3, launch: 0.45 },
+  leadByExample: { charge: 3.3, launch: 0.4 },
+  objection: { charge: 3, launch: 0.46 },
+  // beam specials: no long charge, but the background dims while the beam fires
+  splice: { dim: { from: 0, to: 760, amount: 0.35 } },
+  catalyst: { dim: { from: 0, to: 560, amount: 0.35 } },
+  powerChord: { dim: { from: 0, to: 560, amount: 0.35 } },
+}
+
+/** Recipe time ↔ real time for one move: the wind-up stretched by `charge`, the rest by its tempo. */
+export interface Warp {
+  /** recipe ms where the wind-up ends */
+  a: number
+  k1: number
+  k2: number
+}
+export function warpFor(id: MoveId, r: Recipe, power: number): Warp {
+  const k2 = tempoFor(r, power)
+  const st = STAGING[id]
+  if (!st?.charge) return { a: 0, k1: k2, k2 }
+  return { a: r.impact * (st.launch ?? 0.5), k1: st.charge, k2 }
+}
+export const toReal = (w: Warp, t: number) => (t <= w.a ? t * w.k1 : w.a * w.k1 + (t - w.a) * w.k2)
+export const toRecipe = (w: Warp, ms: number) => (ms <= w.a * w.k1 ? ms / w.k1 : w.a + (ms - w.a * w.k1) / w.k2)
+
 /** The total length of a recipe's animation. */
 export function recipeLength(r: Recipe, env: FxEnv): number {
   return Math.max(r.impact, ...r.layers(env).map((l) => l.t0 + l.dur))

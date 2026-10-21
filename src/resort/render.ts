@@ -261,11 +261,25 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
       if (tileAt(m, tx, ty) === 'l' && inView(project(cam, bx, by, vh), vh)) lamps.push([bx, by])
       items.push({ depth: by, draw: () => (!def.wall && shadow(bx, by - 2, 7), sprite(img, bx, by, prop.anchorX)) })
     }
+  // BW grounds its buildings with soft contact shading along the base: two stepped bands on the
+  // ground in front of the footprint (flat steps, not a smooth gradient, to stay pixel-art)
+  const contact = (x0: number, x1: number, by: number) => {
+    for (const [d0, d1, alpha] of [[0, 2.5, 0.24], [2.5, 5, 0.12]] as const) {
+      const q = [project(cam, x0 - 1, by + d0, vh), project(cam, x1 + 1, by + d0, vh), project(cam, x1 + 2, by + d1, vh), project(cam, x0 - 2, by + d1, vh)]
+      if (!q.every((p) => inView(p, vh))) continue
+      ctx.fillStyle = `rgba(20,24,40,${alpha})`
+      ctx.beginPath()
+      q.forEach((p, i) => (i ? ctx.lineTo(Math.round(p.x * RES), Math.round(p.y * RES)) : ctx.moveTo(Math.round(p.x * RES), Math.round(p.y * RES))))
+      ctx.closePath()
+      ctx.fill()
+    }
+  }
   for (const st of m.structures ?? []) {
     const art = structureArt[st.kind]
     const img = pixelCanvas(art, tilePalette, `structure:${st.kind}`)
     const by = (st.y + st.d) * TILE
-    items.push({ depth: by, draw: () => sprite(img, st.x * TILE, by, 0) })
+    const grounded = m.outdoor && st.d > 1
+    items.push({ depth: by, draw: () => (grounded && contact(st.x * TILE, (st.x + st.w) * TILE, by), sprite(img, st.x * TILE, by, 0)) })
   }
   const onMap = (x: number, y: number) => inView(project(cam, x, y, vh), vh)
   for (const a of actors) {

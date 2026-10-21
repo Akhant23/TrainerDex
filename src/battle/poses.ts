@@ -22,6 +22,18 @@ export const ATTACK_POSES: Partial<Record<SpeciesId, AttackPose>> = {
   megaphawk: { windupUntil: 0.5, strikeHold: 320 },
   // mane bristling, then a roar
   gavelion: { windupUntil: 0.6, strikeHold: 280 },
+  // second batch
+  helixor: { windupUntil: 0.55, strikeHold: 260 }, // coils, then springs up, tongue out
+  brushfox: { windupUntil: 0.55, strikeHold: 260 }, // tail cocked, then the brush sweeps
+  subwoof: { windupUntil: 0.5, strikeHold: 300 }, // cone draws in, then pushes out
+  strikaroo: { windupUntil: 0.6, strikeHold: 240 }, // tail high, then the kick
+  beakerbun: { windupUntil: 0.5, strikeHold: 300 }, // liquid churns, then bubbles burst
+  riffin: { windupUntil: 0.55, strikeHold: 280 }, // flipper up, then the strum
+  wicketoad: { windupUntil: 0.55, strikeHold: 260 }, // sac swells, then empties
+  campfly: { windupUntil: 0.5, strikeHold: 280 }, // lantern blazes, wings snap down
+  diplomoth: { windupUntil: 0.5, strikeHold: 300 }, // wings spread, then fold for the gust
+  // no pose (plain motion; artwork required): hootour (the flag would have to move with the
+  // wing), stitchick (needle and thread), datadillo (would roll into a ball)
 }
 
 export interface PoseStep {

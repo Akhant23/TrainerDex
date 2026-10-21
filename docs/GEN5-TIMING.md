@@ -61,11 +61,31 @@ Behaviours seen in every sample:
 
 Reduced motion keeps the old short timings with no camera movement.
 
+## Charged moves and background dimming (third pass)
+
+A uniform stretch slowed the throw as much as the charge, so charged moves now use a two-part
+warp (`STAGING`, `warpFor` in fx.ts): the wind-up is stretched by its own factor, the rest keeps
+the move's normal pacing. Dimming (`STAGING[move].dim`) darkens only the scenery and platforms;
+the battlers, effects and HUD stay bright, as in the Electro Ball frames.
+
+| Move | Analogue | Before: impact / end | After: launch / impact / end | Dim |
+|---|---|---|---|---|
+| OVERCLOCK | Electro Ball (~2.1 / ~2.4 / ~3.8 s) | 1.12 / 2.05 s | 1.86 / 2.31 / 3.24 s | 0–2.59 s, 42% |
+| BASS DROP | charged special | 1.30 / 2.30 | 1.15 / 1.80 / 2.81 | none: its own effect darkens the screen |
+| HYPE CAMPAIGN | charged special | 1.01 / 2.27 | 0.76 / 1.31 / 2.57 | — |
+| LEAD BY EXAMPLE | charged special | 1.01 / 1.87 | 0.74 / 1.34 / 2.21 | — |
+| OBJECTION | charged special | 1.01 / 1.73 | 0.77 / 1.32 / 2.04 | — |
+| SPLICE, CATALYST, POWER CHORD | beam specials | unchanged | unchanged | while the beam fires, 35% |
+
+Live check (OVERCLOCK in a quick battle, recorded per frame from the page): HUD off, camera on
+the attacker, dim on and wind-up pose at 0 ms; strike pose at +1.27 s; camera cut to the target at
++2.04 s; pose cleared +2.53 s; dim off +2.58 s; HUD back +3.25 s; then damage. All within ~10 ms
+of the planned values. Which BW moves dim was only observed for Electro Ball; applying it to the
+three beam specials is a judgement call (IMPLEMENTED BUT NOT VERIFIED AGAINST ORIGINAL FOOTAGE).
+
 ## Known differences
 
-- Charged special moves (Electro Ball ~2.4 s to impact) run longer in BW than any recipe here;
-  the slowest (BASS DROP) now lands at ~1.3 s.
-- BW darkens the background for many special moves; recipes only do this where their own
-  effect includes a tint.
+- OVERCLOCK now lands at ~2.3 s (Electro Ball ~2.4 s) but ends at ~3.2 s vs ~3.8 s: BW's spark
+  aftermath is longer.
 - BW's camera pans in 3D; here it's a 2D push-in (scale 1.14 on your side, 1.28 on the foe's)
   with the same nearest-neighbour look.
