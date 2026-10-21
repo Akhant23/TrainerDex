@@ -120,27 +120,29 @@ function PhotoViewer({ index, onClose }: { index: number; onClose: () => void })
         <div key={index} className="flex min-h-0 flex-1 items-center justify-center p-[14px]" style={{ animation: 'photo-in 260ms steps(5)', ['--dx' as string]: `${dir * 24}px` }}>
           <img src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} className="gv-photo h-auto max-h-full w-auto max-w-full" />
         </div>
-        <PixelBox className="shrink-0 px-5 py-4 lg:w-[340px] lg:self-start">
-          <p className="font-display m-0 text-[17px] text-dex-red">
-            No.{pad(index + 1)} {photo.title.toUpperCase()}
-          </p>
-          <p className="m-0 text-[14px] text-muted">
-            {photo.category}
-            {photo.date && ` · ${photo.date}`}
-          </p>
-          <p className="m-0 mt-2 text-[17px]">{photo.caption}</p>
-          <p className="m-0 mt-2 text-[15px] italic">{photo.dexEntry}</p>
+        <div className="flex shrink-0 flex-col gap-3 lg:w-[340px] lg:self-start">
+          <PixelBox className="px-5 py-4">
+            <p className="font-display m-0 text-[17px] text-dex-red">
+              No.{pad(index + 1)} {photo.title.toUpperCase()}
+            </p>
+            <p className="m-0 text-[14px] text-muted">
+              {photo.category}
+              {photo.date && ` · ${photo.date}`}
+            </p>
+            <p className="m-0 mt-2 text-[17px]">{photo.caption}</p>
+            <p className="m-0 mt-2 text-[15px] italic">{photo.dexEntry}</p>
+            <div className="mt-3 flex justify-between">
+              <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
+                ◀ PREV
+              </button>
+              <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(1)}>
+                NEXT ▶
+              </button>
+            </div>
+          </PixelBox>
           {/* the same moment as pixel art, drawn for this photo (changes with PREV / NEXT) */}
-          <PhotoPortrait key={photo.id} photoId={photo.id} className="mt-3" />
-          <div className="mt-3 flex justify-between">
-            <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
-              ◀ PREV
-            </button>
-            <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(1)}>
-              NEXT ▶
-            </button>
-          </div>
-        </PixelBox>
+          <PhotoPortrait key={photo.id} photoId={photo.id} />
+        </div>
       </div>
     </Overlay>
   )

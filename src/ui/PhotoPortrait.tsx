@@ -283,7 +283,7 @@ export function PhotoPortrait({ photoId, className = '' }: { photoId: string; cl
   return (
     <div ref={wrap} className={className}>
       {scene ? (
-        <canvas ref={canvas} width={SCENE_W} height={SCENE_H} role="img" aria-label={scene.alt} className="pixelated gv-card block rounded-[3px]" style={{ width: SCENE_W * scale, height: SCENE_H * scale }} />
+        <canvas ref={canvas} width={SCENE_W} height={SCENE_H} role="img" aria-label={scene.alt} className="pixelated gv-card mx-auto block rounded-[3px]" style={{ width: SCENE_W * scale, height: SCENE_H * scale }} />
       ) : (
         <p className="font-display m-0 rounded-[3px] bg-[#e6eaf2] px-3 py-2 text-center text-[13px] text-muted">Pixel portrait not drawn yet</p>
       )}
