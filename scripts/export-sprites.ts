@@ -9,7 +9,7 @@ import { dirname } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
 import { creatureArt, creatureArtHi, trainerdexBadge } from '../src/sprites/creatures.ts'
-import { overworldFor, riderFor, RIDER_HIP } from '../src/sprites/overworld.ts'
+import { overworldFor, riderBackFor, riderFor, RIDER_HIP } from '../src/sprites/overworld.ts'
 import { flightArt, FLYERS } from '../src/sprites/flight.ts'
 import { renderFlat, renderBack, renderSide, renderPose, paletteFor, atResolution, PORTRAIT } from '../src/sprites/character.ts'
 import { GESTURES } from '../src/sprites/gestures.ts'
@@ -133,9 +133,16 @@ for (const [id, frames] of Object.entries(GESTURES)) {
   const fw = 76 * OUT
   const fh = 62 * OUT
   const rider = riderFor(signature)
+  const riderBack = riderBackFor(signature)
   const rpal = paletteFor(signature)
-  for (const id of FLYERS) {
+  // the side view (flight-<id>.png) and, for mounts, the view from behind (flight-<id>-back.png)
+  const views = FLYERS.flatMap((id) => {
     const art = flightArt[id]
+    const side = { file: `flight-${id}`, id, frames: art.frames, saddle: art.saddle, rider }
+    return art.framesBack && art.saddleBack ? [side, { file: `flight-${id}-back`, id, frames: art.framesBack, saddle: art.saddleBack, rider: riderBack }] : [side]
+  })
+  for (const v of views) {
+    const art = flightArt[v.id]
     const w = fw * 4
     const rgba = new Uint8Array(w * fh * 4)
     const blit = (px: Pixels, pal: Palette, ox: number, oy: number, s: number) => {
@@ -150,20 +157,20 @@ for (const [id, frames] of Object.entries(GESTURES)) {
           rgba.set(hexToRgba(pal[ch]), (y * w + x) * 4)
         }
     }
-    art.frames.forEach((fr, i) => {
+    v.frames.forEach((fr, i) => {
       const s = art.world * OUT
       const ox = i * fw + (fw - 112 * s) / 2
       const oy = fh - 80 * s - 8
       blit(fr.far, art.palette, ox, oy, s)
       blit(fr.body, art.palette, ox, oy, s)
-      if (art.saddle) {
+      if (v.saddle) {
         const rs = 0.5 * OUT
-        const [sx, sy] = art.saddle[i]
-        blit(rider, rpal, ox + sx * s - RIDER_HIP[0] * rs, oy + sy * s - RIDER_HIP[1] * rs, rs)
+        const [sx, sy] = v.saddle[i]
+        blit(v.rider, rpal, ox + sx * s - RIDER_HIP[0] * rs, oy + sy * s - RIDER_HIP[1] * rs, rs)
       }
       blit(fr.near, art.palette, ox, oy, s)
     })
-    writeFileSync(`sprites-export/flight-${id}.png`, encodePng(w, fh, rgba))
+    writeFileSync(`sprites-export/${v.file}.png`, encodePng(w, fh, rgba))
   }
 }
 

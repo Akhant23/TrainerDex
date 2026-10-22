@@ -83,6 +83,11 @@ export interface MountFrame<P extends string = DeparturePhase> {
   dip: number
   /** 1 → 0 as it disappears into the distance */
   fade: number
+  /**
+   * 0 → 1 as it turns from the side view to the rear view (flying away from you), over a short
+   * cross-fade while its course bends north: a deliberate change of view, not an animated turn.
+   */
+  back: number
 }
 export type DepartureFrame = MountFrame<DeparturePhase>
 export type ArrivalFrame = MountFrame<ArrivalPhase>
@@ -104,6 +109,14 @@ const AWAY_DX = 120
 const AWAY_DY = 320
 /** Where in the hop (0–1) the trainer changes pose: in the air, hips just above the saddle. */
 export const HOP_SWAP = 0.78
+/**
+ * The change to the rear view, over `u` (take-off + flight): from TURN_AT for TURN_LEN (≈140 ms),
+ * as the sideways drift gives way to flying north. The drift finishes by DRIFT_END, so once it's
+ * facing away it's flying away, not sliding sideways.
+ */
+export const TURN_AT = 0.4
+export const TURN_LEN = 0.036
+const DRIFT_END = 0.55
 
 /**
  * Taking off and flying away, as one curve over `u` (0–1 across take-off + flight), so speed and
@@ -112,11 +125,12 @@ export const HOP_SWAP = 0.78
  * reaches the far distance, so it's gone when the sequence ends rather than popping out.
  */
 function away(u: number) {
-  const drift = AWAY_DX * ease(clamp01(u / 0.75))
+  const drift = AWAY_DX * ease(clamp01(u / DRIFT_END))
   const north = AWAY_DY * clamp01((u - 0.25) / 0.75) ** 2
   const alt = DEPARTURE_CRUISE * ease(u)
   const fade = 1 - ease(clamp01((u - 0.8) / 0.2))
-  return { drift, north, alt, fade }
+  const back = clamp01((u - TURN_AT) / TURN_LEN)
+  return { drift, north, alt, fade, back }
 }
 
 /** The mount gliding in from off to the side and settling onto the ground at `landX`. */
@@ -132,7 +146,7 @@ export function departureAt(d: Departure, now: number): DepartureFrame {
   const side = d.fromLeft ? -1 : 1
   const faceRight = d.fromLeft
   const landX = d.x + side * LAND_DX
-  const still = { faceRight, dip: 0, fade: 1 }
+  const still = { faceRight, dip: 0, fade: 1, back: 0 }
   let t = now - d.t0
   for (const phase of ORDER) {
     const len = DEPARTURE_MS[phase]
@@ -149,14 +163,14 @@ export function departureAt(d: Departure, now: number): DepartureFrame {
         case 'flight': {
           const u = (phase === 'takeoff' ? t : DEPARTURE_MS.takeoff + t) / (DEPARTURE_MS.takeoff + DEPARTURE_MS.flight)
           const a = away(u)
-          return { phase, k, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: true, hop: 1, standing: false, faceRight, dip: 0, fade: a.fade }
+          return { phase, k, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: true, hop: 1, standing: false, faceRight, dip: 0, fade: a.fade, back: a.back }
         }
       }
     }
     t -= len
   }
   const a = away(1)
-  return { phase: 'complete', k: 1, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: true, hop: 1, standing: false, faceRight, dip: 0, fade: 0 }
+  return { phase: 'complete', k: 1, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: true, hop: 1, standing: false, faceRight, dip: 0, fade: 0, back: 1 }
 }
 
 /**
@@ -168,7 +182,7 @@ export function arrivalAt(d: Departure, now: number): ArrivalFrame {
   const side = d.fromLeft ? -1 : 1
   const faceRight = d.fromLeft
   const landX = d.x + side * LAND_DX
-  const still = { faceRight, dip: 0, fade: 1 }
+  const still = { faceRight, dip: 0, fade: 1, back: 0 }
   let t = now - d.t0
   for (const phase of ARRIVAL_ORDER) {
     const len = ARRIVAL_MS[phase]
@@ -186,14 +200,14 @@ export function arrivalAt(d: Departure, now: number): ArrivalFrame {
           // on the way it was going, over the spot and beyond, so it doesn't double back
           const u = (phase === 'takeoff' ? t : ARRIVAL_MS.takeoff + t) / (ARRIVAL_MS.takeoff + ARRIVAL_MS.flight)
           const a = away(u)
-          return { phase, k, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: false, hop: 0, standing: true, faceRight, dip: 0, fade: a.fade }
+          return { phase, k, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: false, hop: 0, standing: true, faceRight, dip: 0, fade: a.fade, back: a.back }
         }
       }
     }
     t -= len
   }
   const a = away(1)
-  return { phase: 'complete', k: 1, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: false, hop: 0, standing: true, faceRight, dip: 0, fade: 0 }
+  return { phase: 'complete', k: 1, x: landX - side * a.drift, y: d.y - a.north, alt: a.alt, aboard: false, hop: 0, standing: true, faceRight, dip: 0, fade: 0, back: 1 }
 }
 
 /**

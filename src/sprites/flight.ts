@@ -10,6 +10,11 @@
  *   buzz    small insects: fast translucent wings, plus a pulsing glow
  *
  * Builders draw on a 56×40 base grid, rasterised at 2× (112×80 art pixels).
+ *
+ * The mounts (Megaphawk, Hootour, Diplomoth) also have a rear view (`framesBack`): the same
+ * creature seen from behind and a little above as it flies away, wings beating out to both sides,
+ * the rider's seat on its back. Original art drawn for this site, from each mount's own shapes and
+ * palette (and its battle back sprite's details: the megaphone, the scarf and flag, the placard).
  */
 import { HiGrid } from './raster.ts'
 import type { Palette, Pixels } from './pixels.ts'
@@ -53,6 +58,12 @@ export interface FlightSprite {
    * creature is too small to ride. Moves with the body bob.
    */
   saddle: Array<[number, number]> | null
+  /**
+   * Seen from behind, flying away (same size, frame timing and wingbeat as the side view), and
+   * where the rider's hips go in it; null for creatures that never carry anyone away.
+   */
+  framesBack: FlightFrame[] | null
+  saddleBack: Array<[number, number]> | null
 }
 
 /** Drawing the right-facing frames: shapes go through MirrorGrid, held items come to the near side. */
@@ -115,9 +126,34 @@ const BIRD_TIP: Pt[] = [
 function birdWing(g: HiGrid, root: Pt, frame: number, len: number, chord: number, col: string, shade: string, light: string) {
   const fold = frame === 3 ? 0.86 : 1
   const [fx, fy] = BIRD_TIP[frame]
-  const r1: Pt = [root[0], root[1]]
-  const r2: Pt = [root[0] + chord, root[1] + 0.6]
-  const tip: Pt = [root[0] + fx * len * fold, root[1] + fy * len * fold]
+  featherWing(g, [root[0], root[1]], [root[0] + chord, root[1] + 0.6], [root[0] + fx * len * fold, root[1] + fy * len * fold], col, shade, light)
+}
+
+/**
+ * Tip of a bird's wing seen from behind, per frame, as fractions of its length: [out to the side,
+ * down]. Both wings beat together, so from behind the stroke reads as a V, a wide flat span, a
+ * droop and a half-folded recovery (the side view's up, mid-down, down, mid-up).
+ */
+const BIRD_TIP_BACK: Pt[] = [
+  [0.46, -0.86],
+  [0.97, -0.18],
+  [0.8, 0.52],
+  [0.64, -0.58],
+]
+/** How much of the wing's depth shows from behind and above, per frame: most when spread flat. */
+const BIRD_DEPTH_BACK = [0.75, 0.8, 0.7, 0.72]
+
+/** One wing seen from behind: from the shoulder out to one side (`side` −1 left, 1 right). */
+function birdWingBack(g: HiGrid, root: Pt, side: -1 | 1, frame: number, len: number, chord: number, col: string, shade: string, light: string) {
+  const fold = frame === 3 ? 0.86 : 1
+  const [fx, fy] = BIRD_TIP_BACK[frame]
+  // the trailing edge meets the body a little further out and lower than the leading edge, so even
+  // the raised wing (nearly edge-on from behind) keeps some breadth at the shoulder
+  featherWing(g, root, [root[0] + side * chord * 0.3, root[1] + chord * BIRD_DEPTH_BACK[frame]], [root[0] + side * fx * len * fold, root[1] + fy * len * fold], col, shade, light)
+}
+
+/** The wing shape both views share: leading edge r1 → tip, trailing edge tip → r2 with feather points. */
+function featherWing(g: HiGrid, r1: Pt, r2: Pt, tip: Pt, col: string, shade: string, light: string) {
   // trailing edge from the tip back to the rear of the shoulder, with feather points
   const d: Pt = [r2[0] - tip[0], r2[1] - tip[1]]
   const dl = Math.hypot(d[0], d[1]) || 1
@@ -342,6 +378,111 @@ function diplomoth(f: number) {
   return { far, body, near, saddle: [21.5, 15.5 + b] as Pt }
 }
 
+/* ---------------- seen from behind ---------------- */
+
+/**
+ * Parts drawn on their own grids, each with its own outline, then laid over each other in order
+ * (back to front), so a nearer part keeps its dark edge where it crosses a farther one.
+ */
+function stack(...parts: HiGrid[]): Pixels {
+  const out = parts[0].toPixels().map((r) => [...r])
+  for (const g of parts.slice(1)) g.toPixels().forEach((r, y) => [...r].forEach((c, x) => c !== '.' && (out[y][x] = c)))
+  return out.map((r) => r.join(''))
+}
+type BackDraw = (f: number) => { far: Pixels; body: Pixels; near: Pixels; saddle: Pt }
+/** Centre line of the rear view. */
+const MID = FLIGHT_BASE_W / 2
+
+function megaphawkBack(f: number) {
+  const b = BOB[f]
+  // the megaphone, held out in front of its beak and tilted to its right (as in its battle back
+  // sprite): from behind, the bell's rim shows past that side of its head
+  const horn = grid().ellipse(MID + 4.5, 10.5 + b, 5.2, 6.2, 'R').ellipse(MID + 4.5, 10.5 + b, 4.2, 5.2, 'W', 'w')
+  horn.outline(OL)
+  const head = grid().ellipse(MID, 13 + b, 6, 5.6, 'D', 'd')
+  // the crest, swept back
+  head.poly([[MID - 2.6, 10 + b], [MID - 5, 3 + b], [MID, 9 + b]], 'd').poly([[MID, 9 + b], [MID + 3, 2 + b], [MID + 3.5, 10 + b]], 'D')
+  head.outline(OL)
+  const wings = [-1, 1].map((side) => {
+    const w = grid()
+    birdWingBack(w, [MID + side * 5.5, 16.5 + b], side as -1 | 1, f, 19, 10, 'D', 'd', 'C')
+    return w.outline(OL)
+  })
+  const back = grid()
+  back.ellipse(MID - 3.6, 27.5 + b, 1.7, 1.3, 'Y').ellipse(MID + 3.6, 27.5 + b, 1.7, 1.3, 'Y')
+  back.ellipse(MID, 20 + b, 8.5, 7.2, 'D', 'd')
+  back.outline(OL)
+  // the tail fans out toward you, under the rider's seat
+  const tail = grid().poly([[MID - 4, 24 + b], [MID + 4, 24 + b], [MID + 8, 33 + b], [MID, 35.5 + b], [MID - 8, 33 + b]], 'd')
+  tail.outline(OL)
+  for (const dx of [-4, 0, 4]) tail.line(MID, 25.5 + b, MID + dx, 33.5 + b, 'D')
+  return { far: stack(horn, head, ...wings), body: stack(back), near: stack(tail), saddle: [MID, 14.5 + b] as Pt }
+}
+
+function hootourBack(f: number) {
+  const b = BOB[f]
+  const wave = f / 4
+  const head = grid()
+  head.poly([[MID - 5.5, 10 + b], [MID - 6.5, 3 + b], [MID - 2, 9 + b]], 'H').poly([[MID + 2, 9 + b], [MID + 6.5, 3 + b], [MID + 5.5, 10 + b]], 'h')
+  head.ellipse(MID, 13 + b, 7.2, 6.6, 'H', 'h')
+  head.outline(OL)
+  const wings = [-1, 1].map((side) => {
+    const w = grid()
+    birdWingBack(w, [MID + side * 6, 17.5 + b], side as -1 | 1, f, 16, 11, 'H', 'h', 'C')
+    return w.outline(OL)
+  })
+  // the flag, gripped in its talons, streams back toward you on its right side
+  const flag = grid()
+  drawItem(flag, 'flag', { x: MID + 4, y: 28 + b, angle: Math.PI - 0.5, scale: 0.62, wave })
+  flag.outline(OL)
+  const back = grid()
+  back.ellipse(MID, 21 + b, 9.5, 8, 'H', 'h')
+  // the scarf: knotted round the neck, its tail flapping down the back
+  const w = Math.sin(wave * Math.PI * 2) * 1.2
+  back.rect(MID - 7, 16 + b, MID + 7, 18 + b, 'Y')
+  back.poly([[MID - 1.5, 18 + b], [MID + 1.5, 18 + b], [MID + 2 + w, 27 + b], [MID - 2 + w, 27 + b]], 'Y')
+  back.ellipse(MID - 3.5, 29 + b, 1.8, 1.4, 'O').ellipse(MID + 3.5, 29 + b, 1.8, 1.4, 'O')
+  back.outline(OL)
+  back.line(MID + w * 0.5, 19 + b, MID + w, 26 + b, 'y')
+  const tail = grid().poly([[MID - 3.5, 26 + b], [MID + 3.5, 26 + b], [MID + 5, 32 + b], [MID, 33.5 + b], [MID - 5, 32 + b]], 'h')
+  tail.outline(OL)
+  return { far: stack(head, ...wings, flag), body: stack(back), near: stack(tail), saddle: [MID, 15 + b] as Pt }
+}
+
+function diplomothBack(f: number) {
+  const b = BOB[f] * 0.7
+  // wing elevation per frame (0 = level, negative = raised), both sides together
+  const e = [-0.95, -0.4, 0.4, -0.15][f]
+  const antennae = grid()
+  antennae.line(MID - 2, 12 + b, MID - 7, 4 + b, 'G').line(MID + 2, 12 + b, MID + 7, 4 + b, 'G')
+  antennae.outline(OL)
+  for (const [x, y] of [[MID - 7, 4], [MID - 6, 5], [MID + 7, 4], [MID + 6, 5]]) antennae.set(x, y + b, 'G')
+  const wings = [-1, 1].map((side) => {
+    const g = grid()
+    // forewing out and up, hindwing lower and smaller; the eye spot near the forewing's tip
+    const ang = (a: number) => (side > 0 ? a : Math.PI - a)
+    swingWing(g, [MID + side * 3, 17 + b], ang(e), 11, 5.4, 'M', 'm', ['V', 2.2])
+    swingWing(g, [MID + side * 3, 20 + b], ang(e + 0.5), 7, 4.2, 'M', 'm')
+    return g.outline(OL)
+  })
+  // the placard hangs below on its pole: from behind, its blank back
+  const placard = grid()
+  drawItem(placard, 'placard', { x: MID, y: 26 + b, angle: Math.PI, scale: 0.8 })
+  placard.outline(OL)
+  const body = grid()
+  body.ellipse(MID, 17 + b, 4.6, 4, 'G', 'g')
+  body.ellipse(MID, 14.5 + b, 4.4, 2.2, 'W', 'w')
+  body.line(MID - 2, 21 + b, MID - 2, 25 + b, 'G').line(MID + 2, 21 + b, MID + 2, 25 + b, 'G')
+  body.outline(OL)
+  // the abdomen, segmented, toward you below the seat
+  const abdomen = grid().ellipse(MID, 24 + b, 3.6, 6, 'G', 'g')
+  abdomen.outline(OL)
+  for (const y of [22, 25, 28]) abdomen.line(MID - 2.5, y + b, MID + 2.5, y + b, 'g')
+  return { far: stack(antennae, ...wings, placard), body: stack(body), near: stack(abdomen), saddle: [MID, 15.5 + b] as Pt }
+}
+
+const BACKS: Partial<Record<FlyerId, BackDraw>> = { megaphawk: megaphawkBack, hootour: hootourBack, diplomoth: diplomothBack }
+
 /* ---------------- assembly ---------------- */
 
 const SPECS: Record<FlyerId, { draw: (f: number) => { far: HiGrid; body: HiGrid; near: HiGrid; saddle: Pt | null }; style: FlightStyle; frameMs: number; world: number; extra?: Palette }> = {
@@ -359,8 +500,8 @@ function buildFlyer(id: FlyerId): FlightSprite {
   const framesRight: FlightFrame[] = []
   const saddle: Array<[number, number]> = []
   let rideable = true
-  const finish = (g: HiGrid) => {
-    const sh = formShade(g.toPixels(), palette, K2 + 1)
+  const finish = (g: HiGrid | Pixels) => {
+    const sh = formShade(Array.isArray(g) ? g : g.toPixels(), palette, K2 + 1)
     const r = selectiveOutline(sh.pixels, sh.palette)
     palette = r.palette
     return r.pixels
@@ -379,7 +520,19 @@ function buildFlyer(id: FlyerId): FlightSprite {
   } finally {
     MIRROR = false
   }
-  return { palette, frames, framesRight, style: spec.style, frameMs: spec.frameMs, world: spec.world, saddle: rideable ? saddle : null }
+  const back = BACKS[id]
+  let framesBack: FlightFrame[] | null = null
+  let saddleBack: Array<[number, number]> | null = null
+  if (back) {
+    framesBack = []
+    saddleBack = []
+    for (let f = 0; f < 4; f++) {
+      const r = back(f)
+      framesBack.push({ far: finish(r.far), body: finish(r.body), near: finish(r.near) })
+      saddleBack.push([r.saddle[0] * K2, r.saddle[1] * K2])
+    }
+  }
+  return { palette, frames, framesRight, framesBack, saddleBack, style: spec.style, frameMs: spec.frameMs, world: spec.world, saddle: rideable ? saddle : null }
 }
 
 export const FLYERS: FlyerId[] = ['megaphawk', 'hootour', 'riffin', 'campfly', 'diplomoth']

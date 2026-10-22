@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { CRUISE_ALT, airScale } from './ambient'
-import { ARRIVAL_HANDOFF, ARRIVAL_MS, ARRIVAL_TOTAL, arrivalAt, DEPARTURE_BOARD_AT, DEPARTURE_CRUISE, DEPARTURE_MS, DEPARTURE_TOTAL, departureAt, departureMount, HOP_SWAP, landingSide, LAND_DX, type Departure } from './departure'
+import { ARRIVAL_HANDOFF, ARRIVAL_MS, ARRIVAL_TOTAL, arrivalAt, DEPARTURE_BOARD_AT, DEPARTURE_CRUISE, DEPARTURE_MS, DEPARTURE_TOTAL, departureAt, departureMount, HOP_SWAP, landingSide, LAND_DX, TURN_AT, TURN_LEN, type Departure } from './departure'
 import { flightArt } from '../sprites/flight'
 
 const base = (fromLeft: boolean): Departure => ({ t0: 1000, x: 200, y: 300, mount: 'megaphawk', fromLeft })
@@ -179,3 +179,46 @@ describe('landing side', () => {
     expect(landingSide(10, 5, true, wall(['9,5', '11,5']))).toBe(true)
   })
 })
+
+describe('turning to fly away', () => {
+  const d: Departure = { t0: 0, x: 200, y: 300, mount: 'hootour', fromLeft: true }
+  const airborne = DEPARTURE_MS.takeoff + DEPARTURE_MS.flight
+  const tTurn = DEPARTURE_BOARD_AT + DEPARTURE_MS.boarding + TURN_AT * airborne
+
+  it('changes to the rear view once, briefly, during the flight away', () => {
+    let last = 0
+    let changes = 0
+    for (let t = 0; t <= DEPARTURE_TOTAL; t += 8) {
+      const f = departureAt(d, t)
+      expect(f.back).toBeGreaterThanOrEqual(last)
+      if (f.back > 0 && f.back < 1) {
+        changes++
+        expect(f.phase).toBe('flight')
+        expect(f.aboard).toBe(true)
+      }
+      last = f.back
+    }
+    // ~140 ms of cross-fade
+    expect(changes * 8).toBeGreaterThan(100)
+    expect(changes * 8).toBeLessThan(200)
+    expect(departureAt(d, tTurn - 1).back).toBe(0)
+    expect(departureAt(d, tTurn + TURN_LEN * airborne + 1).back).toBe(1)
+  })
+
+  it('is flying away (north) by then, most of the sideways drift done', () => {
+    const start = departureAt(d, DEPARTURE_BOARD_AT + DEPARTURE_MS.boarding)
+    const atTurn = departureAt(d, tTurn + TURN_LEN * airborne)
+    const end = departureAt(d, DEPARTURE_TOTAL - 1)
+    expect(Math.abs(atTurn.x - start.x) / Math.abs(end.x - start.x)).toBeGreaterThan(0.85)
+    // after the turn it moves mostly north
+    const later = departureAt(d, tTurn + 900)
+    expect(Math.abs(later.y - atTurn.y)).toBeGreaterThan(3 * Math.abs(later.x - atTurn.x))
+  })
+
+  it("a visitor's empty mount turns away the same way", () => {
+    const a = arrivalAt(d, ARRIVAL_HANDOFF + TURN_AT * (ARRIVAL_MS.takeoff + ARRIVAL_MS.flight) + TURN_LEN * (ARRIVAL_MS.takeoff + ARRIVAL_MS.flight) + 1)
+    expect(a.back).toBe(1)
+    expect(arrivalAt(d, ARRIVAL_HANDOFF + 10).back).toBe(0)
+  })
+})
+

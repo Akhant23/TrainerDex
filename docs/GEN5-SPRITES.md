@@ -54,6 +54,10 @@ The riding sprite is the walking profile with the legs bent over the mount: same
 the hop onto or off a mount change pose mid-air without the head or body moving (GEN5-AUDIT.md,
 sixth pass).
 
+Flying away, the rider is drawn from behind (`riderBackFor`, eighth pass): astride, the back of
+the head and top, legs either side of the mount, on the same canvas and hip point. From behind the
+wearer's right is on your right, so it's never a mirror of a side pose.
+
 ## Identity kept at this size (Aaryan)
 
 Mullet with the wavy top, bold rectangular glasses, white jersey with red sleeve stripes, side

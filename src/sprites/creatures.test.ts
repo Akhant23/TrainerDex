@@ -9,7 +9,7 @@ import { HOLDS, ITEM_PALETTE } from './held'
 import { flightArt, FLYERS, FLIGHT_H, FLIGHT_W, RIDEABLE } from './flight'
 import { validate } from './pixels'
 import { species } from '../battle/data'
-import { riderFor } from './overworld'
+import { overworldFor, riderBackFor, riderFor, RIDER_HIP } from './overworld'
 import { signature } from '../content/aaryan'
 import { OW_H, OW_W } from './overworld'
 import { paletteFor } from './character'
@@ -125,3 +125,58 @@ describe('flyers facing right', () => {
     }
   })
 })
+
+describe('flying away, seen from behind', () => {
+  const flip = (px: string[]) => px.map((r) => [...r].reverse().join(''))
+  it('every mount has its own rear-view frames and saddle', () => {
+    for (const id of RIDEABLE) {
+      const a = flightArt[id]
+      expect(a.framesBack, id).not.toBeNull()
+      expect(a.framesBack!, id).toHaveLength(a.frames.length)
+      expect(a.saddleBack!, id).toHaveLength(a.frames.length)
+      for (let f = 0; f < a.frames.length; f++) {
+        for (const layer of ['far', 'body', 'near'] as const) expect(validate(a.framesBack![f][layer], a.palette, FLIGHT_W, FLIGHT_H), `${id} ${f} ${layer}`).toEqual([])
+        // new art: not the side view, nor the side view flipped
+        expect(a.framesBack![f].body, id).not.toEqual(a.frames[f].body)
+        expect(a.framesBack![f].body, id).not.toEqual(flip(a.frames[f].body))
+        // the seat is on the centre line of its back, on the body
+        const [sx, sy] = a.saddleBack![f]
+        expect(Math.abs(sx - FLIGHT_W / 2), id).toBeLessThan(2)
+        const row = a.framesBack![f].body[Math.round(sy) + 2]
+        expect(row[Math.round(sx)], `${id} ${f} seat on the body`).not.toBe('.')
+      }
+      // the wings beat: the four frames differ
+      expect(new Set(a.framesBack!.map((fr) => fr.far.join('\n'))).size, id).toBe(4)
+    }
+  })
+
+  it('only mounts get a rear view; the others keep their side views', () => {
+    for (const id of FLYERS) expect(!!flightArt[id].framesBack, id).toBe(RIDEABLE.includes(id))
+  })
+
+  it('the rider from behind is its own pose, sized and seated like the side riders', () => {
+    const px = riderBackFor(signature)
+    expect(validate(px, paletteFor(signature), OW_W, OW_H)).toEqual([])
+    expect(px).not.toEqual(overworldFor(signature).up[0])
+    expect(px).not.toEqual(flip(px))
+    // something sits on the hip point (the seat), and the head is in the same rows as the side rider's
+    expect(px[RIDER_HIP[1]][RIDER_HIP[0]]).not.toBe('.')
+    const top = (p: string[]) => p.findIndex((r) => /[^.]/.test(r))
+    expect(Math.abs(top(px) - top(riderFor(signature, 'left')))).toBeLessThanOrEqual(1)
+  })
+
+  it("from behind, the wearer's right is on your right (the jersey's flames stay on their side)", () => {
+    // count the flame red in the torso, either side of the centre line
+    const px = riderBackFor(signature)
+    let left = 0
+    let right = 0
+    for (let y = 39; y <= 46; y++)
+      for (let x = 17; x <= 31; x++) {
+        if (px[y][x] !== 'R') continue
+        if (x < 24) left++
+        else right++
+      }
+    expect(right).toBeGreaterThan(left)
+  })
+})
+

@@ -105,7 +105,8 @@ the site's own rendering (in a real browser unless marked offline); **E** not ye
 | Leave prompt → mount appears | 600 ms (prepare; follower recall flash over its second half) | C, D |
 | Mount approach | 2200 ms; from 150 px to the side at 105 px altitude, ease-out to touchdown 30 px beside the trainer | C, D |
 | Boarding hop | 700 ms; crouch held on the ground for the first 12% (84 ms), then a 10 px arc over the rest; turn at the top of the jump; seated pose from 78%; mount sinks 1 px over the last 22%; ground shadow shrinks and fades as they rise (seventh pass, below) | C, D |
-| Take-off + flight away | 1100 + 2800 ms as one curve: climb to 150 px (smoothstep), drift 120 px sideways (done by 75%), 320 px north (from 25%, accelerating), fade over the last 20% | C, D |
+| Take-off + flight away | 1100 + 2800 ms as one curve: climb to 150 px (smoothstep), drift 120 px sideways (done by 55%; was 75%, eighth pass), 320 px north (from 25%, accelerating), fade over the last 20% | C, D |
+| Turn to the rear view | at 40% of take-off + flight (≈1.56 s after leaving the ground, ≈460 ms into the flight phase), an eased cross-fade over 3.6% (≈140 ms); rear view until the end | C, D |
 | Size with altitude | `airScale`: 1.0 on the ground → 0.52 at 150 px, times the map's perspective scale; drawn in steps of 2^(1/24) (~2.9%) | C, D |
 | Visitor arrival by air | 2600 ms approach from 150 px altitude, 700 ms alighting hop, then 1100 + 2400 ms empty mount flying away | C, D |
 | Visitor leaving by air | as the player's departure; walker hand-over 250 ms before the hop | C, D |
@@ -166,4 +167,18 @@ Findings:
 - One late frame on the frame YES was pressed (1 of ~40 departures, production, first run):
   not reproduced, treated as noise.
 - The earlier recorder's full-canvas copies did not cause late frames in the flight.
+
+### Rear view (eighth pass)
+
+| What | Before | After | Why | Evidence |
+|---|---|---|---|---|
+| View while flying away | side view all the way | side → rear view (new original art) | a genuine away-from-you view | browser captures `docs/qa/rear-turn-*.png` |
+| Sideways drift | done by 75% of take-off + flight | done by 55% | so the mount isn't sliding sideways once it faces away (≥85% of the drift is done when the turn ends; after it, movement is >3× more north than sideways; both tested) | estimated, then checked in the browser captures |
+| Turn timing | — | starts at 40%, cross-fade 140 ms (first tried 195 ms: the half-and-half frames looked muddy), eased | brief enough not to read as a double image, long enough not to pop | visual comparison of 195 ms and 140 ms in the browser |
+| Scale and position at the turn | — | both views drawn at the same centre and scale | no jump in size or position | browser captures |
+
+Status: C (estimated, this site's own) and D (verified only on the site, in the browser). Nothing
+here is measured against BW2's Fly. Frame timing with the rear view (4 departures, 2 cold visitor
+arrivals, 2988 frames): no late frames during the flight or the turn; the only one is the known
+main-menu frame after leaving, on a cold first run.
 

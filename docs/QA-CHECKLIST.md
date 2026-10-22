@@ -22,6 +22,7 @@ What the tests guard (behaviour, not pixels, so correct art changes don't break 
 | Departure + arrival | `src/resort/departure.test.ts` | phase order, smooth per-frame movement, lands beside (not on) the trainer, rider aboard exactly from the pose change, take-off without a stall, fades out exactly at the end, visitors hand over when their feet touch down, landing side avoids blocked tiles, both directions mirror, mount choice |
 | Distance scaling | `src/resort/ambient.test.ts` | arrival grows smoothly to full size; stepped shrinking is exact on the ground, within one step of true size, steps under 3% |
 | Mount direction | `src/sprites/creatures.test.ts` | every flyer has valid right-facing frames that aren't just the left ones mirrored |
+| Rear view | `src/sprites/creatures.test.ts`, `src/resort/departure.test.ts` | every mount has valid rear frames (not the side view or its mirror) with the seat on its back; only mounts have them; the rear rider is its own pose, seated like the side riders, with the jersey's flames on the wearer's right; the turn happens once, briefly, in the flight, after most of the drift |
 
 ## Previews
 
@@ -82,8 +83,9 @@ Use a 1280×800 desktop window and a 375×812 phone viewport.
 17. **Leaving the resort**: in the plaza press BACK (or EXIT in the menu). The prompt appears;
     keys don't move you. NO: the box closes and you can walk. YES: the follower flashes back into
     its ball, a flyer lands beside you (not on anyone), you crouch, jump, turn at the top and
-    settle onto the saddle with no jump in your head or body; it lifts off, flies on and away
-    north, shrinking, and fades out; then the main menu. Repeat from the left and the right half
+    settle onto the saddle with no jump in your head or body; it lifts off and flies on, then
+    changes to the view from behind (a short cross-fade: mount and rider from the back, rider on
+    the saddle) and flies away north, shrinking, and fades out; then the main menu. Repeat from the left and the right half
     of the plaza (the mount faces the way it flies; Hootour's flag is on the near wing). Keys,
     BACK and EXIT during it do nothing. Indoors or with reduced motion it fades straight out.
 18. **Visitors by air**: `__resortAmbient.nextGuest = 0` until one flies in: the mount lands

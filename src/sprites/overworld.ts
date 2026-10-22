@@ -197,13 +197,19 @@ function legsFrontBack(g: Grid, a: Appearance, step: Step, cx: number) {
   g.poly([[cx - 7.5, 44.5], [cx + 7.5, 44.5], [cx + 7.8, 48], [cx - 7.8, 48]], 'B')
 }
 
+/** The torso for the front and back views: compact, about as wide as the head. */
+function torsoFrontBack(g: Grid, a: Appearance, cx: number) {
+  const hem = BLAZERS.has(a.top) ? 47.5 : HEM_Y
+  g.poly([[cx - 6.5, SHOULDER_Y], [cx + 6.5, SHOULDER_Y], [cx + 8.5, SHOULDER_Y + 2], [cx + 8, hem], [cx - 8, hem], [cx - 8.5, SHOULDER_Y + 2]], 'A')
+  g.poly([[cx + 4, SHOULDER_Y], [cx + 6.5, SHOULDER_Y], [cx + 8.5, SHOULDER_Y + 2], [cx + 8, hem], [cx + 4.5, hem]], 'a')
+  return hem
+}
+
 /** Torso and arms for the front and back views: compact, about as wide as the head. */
 function bodyFrontBack(g: Grid, a: Appearance, step: Step, back: boolean) {
   const cx = 24
   legsFrontBack(g, a, step, cx)
-  const hem = BLAZERS.has(a.top) ? 47.5 : HEM_Y
-  g.poly([[cx - 6.5, SHOULDER_Y], [cx + 6.5, SHOULDER_Y], [cx + 8.5, SHOULDER_Y + 2], [cx + 8, hem], [cx - 8, hem], [cx - 8.5, SHOULDER_Y + 2]], 'A')
-  g.poly([[cx + 4, SHOULDER_Y], [cx + 6.5, SHOULDER_Y], [cx + 8.5, SHOULDER_Y + 2], [cx + 8, hem], [cx + 4.5, hem]], 'a')
+  const hem = torsoFrontBack(g, a, cx)
   if (!back) {
     switch (a.top) {
       case 'jersey':
@@ -367,6 +373,15 @@ function up(a: Appearance, step: Step): Pixels {
   const cx = 24
   const h = new HeadSpace(g, cx)
   bodyFrontBack(g, a, step, true)
+  backOfHead(g, h, a, cx)
+  g.outline().thicken()
+  backHairLines(h, a, cx)
+  bodyDetails(g, a, true)
+  return step === 0 ? g.toPixels() : shiftDown(g.toPixels(), 1)
+}
+
+/** The head from behind: ears, the back of the hair (a mullet down the neck, a long fall, a bun), any hat. */
+function backOfHead(g: Grid, h: HeadSpace, a: Appearance, cx: number) {
   if (a.top === 'hoodie') oval(g, cx, 36.5, 5.5, 2.2, 'a')
   oval(h, cx - 8.4, HEAD_Y + 0.5, 1.4, 2, 'S', 's')
   oval(h, cx + 8.4, HEAD_Y + 0.5, 1.4, 2, 's')
@@ -379,10 +394,11 @@ function up(a: Appearance, step: Step): Pixels {
   if (a.hair === 'curly') for (let x = cx - 8; x <= cx + 8; x += 4) oval(h, x, 3.5, 2, 2, 'H', 'j')
   clipHair(g, a, 1)
   hat(h, a, cx, 'up')
-  g.outline().thicken()
+}
+
+/** Strands drawn into the back of the hair after outlining. */
+function backHairLines(h: HeadSpace, a: Appearance, cx: number) {
   if (a.hair !== 'buzz') h.line(cx - 4, 5, cx - 3, 15, 'j').line(cx + 3, 5.5, cx + 4, 15, 'j')
-  bodyDetails(g, a, true)
-  return step === 0 ? g.toPixels() : shiftDown(g.toPixels(), 1)
 }
 
 /* ---------------- in profile ---------------- */
@@ -498,6 +514,49 @@ export function riderFor(a: Appearance, facing: 'left' | 'right' = 'left'): Pixe
 }
 /** Where the rider's hips are in the riding sprite (art pixels): this point sits on the mount's saddle. */
 export const RIDER_HIP: [number, number] = [24, 46]
+
+/**
+ * The rider seen from behind, astride a mount flying away: the back of the head and hair, the
+ * back of the top (the jersey's number and the flames up the wearer's right side), arms reaching
+ * forward to hold on (so only the shoulders and upper arms show past the body: the watch and
+ * bracelets are out of sight), and legs either side of the mount's back with the shoes hanging
+ * below. Same canvas and hip point as the side riders (RIDER_HIP). From behind the wearer's
+ * right is on your right, so it's drawn as itself, never a mirror of anything.
+ */
+export function riderBackFor(a: Appearance): Pixels {
+  const g = new Grid(OW_W, OW_H)
+  const cx = 24
+  const h = new HeadSpace(g, cx)
+  // the arms go first: they reach forward past the body, which then covers the forearms and hands
+  const arms = new Grid(OW_W, OW_H)
+  for (const side of [-1, 1]) owArm(arms, a, [cx + side * 8.2, SHOULDER_Y + 2.5], [cx + side * 9.8, 42.5], [cx + side * 6, 44.5], [cx + side * 4.5, 45])
+  arms.outline()
+  if (TEES.has(a.top)) for (const side of [-1, 1]) arms.line(cx + side * 7.6, 40, cx + side * 11, 40, a.top === 'jersey' ? 'c' : 'a')
+  stampOver(g, arms)
+  // legs astride: thighs out over the mount's back, shins and shoes hanging down its sides
+  for (const side of [-1, 1]) {
+    const hip: Pt = [cx + side * 3, HIP_Y]
+    const knee: Pt = [cx + side * 9, 49]
+    const ankle: Pt = [cx + side * 9.5, 54]
+    if (bareLegs(a)) {
+      capsule(g, hip, knee, 3.1, 2.9, 'B', 'b')
+      capsule(g, knee, ankle, 2.3, 2.1, 'S', 's')
+    } else {
+      capsule(g, hip, knee, 3.1, 2.9, 'B', 'b', 'P')
+      capsule(g, knee, ankle, 2.7, 2.5, 'B', 'b')
+    }
+    // the heel and sole, from behind
+    oval(g, ankle[0], 56, 2.6, 2, 'F', 'f', 'e')
+  }
+  if (a.bottom === 'skirt') g.poly([[cx - 8.5, 44], [cx + 8.5, 44], [cx + 10.5, 49], [cx - 10.5, 49]], 'B')
+  g.poly([[cx - 7.5, 44.5], [cx + 7.5, 44.5], [cx + 8, 48.5], [cx - 8, 48.5]], 'B')
+  torsoFrontBack(g, a, cx)
+  backOfHead(g, h, a, cx)
+  g.outline().thicken()
+  backHairLines(h, a, cx)
+  bodyDetails(g, a, true)
+  return g.toPixels()
+}
 
 /** Walk cycle order: stand, step A, stand, step B. */
 export const WALK_CYCLE = [0, 1, 0, 2] as const

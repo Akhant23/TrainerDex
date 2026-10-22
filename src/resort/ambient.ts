@@ -11,7 +11,7 @@ import type { SpeciesId } from '../battle/data'
 import type { Appearance } from '../sprites/character'
 import { paletteFor } from '../sprites/character'
 import type { Facing } from '../sprites/overworld'
-import { OW_WORLD, riderFor, RIDER_HIP } from '../sprites/overworld'
+import { OW_WORLD, riderBackFor, riderFor, RIDER_HIP } from '../sprites/overworld'
 import { creatureArtHi } from '../sprites/creatures'
 import { flightArt, FLIGHT_H, FLIGHT_W, FLYERS as FLYER_IDS, RIDEABLE, type FlyerId } from '../sprites/flight'
 import { flipX } from '../sprites/raster'
@@ -125,11 +125,14 @@ export const skyScale = (near: number) => 0.42 + 0.2 * Math.max(0, Math.min(1, (
 
 /* ---------------- sprites ---------------- */
 
-/** A flyer's layer for one frame, facing right from its own right-facing art (not a flipped copy). */
-function flightLayer(id: FlyerId, frame: number, layer: 'far' | 'body' | 'near', faceRight: boolean) {
+/** Which way a flyer is drawn: side-on (left or right), or from behind as it flies away. */
+export type FlightView = 'left' | 'right' | 'back'
+
+/** A flyer's layer for one frame, in that view: each view is its own art (never a flipped copy). */
+function flightLayer(id: FlyerId, frame: number, layer: 'far' | 'body' | 'near', view: FlightView) {
   const art = flightArt[id]
-  const px = (faceRight ? art.framesRight : art.frames)[frame][layer]
-  return pixelCanvas(px, art.palette, `fl:${id}:${frame}:${layer}:${faceRight}`)
+  const set = view === 'back' && art.framesBack ? art.framesBack : view === 'right' ? art.framesRight : art.frames
+  return pixelCanvas(set[frame][layer], art.palette, `fl:${id}:${frame}:${layer}:${view}`)
 }
 /** The riding sprite for this look and direction (each side drawn as itself, not mirrored). */
 const riderPx = new Map<string, ReturnType<typeof riderFor>>()
@@ -138,6 +141,15 @@ function riderCanvas(look: Appearance, faceRight: boolean) {
   let px = riderPx.get(key)
   if (!px) riderPx.set(key, (px = riderFor(look, faceRight ? 'right' : 'left')))
   return pixelCanvas(px, paletteFor(look), `ride:${key}`)
+}
+
+/** The riding sprite seen from behind (riderBackFor), for a mount flying away. */
+const riderBackPx = new Map<string, ReturnType<typeof riderBackFor>>()
+function riderBackCanvas(look: Appearance) {
+  const key = JSON.stringify(look)
+  let px = riderBackPx.get(key)
+  if (!px) riderBackPx.set(key, (px = riderBackFor(look)))
+  return pixelCanvas(px, paletteFor(look), `rideback:${key}`)
 }
 
 /** Which flight frame to show: birds flap in bursts and glide between them; insects never stop. */
@@ -164,26 +176,30 @@ export function saddlePoint(id: FlyerId, t: number, x: number, y: number, s: num
  * near wing sweeps over their legs. `riderOff` (canvas px) moves the rider off the saddle while
  * they settle onto it or push off from it.
  */
-export function drawFlyer(ctx: CanvasRenderingContext2D, id: FlyerId, t: number, x: number, y: number, s: number, faceRight: boolean, rider?: Appearance, riderOff: [number, number] = [0, 0]) {
+export function drawFlyer(ctx: CanvasRenderingContext2D, id: FlyerId, t: number, x: number, y: number, s: number, faceRight: boolean, rider?: Appearance, riderOff: [number, number] = [0, 0], fromBehind = false) {
   const art = flightArt[id]
+  const back = fromBehind && !!art.framesBack && !!art.saddleBack
+  const view: FlightView = back ? 'back' : faceRight ? 'right' : 'left'
   const f = flightFrame(id, t)
   const k = art.world * s
   const ox = Math.round(x - (FLIGHT_W / 2) * k)
   const oy = Math.round(y - FLIGHT_H * 0.62 * k)
   const w = Math.round(FLIGHT_W * k)
   const h = Math.round(FLIGHT_H * k)
-  ctx.drawImage(flightLayer(id, f, 'far', faceRight), ox, oy, w, h)
-  ctx.drawImage(flightLayer(id, f, 'body', faceRight), ox, oy, w, h)
-  if (rider && art.saddle) {
-    const [sx, sy] = art.saddle[f]
+  ctx.drawImage(flightLayer(id, f, 'far', view), ox, oy, w, h)
+  ctx.drawImage(flightLayer(id, f, 'body', view), ox, oy, w, h)
+  const seat = back ? art.saddleBack : art.saddle
+  if (rider && seat) {
+    const [sx, sy] = seat[f]
     const rs = OW_WORLD * s
-    const img = riderCanvas(rider, faceRight)
-    const hipX = faceRight ? img.width - RIDER_HIP[0] : RIDER_HIP[0]
-    const px = ox + (faceRight ? FLIGHT_W - sx : sx) * k
+    // the rider for this view, chosen explicitly (left, right or from behind), hips on the saddle
+    const img = back ? riderBackCanvas(rider) : riderCanvas(rider, faceRight)
+    const hipX = !back && faceRight ? img.width - RIDER_HIP[0] : RIDER_HIP[0]
+    const px = ox + (!back && faceRight ? FLIGHT_W - sx : sx) * k
     const py = oy + sy * k
     ctx.drawImage(img, Math.round(px + riderOff[0] - hipX * rs), Math.round(py + riderOff[1] - RIDER_HIP[1] * rs), Math.round(img.width * rs), Math.round(img.height * rs))
   }
-  ctx.drawImage(flightLayer(id, f, 'near', faceRight), ox, oy, w, h)
+  ctx.drawImage(flightLayer(id, f, 'near', view), ox, oy, w, h)
 }
 
 /** Sky flyers, in the sky band above the horizon row `horizonY` (canvas pixels). */
@@ -370,7 +386,19 @@ export function mountItems(f: MountFrame<string>, d: Departure, now: number, pro
         const travel: 'left' | 'right' = f.faceRight ? 'right' : 'left'
         const seat = saddlePoint(id, wingT, mx, my, fs, f.faceRight)
         if (!seat || f.hop <= 0 || f.hop >= 1) {
-          drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight, f.aboard ? look : undefined)
+          const rider = f.aboard ? look : undefined
+          if (f.back <= 0 || !flightArt[id].framesBack) drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight, rider)
+          else if (f.back >= 1) drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight, rider, [0, 0], true)
+          else {
+            // turning to fly away: a short cross-fade from the side view to the view from behind,
+            // both on the same spot and scale (each layer stays pixel-sharp), eased so it spends
+            // little time half-and-half
+            const b = f.back * f.back * (3 - 2 * f.back)
+            ctx.globalAlpha = f.fade * (1 - b)
+            drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight, rider)
+            ctx.globalAlpha = f.fade * b
+            drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight, rider, [0, 0], true)
+          }
           ctx.restore()
           return
         }

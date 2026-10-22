@@ -221,17 +221,75 @@ side-view flight was made to read better as "away": one continuous take-off + fl
 stall at the phase change), sideways drift that eases off as the course bends north, size shrinking
 in ~3% steps (exactly full size on the ground) so nearest-neighbour scaling doesn't shimmer, and a
 fade over the last ~20% so it's gone when the sequence ends instead of popping out. Mount and rider
-always share one scale and the saddle point, so the rider stays attached. **It is still the
-side-view sprite: a convincing distance effect, not a rear-facing animation.** Captures:
-`departure-flight-before.png`, `departure-flight-after-right.png`, `departure-flight-after-left.png`.
+always share one scale and the saddle point, so the rider stays attached. (Seventh pass: still
+the side-view sprite. Superseded by the rear view below.) Captures: `departure-flight-before.png`,
+`departure-flight-after-right.png`, `departure-flight-after-left.png`.
+
+## Flying away, seen from behind (eighth pass)
+
+**Audit.** The player's mount is the first rideable flyer in their party (Megaphawk, Hootour or
+Diplomoth; Megaphawk when there's none, as with the starter party); visitors ride all three. Each
+had left- and native right-facing side frames (3 layers: far wing, body, near wing; 4 wingbeat
+frames; 56×40 base grid drawn at 2×, shown at 0.58–0.62 world px per art px, flight frames
+120–140 ms (Diplomoth 110 ms)), and the rider had per-direction side poses (48×64, shown at 0.5 world px per art
+px, hips at (24, 46) on the saddle). No rear-facing or alternate-perspective flight frames existed
+anywhere in the project, and no unused ones; the battle back sprites are perched poses. No external
+sprite library was tried this pass (they were unreachable before; nothing to compare a rear flying
+pose against).
+
+**New art (original, drawn in code for this site).**
+
+- `framesBack` for Megaphawk, Hootour and Diplomoth (`src/sprites/flight.ts`: `megaphawkBack`,
+  `hootourBack`, `diplomothBack`): the same canvas, palette, outline and form-shading pipeline as
+  the side frames, 4 wingbeat frames on the same timing. Birds: both wings beat out to the sides
+  (a V, a wide flat span, a droop, a half-folded recovery), the wing shape shared with the side
+  view (`featherWing`), tail fanned toward you, feet tucked. Megaphawk's crest and the rim of its
+  megaphone past the right of its head; Hootour's ear tufts, the scarf knotted round its neck with
+  its tail down the back (as on its battle back sprite) and the flag in its talons on its right;
+  Diplomoth's fore- and hindwings spread with their eye spots, antennae, white ruff, segmented
+  abdomen and the placard hanging below, its blank back toward you. Parts are outlined separately
+  and stacked so each keeps its edge where it crosses another. Not a mirror or rotation of anything.
+- `riderBackFor` (`src/sprites/overworld.ts`): the trainer astride, from behind: the back of the
+  head and hair and any hat (shared with the standing back view, which is unchanged pixel for
+  pixel), the back of the top (side panels, sleeve stripes, the flames up the wearer's right), arms
+  reaching forward to hold on (only shoulders and upper arms show), legs either side of the mount's
+  back with the shoes hanging below. Same canvas and hip point as the side riders. From behind the
+  wearer's right is on your right, so it's drawn as itself; a test checks the flames' side.
+
+**In the sequence.** Arrival, landing, the hop and take-off are unchanged (side view). In the
+flight away, as the course bends north, mount and rider change to the rear view over a short eased
+cross-fade (~140 ms) on the same spot and scale, then carry on north, shrinking in steps and fading
+out. A cross-fade is a deliberate change of view, not an animated turn: the middle two or three
+frames show both views faintly. Flyers without rear art keep the side view. Visitors leaving by
+air use the same sequence, and a visitor's empty mount turns away the same way after dropping them
+off. Captures (all in the real game in the browser): `rear-turn-hootour-from-right.png`,
+`rear-turn-hootour-from-left.png`, `rear-turn-megaphawk.png`, `rear-turn-diplomoth.png`,
+`rear-visitor-arrival.png`, `rear-visitor-leaving.png`; the art: `rear-mount-frames.png` (sprite
+sheet), `rear-mount-with-rider.png` and `rear-rider-poses.png` (drawn by the game's own functions,
+not in a scene); `npm run sprites:export` writes `flight-<mount>-back.png`.
+
+**Provenance.**
+
+| Asset | Kind |
+|---|---|
+| Side-view flight frames, side riders, the walker's back view, the battle back sprites | existing project art (this site's own, generated in code) |
+| Rear-view flight frames (3 mounts × 4 frames), the rear rider | new original art, this pass |
+| Pokémon Black/White gameplay footage | earlier passes only, for general style (proportions, outlines); nothing copied, no frames stored |
+| Original sprite sheets | not used, not in the repository |
+
+Nothing here is extracted or official Pokémon art.
 
 ## Open gaps
 
 - Original BW overworld sprite sheets weren't reachable; walker numbers are footage-measured.
 - Which BW moves dim the background was only observed for Electro Ball.
 - Tile and backdrop colours are compared against compressed video, so they're approximate.
-- Flyers only fly left or right; the departure's flight away is a left/right flyer drifting north,
-  shrinking and fading, not a true away-from-camera view (no rear-facing flight art exists).
+- The change from the side view to the rear view is a short cross-fade, not an animated turn.
+  Optional future enhancement: a three-quarter frame per mount (and per side, since turning from
+  left and from right show different sides) plus a three-quarter rider; not made, as it would be
+  six more mount poses and two rider poses for a ~140 ms moment.
+- Only the three mounts have rear views (Riffin and Campfly never carry anyone away); the rear
+  rider hides the watch and bracelets (the hands are forward, out of sight).
 - The departure's timing and sizes are this site's own; BW2's Fly sequence hasn't been measured
   (confidence record in GEN5-TIMING.md).
 - The hop is two existing poses (walking frame, seated rider) moved along a path; there's no
