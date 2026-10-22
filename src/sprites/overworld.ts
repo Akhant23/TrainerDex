@@ -46,11 +46,22 @@ const FOOT_Y = 56.8
  * centre line, y downward from the top of the head. Shapes are re-rasterised at the new size, not
  * scaled after drawing, so every outline stays one clean pixel.
  */
-const HEAD_SX = 1.32
-const HEAD_SY = 1.12
-const HEAD_TOP = 12
+const HEAD_SX = 1.14
+const HEAD_SY = 1.06
+const HEAD_TOP = 13
 /** Design-space head centre (for shapes written against it). */
 const HEAD_Y = 13.5
+/**
+ * Where a head-space point lands in the sprite, for the face's pixel-sized marks (eyes, frames,
+ * nose, earrings): they're placed on the head, so they follow its proportions, but drawn as fixed
+ * little stamps so they stay crisp.
+ */
+const headX = (cx: number, x: number) => Math.round(cx + (x - cx) * HEAD_SX)
+const headY = (y: number) => Math.round(HEAD_TOP + y * HEAD_SY)
+/** The eyes in head space: either side of the centre line (front), toward the face (profile), and their top row. */
+const EYE_DX = 3.7879
+const EYE_PROFILE_DX = -6.818
+const EYE_Y = 11.6
 /** Where hats sit, in head space: hair above this row is clipped under a hat. */
 const BRIM: Partial<Record<Appearance['hat'], number>> = { cap: 9, beanie: 9, bucket: 8 }
 
@@ -299,46 +310,52 @@ function down(a: Appearance, step: Step): Pixels {
   const h = new HeadSpace(g, cx)
   // hair behind the head (and the mullet at the nape)
   const big = bigHair(a)
-  oval(h, cx, 11.5, big ? 10.4 : 9.8, big ? 10.4 : 9.6, a.hair === 'buzz' ? 'j' : 'H', 'j')
+  oval(h, cx, 11.5, big ? 9.6 : 9, big ? 9.8 : 9.2, a.hair === 'buzz' ? 'j' : 'H', 'j')
   if (a.hair === 'long') h.poly([[cx - 9.5, 12], [cx + 9.5, 12], [cx + 10, 28], [cx - 10, 28]], 'H')
   if (a.hair === 'mullet') h.poly([[cx - 7, 16], [cx + 7, 16], [cx + 7.5, 24], [cx - 7.5, 24]], 'H')
   if (a.hair === 'bun') oval(h, cx, 1.8, 3.5, 2.6, 'H', 'j', 'h')
   clipHair(g, a)
   bodyFrontBack(g, a, step, false)
   // a big round face, ears level with the eyes, shaded down its right side
-  oval(h, cx - 8.4, HEAD_Y + 0.5, 1.4, 2, 'S', 's')
-  oval(h, cx + 8.4, HEAD_Y + 0.5, 1.4, 2, 's')
+  // ears tucked against the face (not sticking out past the hair)
+  oval(h, cx - 7.8, HEAD_Y + 0.5, 1.2, 1.9, 'S', 's')
+  oval(h, cx + 7.8, HEAD_Y + 0.5, 1.2, 1.9, 's')
   oval(h, cx, HEAD_Y, 7.8, 8.6, 'S', undefined, 'T')
-  for (let y = 16; y < 38; y++) for (let x = cx + 6; x <= cx + 11; x++) if (g.get(x, y) === 'S') g.set(x, y, 's')
+  const shadeX = headX(cx, cx + 4.545)
+  const edgeX = headX(cx, cx + 8.333)
+  for (let y = 16; y < 38; y++) for (let x = shadeX; x <= edgeX; x++) if (g.get(x, y) === 'S') g.set(x, y, 's')
   fringeFront(h, a, cx)
   clipHair(g, a, 1)
   hat(h, a, cx, 'down')
   g.outline().thicken()
   // the BW face: two tall eyes with a glint (no brows, nose or mouth at this size)
+  const eL = headX(cx, cx - EYE_DX) - 1
+  const eR = headX(cx, cx + EYE_DX) - 1
+  const eT = headY(EYE_Y)
   if (has(a, 'sunglasses')) {
-    g.rect(cx - 8, 25, cx - 2, 28, 'K').rect(cx + 2, 25, cx + 8, 28, 'K').rect(cx - 2, 25, cx + 2, 25, 'K')
-    g.set(cx - 7, 25, 'l').set(cx + 3, 25, 'l')
+    g.rect(eL - 2, eT, eL + 4, eT + 3, 'K').rect(eR - 2, eT, eR + 4, eT + 3, 'K').rect(eL + 4, eT, eR - 2, eT, 'K')
+    g.set(eL - 1, eT, 'l').set(eR - 1, eT, 'l')
   } else {
-    g.stamp(cx - 6, 25, ['WK', 'KK', 'KK', 'KK']).stamp(cx + 4, 25, ['KW', 'KK', 'KK', 'KK'])
+    g.stamp(eL, eT, ['WK', 'KK', 'KK', 'KK']).stamp(eR, eT, ['KW', 'KK', 'KK', 'KK'])
     if (has(a, 'glasses')) {
       // bold frames survive at this size; the eyes sit inside them
-      for (const x0 of [cx - 8, cx + 2]) g.rect(x0, 24, x0 + 6, 24, 'K').rect(x0, 29, x0 + 6, 29, 'K').rect(x0, 25, x0, 28, 'K').rect(x0 + 6, 25, x0 + 6, 28, 'K')
-      g.rect(cx - 2, 25, cx + 2, 25, 'K')
+      for (const x0 of [eL - 2, eR - 2]) g.rect(x0, eT - 1, x0 + 6, eT - 1, 'K').rect(x0, eT + 4, x0 + 6, eT + 4, 'K').rect(x0, eT, x0, eT + 3, 'K').rect(x0 + 6, eT, x0 + 6, eT + 3, 'K')
+      g.rect(eL + 4, eT, eR - 2, eT, 'K')
     }
   }
-  if (has(a, 'earring')) g.set(cx - 11, 30, 'X').set(cx + 11, 30, 'X')
+  if (has(a, 'earring')) g.set(headX(cx, cx - 8.333), headY(16.07), 'X').set(headX(cx, cx + 8.333), headY(16.07), 'X')
   bodyDetails(g, a, false)
   return step === 0 ? g.toPixels() : shiftDown(g.toPixels(), 1)
 }
 
 function fringeFront(g: Raster, a: Appearance, cx: number) {
   const hairC = a.hair === 'buzz' ? 'j' : 'H'
-  oval(g, cx, 7.5, 9.4, 5.2, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
+  oval(g, cx, 7.5, a.hair === 'buzz' ? 8.4 : bigHair(a) ? 9.4 : 9, a.hair === 'buzz' ? 4.6 : 5.2, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
   switch (a.hair) {
     case 'wavy':
     case 'mullet':
       g.poly([[cx - 8.6, 7.5], [cx + 8.6, 7.5], [cx + 7.4, 12], [cx + 4, 10.5], [cx + 0.6, 12.5], [cx - 2.6, 10.5], [cx - 6, 12], [cx - 8.6, 11.5]], 'H')
-      for (const [x, y, r] of [[cx - 5.4, 3, 3], [cx, 2, 3.3], [cx + 5.4, 3, 3]] as const) oval(g, x, y, r, r, 'H', 'j', 'h')
+      for (const [x, y, r] of [[cx - 5, 3.6, 2.6], [cx, 2.8, 2.9], [cx + 5, 3.6, 2.6]] as const) oval(g, x, y, r, r, 'H', 'j', 'h')
       g.line(cx + 3, 4.5, cx + 1, 11, 'j').line(cx - 4, 5, cx - 5.5, 10.5, 'j')
       break
     case 'curtains':
@@ -386,11 +403,11 @@ function up(a: Appearance, step: Step): Pixels {
  */
 function backOfHead(g: Grid, h: HeadSpace, a: Appearance, cx: number, turn = 0) {
   if (a.top === 'hoodie') oval(g, cx, 36.5, 5.5, 2.2, 'a')
-  if (turn <= 0) oval(h, cx - 8.4, HEAD_Y + 0.5, 1.4, 2, 'S', 's')
-  if (turn >= 0) oval(h, cx + 8.4, HEAD_Y + 0.5, 1.4, 2, turn > 0 ? 'S' : 's', turn > 0 ? 's' : undefined)
+  if (turn <= 0) oval(h, cx - 7.8, HEAD_Y + 0.5, 1.2, 1.9, 'S', 's')
+  if (turn >= 0) oval(h, cx + 7.8, HEAD_Y + 0.5, 1.2, 1.9, turn > 0 ? 'S' : 's', turn > 0 ? 's' : undefined)
   const hairC = a.hair === 'buzz' ? 'j' : 'H'
   const big = bigHair(a)
-  oval(h, cx, 11.5, big ? 10.4 : 9.6, big ? 10.4 : 9.8, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
+  oval(h, cx, 11.5, big ? 9.6 : 9, big ? 9.8 : 9.2, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
   if (a.hair === 'mullet') h.poly([[cx - 7.5, 15], [cx + 7.5, 15], [cx + 7.5, 23], [cx + 4, 22], [cx, 24], [cx - 4, 22], [cx - 7.5, 23]], 'H')
   if (a.hair === 'long') h.poly([[cx - 9.5, 12], [cx + 9.5, 12], [cx + 10, 28], [cx - 10, 28]], 'H')
   if (a.hair === 'bun') oval(h, cx, 2.5, 3.5, 2.8, 'H', 'j', 'h')
@@ -454,12 +471,12 @@ function profile(a: Appearance, step: Step, side: Side, ride = false): Pixels {
   if (has(a, 'bag')) g.rect(cx + 4.5, 40, cx + 8, 45, 'Z')
   // the head in profile: hair behind, a big face toward the front
   const hairC = a.hair === 'buzz' ? 'j' : 'H'
-  oval(h, cx + 3, 11.5, 9, 9.4, hairC, 'j')
+  oval(h, cx + 2.4, 11.8, bigHair(a) ? 8.8 : 8.4, bigHair(a) ? 9 : 8.8, hairC, 'j')
   if (a.hair === 'mullet') h.poly([[cx + 1, 15], [cx + 10, 15], [cx + 10, 23], [cx + 6, 22], [cx + 2, 24]], 'H')
   if (a.hair === 'long') h.rect(cx, 11, cx + 10, 27, 'H').rect(cx + 7, 11, cx + 10, 27, 'j')
   if (a.hair === 'bun') oval(h, cx + 8.5, 3, 3, 2.6, 'H', 'j')
   oval(h, cx - 2, HEAD_Y, 7.2, 8.4, 'S', undefined, 'T')
-  oval(h, cx + 3, 7.6, 8.6, 5.2, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
+  oval(h, cx + 2.4, 7.8, a.hair === 'buzz' ? 7.8 : 8.2, a.hair === 'buzz' ? 4.6 : 5, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
   if (a.hair !== 'buzz' && a.hair !== 'bun') h.poly([[cx - 9.5, 7.5], [cx + 2, 6.5], [cx - 1.5, 11], [cx - 5.5, 10.5], [cx - 9.5, 12.5]], 'H')
   if (a.hair === 'curtains') h.poly([[cx - 9, 7.5], [cx - 5, 7.5], [cx - 6, 17], [cx - 9, 15.5]], 'H')
   if (a.hair === 'spiky') for (const x of [cx - 4, cx + 1.5, cx + 7]) h.poly([[x - 2.6, 6], [x + 2.6, 6], [x + 2, -0.5]], 'H')
@@ -481,13 +498,18 @@ function profile(a: Appearance, step: Step, side: Side, ride = false): Pixels {
   stampOver(g, arm)
   g.outline().thicken()
   // a nose bump in the profile line, and one tall eye
-  g.set(cx - 13, 29, 'S').set(cx - 13, 30, 's')
-  if (has(a, 'sunglasses')) g.rect(cx - 11, 25, cx - 6, 28, 'K').line(cx - 6, 25, cx + 3, 25, 'K')
+  const nose = headX(cx, cx - 9.848)
+  const noseY = headY(15.18)
+  g.set(nose, noseY, 'S').set(nose, noseY + 1, 's')
+  const eye = headX(cx, cx + EYE_PROFILE_DX) - 1
+  const eT = headY(EYE_Y)
+  const ear = headX(cx, cx + 2.27)
+  if (has(a, 'sunglasses')) g.rect(eye - 1, eT, eye + 4, eT + 3, 'K').line(eye + 4, eT, ear, eT, 'K')
   else {
-    g.stamp(cx - 10, 25, ['KW', 'KK', 'KK', 'KK'])
-    if (has(a, 'glasses')) g.rect(cx - 12, 24, cx - 6, 24, 'K').rect(cx - 12, 29, cx - 6, 29, 'K').rect(cx - 12, 25, cx - 12, 28, 'K').rect(cx - 6, 25, cx - 6, 28, 'K').line(cx - 6, 25, cx + 3, 25, 'K')
+    g.stamp(eye, eT, ['KW', 'KK', 'KK', 'KK'])
+    if (has(a, 'glasses')) g.rect(eye - 2, eT - 1, eye + 4, eT - 1, 'K').rect(eye - 2, eT + 4, eye + 4, eT + 4, 'K').rect(eye - 2, eT, eye - 2, eT + 3, 'K').rect(eye + 4, eT, eye + 4, eT + 3, 'K').line(eye + 4, eT, ear, eT, 'K')
   }
-  if (has(a, 'earring')) g.set(cx + 5, 31, 'X')
+  if (has(a, 'earring')) g.set(headX(cx, cx + 3.788), headY(16.96), 'X')
   return g.toPixels()
 }
 
@@ -598,7 +620,7 @@ export function riderQuarterFor(a: Appearance, h: -1 | 1): Pixels {
   backHairLines(hs, a, hc)
   bodyDetails(g, a, true)
   // the arm of the glasses, from the near ear forward
-  if (has(a, 'glasses') || has(a, 'sunglasses')) g.line(hc + h * 11, 24, hc + h * 13, 24.5, 'K')
+  if (has(a, 'glasses') || has(a, 'sunglasses')) g.line(hc + h * 8.333 * HEAD_SX, HEAD_TOP + 10.71 * HEAD_SY, hc + h * 9.848 * HEAD_SX, HEAD_TOP + 11.16 * HEAD_SY, 'K')
   return g.toPixels()
 }
 

@@ -259,8 +259,9 @@ function hairBack(a: Appearance): Pixels {
       g.poly([[46, 14], [52, 14], [52.5, 27], [47, 27]], 'j')
       break
     case 'curly':
-      oval(g, 40, 15, 15.5, 13.5, 'H', 'j', 'h')
-      for (const [x, y] of [[26, 22], [54, 22], [27, 10], [53, 10], [40, 2.5], [32, 4], [48, 4]]) oval(g, x, y, 4.2, 4.2, 'H', 'j')
+      // a crown of curls round the head: volume, but following the skull rather than puffing out
+      oval(g, 40, 14.5, 14, 13, 'H', 'j', 'h')
+      for (const [x, y] of [[28.5, 21], [51.5, 21], [28, 10], [52, 10], [40, 2.5], [32.5, 4], [47.5, 4]]) oval(g, x, y, 3.8, 3.8, 'H', 'j')
       break
     case 'long':
       oval(g, 40, 15, 13, 12, 'H', 'j', 'h')
