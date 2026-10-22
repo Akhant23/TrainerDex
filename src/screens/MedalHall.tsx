@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { navigate } from '../app/router'
 import { medals } from '../content/medals'
-import { signature } from '../content/aaryan'
+import { signature, towerStages } from '../content/aaryan'
 import { staff } from '../resort/npcs'
 import { blocked, CASES, CURATOR, DOOR, ENTRANCE, hall, nearestFloor, pathTo, PODIUM, slotOf, standFor, type Case } from '../resort/medalHall'
 import { cameraYToShow, drawWorld, pixelCanvas, RES, unproject, VIEW_H, VIEW_W, type Actor, type Camera, type CreatureActor, type WorldItem } from '../resort/render'
@@ -10,7 +10,9 @@ import { tilePalette, tiles, TILE } from '../resort/tiles'
 import type { Spot } from '../resort/maps'
 import { MEDAL_TIER_COLOURS, medalPixels } from '../sprites/medalArt'
 import { WALK_CYCLE, type Facing } from '../sprites/overworld'
-import type { Appearance } from '../sprites/character'
+import { paletteFor, PORTRAIT, renderFlat, type Appearance } from '../sprites/character'
+import { creatureArt } from '../sprites/creatures'
+import { crop, type Palette, type Pixels } from '../sprites/pixels'
 import { useSettings } from '../systems/settings'
 import { DialogueBox } from '../ui/DialogueBox'
 
@@ -161,6 +163,57 @@ function medalCanvas(index: number): HTMLCanvasElement {
 type Proj = (wx: number, wy: number) => { x: number; y: number; s: number }
 const backWall = () => pixelCanvas(tiles.X.prop!.px, tilePalette, 'prop:X')
 
+/* ---------------- pictures on the walls ---------------- */
+
+/** A picture in a gilt frame, at art resolution (shown at half size in the world, like the walkers). */
+const framedCache = new Map<string, HTMLCanvasElement>()
+function framed(key: string, art: Pixels, pal: Palette, mat: string): HTMLCanvasElement {
+  const hit = framedCache.get(key)
+  if (hit) return hit
+  const F = 6
+  const [w, h] = [art[0].length + F * 2, art.length + F * 2]
+  const cv = document.createElement('canvas')
+  cv.width = w
+  cv.height = h
+  const g = cv.getContext('2d')!
+  const rect = (x: number, y: number, rw: number, rh: number, col: string) => ((g.fillStyle = col), g.fillRect(x, y, rw, rh))
+  // the frame: an ink edge, gilt with a lit top-left and a shaded bottom-right, an ink inner line
+  rect(0, 0, w, h, WOOD.ink)
+  rect(1, 1, w - 2, h - 2, '#c8a018')
+  rect(1, 1, w - 2, 2, '#f8d040')
+  rect(1, 1, 2, h - 2, '#f8d040')
+  rect(1, h - 3, w - 2, 2, '#9a7410')
+  rect(w - 3, 1, 2, h - 2, '#9a7410')
+  for (const [x, y] of [[2, 2], [w - 4, 2], [2, h - 4], [w - 4, h - 4]]) rect(x, y, 2, 2, '#fff2a8')
+  rect(F - 1, F - 1, w - F * 2 + 2, h - F * 2 + 2, WOOD.ink)
+  // the mat, a little lighter at the top, then the picture
+  rect(F, F, w - F * 2, h - F * 2, mat)
+  rect(F, F, w - F * 2, Math.round((h - F * 2) / 3), mixWhite(mat))
+  art.forEach((row, y) => [...row].forEach((ch, x) => ch !== '.' && rect(F + x, F + y, 1, 1, pal[ch])))
+  framedCache.set(key, cv)
+  return cv
+}
+const mixWhite = (h: string) => `#${[1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.7 + 255 * 0.3).toString(16).padStart(2, '0')).join('')}`
+
+const portraitOf = (look: Appearance) => crop(renderFlat(look), PORTRAIT.x, PORTRAIT.y, PORTRAIT.w, PORTRAIT.h)
+/** On the wallpaper above the back wall: Aaryan's portrait and his partners', between the lamp cords. */
+const BACK_PICTURES = [
+  { key: 'aaryan', at: 84, art: () => portraitOf(signature), pal: () => paletteFor(signature), mat: '#8cc4ec' },
+  { key: 'gavelion', at: 140, art: () => creatureArt.gavelion.pixels, pal: () => creatureArt.gavelion.palette, mat: '#f0d898' },
+  { key: 'megaphawk', at: 26, art: () => creatureArt.megaphawk.pixels, pal: () => creatureArt.megaphawk.palette, mat: '#b8e0b0' },
+  { key: 'helixor', at: 198, art: () => creatureArt.helixor.pixels, pal: () => creatureArt.helixor.palette, mat: '#e8c0d8' },
+] as const
+/** Along the side walls: Aaryan at each stage of the tower (his past selves), two to a wall. */
+const SIDE_PICTURES = towerStages.slice(0, 4).map((st, i) => ({ key: `stage:${st.id}`, look: st.look, wall: i < 2 ? 0 : 1, depth: i % 2 ? 100 : 60, mat: ['#a8b8d8', '#e8d8b0', '#d8b0b8', '#b0d8d0'][i] }))
+/** How high the pictures hang (world px above the floor, to their bottom edge). */
+const BACK_HANG = 98
+const SIDE_HANG = 50
+
+function backPicture(i: number) {
+  const b = BACK_PICTURES[i]
+  return framed(b.key, b.art(), b.pal(), b.mat)
+}
+
 /** The hall's shell: back wall and wallpaper up to the ceiling, and the side walls (in view px; drawn at RES). */
 function drawShell(c: CanvasRenderingContext2D, proj: Proj, vh: number) {
   const R = RES
@@ -206,6 +259,39 @@ function drawShell(c: CanvasRenderingContext2D, proj: Proj, vh: number) {
     quad(0, 0, 6, 6, '#6c7488')
     quad(WALL_TOP - 44, WALL_TOP - 44, WALL_TOP - 42, WALL_TOP - 42, '#8a92a8')
     quad(WALL_TOP - 3, WALL_TOP - 3, WALL_TOP, WALL_TOP, '#8a92a8')
+  }
+  // pictures on the wallpaper above the back wall (art at half size, like the walkers)
+  c.imageSmoothingEnabled = false
+  BACK_PICTURES.forEach((b, i) => {
+    const img = backPicture(i)
+    const p = proj(b.at - img.width / 4, back)
+    const [w, h] = [(img.width / 2) * p.s, (img.height / 2) * p.s]
+    const x0 = Math.round(p.x * R)
+    const y0 = Math.round((p.y - BACK_HANG * p.s - h) * R)
+    c.fillStyle = 'rgba(20,24,40,0.25)'
+    c.fillRect(x0 + Math.round(p.s * R), y0 + Math.round(p.s * R), Math.round(w * R), Math.round(h * R))
+    c.drawImage(img, x0, y0, Math.round(w * R), Math.round(h * R))
+  })
+  // and on the side walls, seen at an angle: each picture is skewed along its wall
+  for (const sp of SIDE_PICTURES) {
+    const img = framed(sp.key, portraitOf(sp.look), paletteFor(sp.look), sp.mat)
+    const x = sp.wall ? HALL_W : 0
+    const [iw, ih] = [img.width / 2, img.height / 2]
+    // the picture runs along the wall from depth (back) to depth + iw (front)
+    const [d0, d1] = sp.wall ? [sp.depth, sp.depth + iw] : [sp.depth, sp.depth + iw]
+    const pb = proj(x, d0)
+    const pf = proj(x, d1)
+    const top = (q: { x: number; y: number; s: number }) => ({ x: q.x * R, y: (q.y - (SIDE_HANG + ih) * q.s) * R })
+    const tb = top(pb)
+    const tf = top(pf)
+    const hb = ih * pb.s * R
+    c.save()
+    c.setTransform((tf.x - tb.x) / img.width, (tf.y - tb.y) / img.width, 0, hb / img.height, tb.x, tb.y)
+    c.drawImage(img, 0, 0)
+    // the side walls face across the room: the pictures on them catch a little less light
+    c.fillStyle = 'rgba(20,24,40,0.12)'
+    c.fillRect(0, 0, img.width, img.height)
+    c.restore()
   }
 }
 

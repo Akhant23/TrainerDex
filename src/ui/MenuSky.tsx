@@ -22,11 +22,19 @@ function mix(a: string, b: string, k: number): string {
 let bands: { far: Silhouette; near: Silhouette } | undefined
 const silhouettes = () => (bands ??= { far: sydney(), near: resort() })
 
-/** One silhouette band, tiled across `width` (plus a tile to pan into), on the device-pixel grid. */
-function Band({ art, color, lit, scale, width, period, bottom }: { art: Silhouette; color: string; lit: boolean; scale: number; width: number; period: number; bottom: number }) {
+/** What lies under a band, down to the panel's foot: the harbour (rippling) or the resort's paving. */
+type Ground = 'water' | 'paving'
+
+/**
+ * One silhouette band, tiled across `width` (plus a tile to pan into), on the device-pixel grid,
+ * with `below` rows of ground under it in the same colour (its pattern repeats within the tile, so
+ * it pans with the band seamlessly).
+ */
+function Band({ art, color, lit, scale, width, period, below, ground }: { art: Silhouette; color: string; lit: boolean; scale: number; width: number; period: number; below: number; ground: Ground }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const tile = art.w * scale
   const tiles = Math.ceil(width / tile) + 1
+  const rows = art.h + below
   // in step with every other copy of this band (the wipe's new colour lands exactly over the old)
   const [delay] = useState(() => -Math.round(performance.now() % period))
   useLayoutEffect(() => {
@@ -35,10 +43,13 @@ function Band({ art, color, lit, scale, width, period, bottom }: { art: Silhouet
     if (!c || !ctx) return
     const p = scale * dpr()
     c.width = Math.round(tiles * art.w * p)
-    c.height = Math.round(art.h * p)
+    c.height = Math.round(rows * p)
     ctx.clearRect(0, 0, c.width, c.height)
-    const paint = (mask: Uint8Array, fill: string) => {
+    const px = (x: number, y: number, w: number, fill: string) => {
       ctx.fillStyle = fill
+      for (let t = 0; t < tiles; t++) ctx.fillRect(Math.round((t * art.w + x) * p), Math.round(y * p), Math.round(w * p), Math.round(p))
+    }
+    const paint = (mask: Uint8Array, fill: string) => {
       for (let y = 0; y < art.h; y++)
         for (let x = 0; x < art.w; ) {
           if (!mask[y * art.w + x]) {
@@ -47,27 +58,49 @@ function Band({ art, color, lit, scale, width, period, bottom }: { art: Silhouet
           }
           let run = 1
           while (x + run < art.w && mask[y * art.w + x + run]) run++
-          for (let t = 0; t < tiles; t++) ctx.fillRect(Math.round((t * art.w + x) * p), Math.round(y * p), Math.round(run * p), Math.round(p))
+          px(x, y, run, fill)
           x += run
         }
     }
     paint(art.body, color)
     if (lit) paint(art.lights, '#ffe7a0')
-  }, [art, color, lit, scale, tiles])
+    // the ground under the band, down to the foot of the panel
+    ctx.fillStyle = color
+    ctx.fillRect(0, Math.round(art.h * p), c.width, c.height)
+    const light = mix(color, '#ffffff', 0.12)
+    const dark = mix(color, '#1c1a24', 0.25)
+    for (let y = 0; y < below; y++) {
+      const row = art.h + y
+      if (ground === 'water') {
+        // ripples: short pale dashes, staggered row to row (every pattern repeats in 32 px)
+        if (y % 3 !== 1) continue
+        const off = ((y * 11) % 32) | 0
+        for (let x = off % 32; x < art.w; x += 32) px(x, row, 6 + (y % 2) * 3, light)
+        // and the lights of the far shore glinting on the water after dark
+        if (lit && y < 9) for (let x = (y * 7) % 16; x < art.w; x += 16) if ((x * 13 + y) % 5 === 0) px(x, row, 2, '#ffe7a080')
+      } else {
+        // paving: a dark joint every 6 rows, and staggered joints across (12 px slabs)
+        if (y % 6 === 0) px(0, row, art.w, dark)
+        else if (y % 6 === 1) px(0, row, art.w, light)
+        else for (let x = Math.floor(y / 6) % 2 ? 6 : 0; x < art.w; x += 12) px(x, row, 1, dark)
+      }
+    }
+  }, [art, color, lit, scale, tiles, rows, below, ground])
   return (
     <canvas
       ref={ref}
       aria-hidden
-      className="skyline-pan pixelated absolute left-0"
-      style={{ bottom, width: tiles * tile, height: art.h * scale, animationDuration: `${period}ms`, animationDelay: `${delay}ms`, animationTimingFunction: `steps(${art.w})`, ['--pan' as string]: `-${tile}px` }}
+      className="skyline-pan pixelated absolute bottom-0 left-0"
+      style={{ width: tiles * tile, height: rows * scale, animationDuration: `${period}ms`, animationDelay: `${delay}ms`, animationTimingFunction: `steps(${art.w})`, ['--pan' as string]: `-${tile}px` }}
     />
   )
 }
 
 /**
  * Both bands, in shades of the tile's colour: the far one a little darker than the stripes, the
- * near one darker still, each with solid ground beneath it down to the stage's foot. They stand up
- * from behind the platform: the resort's roofs just over its rim, the city's shore above them.
+ * near one darker still. They stand up from behind the platform (the resort's roofs just over its
+ * rim, the city's shore above them) and their ground runs on down to the panel's foot, behind the
+ * text box: the harbour under the city, the resort's paving under its roofs, all panning together.
  */
 export function SkylineBands({ tones, scale, width, ground, stage, lit }: { tones: readonly [string, string]; scale: number; width: number; ground: number; stage: number; lit: boolean }) {
   const { far, near } = silhouettes()
@@ -76,10 +109,8 @@ export function SkylineBands({ tones, scale, width, ground, stage, lit }: { tone
   const [farBase, nearBase] = [ground + Math.round(stage * 0.17), ground + Math.round(stage * 0.06)]
   return (
     <>
-      <div className="absolute inset-x-0" style={{ bottom: ground, height: farBase - ground + scale, background: farColor }} />
-      <Band art={far} color={farColor} lit={lit} scale={scale} width={width} period={320_000} bottom={farBase} />
-      <div className="absolute inset-x-0" style={{ bottom: ground, height: nearBase - ground + scale, background: nearColor }} />
-      <Band art={near} color={nearColor} lit={lit} scale={scale} width={width} period={150_000} bottom={nearBase} />
+      <Band art={far} color={farColor} lit={lit} scale={scale} width={width} period={320_000} below={Math.ceil(farBase / scale)} ground="water" />
+      <Band art={near} color={nearColor} lit={lit} scale={scale} width={width} period={150_000} below={Math.ceil(nearBase / scale)} ground="paving" />
     </>
   )
 }

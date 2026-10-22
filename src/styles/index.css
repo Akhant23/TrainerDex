@@ -1390,19 +1390,6 @@ body {
 /* ---------------- main menu: backdrop wipe and medal case ---------------- */
 
 /* a new tile colour wipes in over the stripes from the left, in hard steps */
-.bg-stripes.stripe-wipe {
-  animation:
-    stripes-scroll 2.4s linear infinite,
-    stripe-wipe 320ms steps(8) forwards;
-}
-@keyframes stripe-wipe {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
 /* the medal case: a felt-lined tray with a socket for every medal */
 .medal-case {
   /* the status card's plate (.pixel-box--plate), as a button */
@@ -1436,9 +1423,6 @@ body {
   box-shadow:
     inset 0 2px 0 rgb(0 0 0 / 0.45),
     0 1px 0 rgb(255 255 255 / 0.12);
-}
-[data-motion='reduced'] .bg-stripes.stripe-wipe {
-  animation: none;
 }
 
 /* Main menu backdrop: the skyline bands pan a tile at a time, one art pixel per step; clouds drift
@@ -1476,5 +1460,29 @@ body {
 [data-motion='reduced'] .skyline-pan,
 [data-motion='reduced'] .cloud-drift,
 [data-motion='reduced'] .menu-star {
+  animation: none;
+}
+
+/* The page backdrop's pattern (ui/pagePattern.ts): the menu icons as faint silhouettes on a
+   staggered grid, drifting slowly down and across behind the game windows */
+body::before {
+  content: '';
+  position: fixed;
+  inset: calc(var(--page-pattern-size, 112px) * -1) 0 0 calc(var(--page-pattern-size, 112px) * -1);
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--page-pattern, none);
+  background-size: var(--page-pattern-size, 112px) var(--page-pattern-size, 112px);
+  image-rendering: pixelated;
+  /* fade out toward the top, where the title-screen glow is */
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.55), #000 40%);
+  animation: page-pattern-drift 48s linear infinite;
+}
+@keyframes page-pattern-drift {
+  to {
+    transform: translate(var(--page-pattern-size, 112px), var(--page-pattern-size, 112px));
+  }
+}
+[data-motion='reduced'] body::before {
   animation: none;
 }

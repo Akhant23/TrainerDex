@@ -55,43 +55,54 @@ export default function MainMenu() {
 
 /** Two close tones of a tile's colour, for the stripes behind the trainer. */
 function stripeTones([c0, c1]: readonly [string, string]): [string, string] {
-  const n = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
-  const [a, b] = [n(c0), n(c1)]
-  const mid = a.map((v, i) => Math.round(v + (b[i] - v) * 0.16).toString(16).padStart(2, '0')).join('')
-  return [c0, `#${mid}`]
+  return [c0, mixHex(c0, c1, 0.16)]
 }
 
-/** The stripes' scroll, on one clock for every layer (so a new layer wipes in exactly in step). */
-const STRIPE_PERIOD = 2400
-const stripePhase = () => `-${Math.round(performance.now() % STRIPE_PERIOD)}ms`
+/** How long the backdrop takes to blend from one tile's colours to the next. */
+const BLEND_MS = 900
+const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+const mixHex = (a: string, b: string, k: number) => {
+  const [pa, pb] = [hex(a), hex(b)]
+  return `#${pa.map((v, i) => Math.round(v + (pb[i] - v) * k).toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
+ * Two colours that blend smoothly to `target` whenever it changes (eased, over BLEND_MS), starting
+ * from wherever the last blend had got to, so quick cursor moves never jump. Reduced motion: no blend.
+ */
+function useBlendedTones(target: [string, string], reduced: boolean): [string, string] {
+  const [shown, setShown] = useState(target)
+  const current = useRef(target)
+  const [a, b] = target
+  useEffect(() => {
+    if (reduced) return
+    const from = current.current
+    const t0 = performance.now()
+    let raf = requestAnimationFrame(function step(now) {
+      const k = Math.min(1, (now - t0) / BLEND_MS)
+      const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2
+      const next: [string, string] = [mixHex(from[0], a, e), mixHex(from[1], b, e)]
+      current.current = next
+      setShown(next)
+      if (k < 1) raf = requestAnimationFrame(step)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [a, b, reduced])
+  return reduced ? target : shown
+}
 
 /**
  * The scrolling stripes behind the trainer, in the focused tile's colours, and whatever `scene` draws
- * on them in those tones (the skyline). A new colour wipes in over the old one from the left in a
- * few hard steps (pixel-style), then becomes the base; with reduced motion it just switches.
+ * on them in those tones (the skyline). On a new tile the colours blend gradually into the new ones.
  */
 function StripeBackdrop({ colors, scene }: { colors: readonly [string, string]; scene?: (tones: [string, string]) => ReactNode }) {
   const { reducedMotion } = useSettings()
-  const tones = stripeTones(colors)
-  const [shown, setShown] = useState(() => ({ tones, phase: stripePhase() }))
-  const [incomingPhase] = useState(stripePhase)
-  const changing = !reducedMotion && (shown.tones[0] !== tones[0] || shown.tones[1] !== tones[1])
-  const layer = (t: [string, string], phase: string) => ({ ['--s1' as string]: t[0], ['--s2' as string]: t[1], animationDelay: phase })
+  const tones = useBlendedTones(stripeTones(colors), reducedMotion)
   return (
     <div aria-hidden className="absolute inset-0">
-      <div className="bg-stripes absolute inset-0 overflow-hidden" style={layer(reducedMotion ? tones : shown.tones, shown.phase)}>
-        {scene?.(reducedMotion ? tones : shown.tones)}
+      <div className="bg-stripes absolute inset-0 overflow-hidden" style={{ ['--s1' as string]: tones[0], ['--s2' as string]: tones[1] }}>
+        {scene?.(tones)}
       </div>
-      {changing && (
-        <div
-          key={tones.join()}
-          className="bg-stripes stripe-wipe absolute inset-0 overflow-hidden"
-          style={layer(tones, incomingPhase)}
-          onAnimationEnd={(e) => e.animationName === 'stripe-wipe' && setShown({ tones, phase: incomingPhase })}
-        >
-          {scene?.(tones)}
-        </div>
-      )}
     </div>
   )
 }
