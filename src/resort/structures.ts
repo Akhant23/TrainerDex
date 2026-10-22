@@ -252,5 +252,7 @@ export const structureArt = {
   yearMarketing: banner(5, ['M', 'm'], '2024-2025', 'y', 'none', false),
   yearTours: banner(5, ['y', 'Y'], '2025-2026', '9', 'none', false),
   yearChampion: banner(5, ['a', 'A'], 'NOW', 'M', 'none', false),
+  // the Medal Box's hall
+  bannerMedals: banner(6, ['M', 'm'], 'MEDAL HALL', 'y', 'stars'),
 } as const
 export type StructureKind = keyof typeof structureArt

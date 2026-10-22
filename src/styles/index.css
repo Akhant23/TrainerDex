@@ -1405,26 +1405,25 @@ body {
 }
 /* the medal case: a felt-lined tray with a socket for every medal */
 .medal-case {
-  background: #f8e8a8;
-  border-radius: calc(var(--u) * 2);
-  box-shadow:
-    inset 0 calc(var(--u) * -0.67) 0 #d8b860,
-    0 0 0 calc(var(--u) * 0.67) var(--gv-ink),
-    0 calc(var(--u) * 1.33) 0 calc(var(--u) * 0.67) var(--gv-drop);
+  /* the status card's plate (.pixel-box--plate), as a button */
+  font: inherit;
 }
 .medal-case:hover,
 .medal-case:focus-visible {
-  background: #fff0b8;
+  --box-bg: #ffffff;
   outline: var(--u) solid var(--color-gold);
-  outline-offset: 2px;
+  outline-offset: calc(var(--u) * 1.5);
 }
+/* the slots sit in a sunken dark tray with square corners, like the plate's own frame */
 .medal-slots {
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
-  background: #3a2a4a;
-  border-radius: calc(var(--u) * 1.5);
+  background: #2c2838;
   padding: 6px;
-  box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.35);
+  box-shadow:
+    0 0 0 calc(var(--u) * 0.5) var(--color-ink),
+    inset 0 calc(var(--u) * 0.75) 0 rgb(0 0 0 / 0.4),
+    inset 0 calc(var(--u) * -0.5) 0 rgb(255 255 255 / 0.08);
 }
 .medal-slot {
   aspect-ratio: 1;

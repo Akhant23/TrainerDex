@@ -48,6 +48,28 @@ export function project(cam: Camera, wx: number, wy: number, vh = VIEW_H) {
   return { x: VIEW_W / 2 + (wx - cam.x) * s, y: vh * FOCUS + u * s * C, s }
 }
 
+/**
+ * The ground point under a view point (view pixels, as `project` returns): the inverse of
+ * `project` for things lying on the floor. Null above the horizon.
+ */
+export function unproject(cam: Camera, sx: number, sy: number, vh = VIEW_H): { x: number; y: number } | null {
+  const v = (sy - vh * FOCUS) / (C * D)
+  const den = 1 + v * T
+  if (den <= 0.05) return null
+  const u = (v * D) / den
+  const s = D / (D - u * T)
+  return { x: cam.x + (sx - VIEW_W / 2) / s, y: cam.y + u }
+}
+
+/**
+ * The camera's y that puts the ground line `frontY` (world px) exactly on the bottom edge of a view
+ * `vh` tall: for a room that should fill the view, nearest wall at the bottom.
+ */
+export function cameraYToShow(frontY: number, vh = VIEW_H): number {
+  const k = vh * (1 - FOCUS)
+  return frontY - (k * D) / (D * C + k * T)
+}
+
 /** Largest scale anything is drawn at; past this the point is practically under the camera. */
 const MAX_SCALE = 4
 /**

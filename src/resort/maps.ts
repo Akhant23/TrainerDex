@@ -21,8 +21,11 @@ export interface Spot {
   y: number
 }
 
+/** Rooms elsewhere on the site drawn with the resort's renderer (not part of the resort itself). */
+export type RoomId = 'medalHall'
+
 export interface ResortMap {
-  id: MapId
+  id: MapId | RoomId
   name: string
   rows: string[]
   /** Arrive here when entering the resort. */

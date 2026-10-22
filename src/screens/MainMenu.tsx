@@ -188,7 +188,7 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
             )}
           </button>
           <Suspense fallback={null}>
-            <MenuCompanion id={PARTNER} hop={hop} />
+            <MenuCompanion id={PARTNER} hop={hop} scale={layout.partner} />
           </Suspense>
           {bubble && (
             <PixelBox variant="plate" role="status" className="cq-text-xs absolute top-[4%] left-[6%] z-10 max-w-[150%] px-3 py-2 font-semibold">
@@ -243,10 +243,20 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
         </div>
       </div>
 
-      {/* context line */}
+      {/* context line: every blurb is laid out in the same cell (all but the focused one hidden), so the
+          box is always as tall as the longest and the stage above never changes size as the cursor moves */}
       <PixelBox className="cq-text-sm mx-[3%] mb-[3%] flex min-h-[3.2em] items-center gap-3 px-[4%] py-[2%] font-semibold">
         <PixelIcon name={entry.icon} scale={2} />
-        <span aria-live="polite">{entry.blurb}</span>
+        <span aria-hidden className="grid items-center">
+          {menu.map((m) => (
+            <span key={m.id} className={`[grid-area:1/1] ${m.id === entry.id ? '' : 'invisible'}`}>
+              {m.blurb}
+            </span>
+          ))}
+        </span>
+        <span className="sr-only" aria-live="polite">
+          {entry.blurb}
+        </span>
       </PixelBox>
     </div>
   )
@@ -259,12 +269,13 @@ const AARYAN_HEADROOM = 3
  * The top screen's measurements: its size, where the ground (the bottom of the stage, above the
  * context line) is, the skyline's pixel scale, and Aaryan's scale, the largest crisp one at which
  * he stands as tall as the status card beside him (the top of his hair level with the card's top).
+ * His partner's (whole-number) scale follows his, so the two always keep their sizes together.
  */
 function useStatusLayout() {
   const rootRef = useRef<HTMLDivElement>(null)
   const colRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
-  const [layout, setLayout] = useState({ w: 0, h: 0, ground: 0, stage: 0, band: 0, aaryan: 2 })
+  const [layout, setLayout] = useState({ w: 0, h: 0, ground: 0, stage: 0, band: 0, aaryan: 2, partner: 1 })
   useLayoutEffect(() => {
     const [root, col, card] = [rootRef.current, colRef.current, cardRef.current]
     if (!root || !col || !card) return
@@ -279,7 +290,7 @@ function useStatusLayout() {
       // his frame stands on a line 10% of the column up from its foot; his hair is the frame's height less the headroom above it
       const base = colBottom - colH * 0.1
       const aaryan = Math.max(1, crispScale((base - top) / (CHAR_H - AARYAN_HEADROOM)))
-      setLayout({ w: root.offsetWidth, h: root.offsetHeight, ground: root.offsetHeight - colBottom, stage: colH, band: Math.max(1, crispScale((colH * 0.22) / SYDNEY_H)), aaryan })
+      setLayout({ w: root.offsetWidth, h: root.offsetHeight, ground: root.offsetHeight - colBottom, stage: colH, band: Math.max(1, crispScale((colH * 0.22) / SYDNEY_H)), aaryan, partner: Math.max(1, Math.floor(aaryan * 0.8)) })
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -394,10 +405,10 @@ function MedalCase({ earned, onOpen }: { earned: readonly string[]; onOpen: () =
       type="button"
       onClick={onOpen}
       aria-label={`Medal case: ${have.size} of ${medals.length} medals. Open the medal box.`}
-      className="medal-case hidden w-full cursor-pointer border-0 px-[4%] py-[3%] text-left sm:block"
+      className="pixel-box pixel-box--plate medal-case hidden cursor-pointer border-0 px-[5%] py-[4%] text-left sm:block"
     >
       <span className="font-display cq-text-xs flex items-center justify-between text-ink">
-        <span>★ MEDALS</span>
+        <span className="text-dex-red">★ MEDALS</span>
         <span>
           {have.size}/{medals.length}
         </span>
