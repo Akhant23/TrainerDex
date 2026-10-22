@@ -203,8 +203,6 @@ export interface ArmSpec {
 export interface PoseFrame {
   back?: ArmSpec
   front?: ArmSpec
-  /** draw the arms behind the head and back hair (hands behind the head) */
-  armsBehind?: boolean
   eyes?: 'open' | 'down' | 'closed'
   mouth?: Appearance['face']
   /** raise the right brow (a smirk) */
@@ -670,7 +668,7 @@ function limbHem(g: Raster, a: Appearance, sh: Pt, el: Pt, side = false) {
 }
 
 /** Shoulder positions shared by every arm pose, so gestures keep the same build as the idle. */
-const SHOULDER: Record<'back' | 'front', Pt> = { back: [29.2, 41], front: [51.4, 41] }
+export const SHOULDER: Record<'back' | 'front', Pt> = { back: [29.2, 41], front: [51.4, 41] }
 
 /**
  * An arm in any position: shoulder → elbow → wrist capsules with the same widths, sleeve cap,
@@ -986,7 +984,7 @@ export function renderHairBackLayer(a: Appearance, tilt = 0): Pixels {
 /** Stack a posed frame into one image, putting the arms behind the head when the pose asks. */
 export function renderPose(a: Appearance, f: PoseFrame): Pixels {
   const l = renderLayers(a, 'idle', f)
-  const layers = f.armsBehind ? [l.armBack, l.armFront, l.hairBack, l.legs, l.torso, l.head] : LAYER_ORDER.map((k) => l[k])
+  const layers = LAYER_ORDER.map((k) => l[k])
   return flatten(f.held ? [...layers, renderHeldLayer(a, f.held)] : layers)
 }
 

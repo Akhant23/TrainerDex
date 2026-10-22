@@ -9,7 +9,7 @@ import { CreatureSprite } from '../screens/battle/BattleBits'
  * gestures (CreatureSprite), at the largest whole-pixel scale that's about `share` of the
  * column's height. `hop` changes to make it hop (a tile focused, Aaryan tapped).
  */
-export default function MenuCompanion({ id, hop, share = 0.3 }: { id: SpeciesId; hop: number; share?: number }) {
+export default function MenuCompanion({ id, hop, share = 0.24 }: { id: SpeciesId; hop: number; share?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0)
   useLayoutEffect(() => {
@@ -22,7 +22,7 @@ export default function MenuCompanion({ id, hop, share = 0.3 }: { id: SpeciesId;
     return () => ro.disconnect()
   }, [share])
   return (
-    <div ref={ref} className="pointer-events-none absolute right-[3%] bottom-[8%] z-[1]" title={species[id].name}>
+    <div ref={ref} className="pointer-events-none absolute right-[1%] bottom-[3%] z-[3]" title={species[id].name}>
       {scale > 0 && (
         <span key={hop} className={hop ? 'hop inline-block' : 'inline-block'}>
           <CreatureSprite id={id} scale={scale} seed={7} />

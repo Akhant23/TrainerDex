@@ -10,6 +10,7 @@
  * Add a scene for a new photo here; photos without one show a "not yet drawn" plate instead.
  */
 import type { Appearance, PoseFrame } from '../sprites/character'
+import { HANDS_BEHIND_HEAD } from '../sprites/gestures'
 import { signature } from './aaryan'
 
 export type SceneBackdrop = 'windows' | 'hall' | 'bags' | 'camp' | 'studio' | 'party' | 'lounge' | 'cinema' | 'cafe' | 'street' | 'store' | 'forest' | 'concert' | 'shelter'
@@ -48,8 +49,9 @@ const friend = (o: Partial<Appearance>): Appearance => ({
 
 /* poses shared by several scenes */
 const highFive: PoseFrame = { back: { el: [17, 36], wr: [13, 23], hand: 'open' }, mouth: 'grin' }
-const handsBehindHead: PoseFrame = { back: { el: [16, 28], wr: [30, 17], hand: 'hidden' }, front: { el: [64, 28], wr: [50, 17], hand: 'hidden' }, armsBehind: true, mouth: 'grin' }
-const handOnNeck: PoseFrame = { front: { el: [64, 30], wr: [50, 22], hand: 'hidden' }, armsBehind: true, mouth: 'calm' }
+const handsBehindHead: PoseFrame = { ...HANDS_BEHIND_HEAD, mouth: 'grin' }
+// the arm at its idle length: elbow up and out, the hand behind the neck (under the head layer)
+const handOnNeck: PoseFrame = { front: { el: [59.8, 31], wr: [49.2, 27], hand: 'fist' }, mouth: 'calm' }
 const bothForward: PoseFrame = { back: { el: [25, 53], wr: [33, 50], hand: 'fist' }, front: { el: [55, 53], wr: [47, 50], hand: 'fist' }, mouth: 'grin' }
 const fingerGuns: PoseFrame = { back: { el: [21, 52], wr: [27, 47], hand: 'pointOut' }, front: { el: [59, 52], wr: [52, 47], hand: 'pointOut' }, mouth: 'smirk', brow: 'up' }
 const armUp: PoseFrame = { front: { el: [60, 32], wr: [62, 18], hand: 'pointOut' }, mouth: 'grin' }

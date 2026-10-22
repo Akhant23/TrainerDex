@@ -7,7 +7,7 @@
  * Breathing itself is the layered idle loop in CharacterSprite (torso, arms, head and hair rise
  * together a pixel while the legs stay planted).
  */
-import { GLASSES_ON_FACE, type ArmSpec, type Held, type PoseFrame, type Pt } from './character.ts'
+import { GLASSES_ON_FACE, SHOULDER, type ArmSpec, type Held, type PoseFrame, type Pt } from './character.ts'
 
 export type GestureId = 'wave' | 'handsBehindHead' | 'ruffleHair' | 'cleanGlasses' | 'smirkPoint' | 'pointMenu'
 
@@ -21,6 +21,8 @@ interface Key {
   hold: number
   /** in-between frames on the way here from the previous key */
   tween?: number
+  /** swing the arms here at the joints instead of sliding the elbow and wrist in straight lines */
+  swing?: boolean
 }
 
 export interface GestureFrame {
@@ -29,12 +31,36 @@ export interface GestureFrame {
 }
 
 const lerpPt = (a: Pt, b: Pt, k: number): Pt => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]
-function lerpArm(a: ArmSpec | undefined, b: ArmSpec | undefined, idle: ArmSpec, k: number): ArmSpec | undefined {
+/** The shorter way round from angle a to angle b (radians). */
+const turn = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a))
+/**
+ * An arm part way between two positions, swung at the joints rather than slid in a straight
+ * line: the upper arm turns about the shoulder and the elbow bends, so the arm keeps its length
+ * all the way (a straight-line tween shortens it to a stub where the two paths cross, as on the
+ * way up from the sides to behind the head).
+ */
+function swingArm(side: 'back' | 'front', a: ArmSpec, b: ArmSpec, k: number): { el: Pt; wr: Pt } {
+  const sh = SHOULDER[side]
+  const polar = (from: Pt, to: Pt) => [Math.atan2(to[1] - from[1], to[0] - from[0]), Math.hypot(to[0] - from[0], to[1] - from[1])]
+  const [ua, ul] = polar(sh, a.el)
+  const [ub, ulb] = polar(sh, b.el)
+  const [fa, fl] = polar(a.el, a.wr)
+  const [fb, flb] = polar(b.el, b.wr)
+  const up = ua + turn(ua, ub) * k
+  const bend = turn(ua, fa) + turn(turn(ua, fa), turn(ub, fb)) * k
+  const u = ul + (ulb - ul) * k
+  const f = fl + (flb - fl) * k
+  const el: Pt = [sh[0] + Math.cos(up) * u, sh[1] + Math.sin(up) * u]
+  return { el, wr: [el[0] + Math.cos(up + bend) * f, el[1] + Math.sin(up + bend) * f] }
+}
+function lerpArm(side: 'back' | 'front', a: ArmSpec | undefined, b: ArmSpec | undefined, k: number, swing = false): ArmSpec | undefined {
   if (!a && !b) return undefined
+  const idle = side === 'back' ? IDLE_BACK : IDLE_FRONT
   const x = a ?? idle
   const y = b ?? idle
   // the hand takes the shape it's heading to once it's most of the way there
-  return { el: lerpPt(x.el, y.el, k), wr: lerpPt(x.wr, y.wr, k), hand: k < 0.6 ? (x.hand === 'pocket' || x.hand === 'hooked' || x.hand === 'hidden' ? 'fist' : x.hand) : y.hand }
+  const { el, wr } = swing ? swingArm(side, x, y, k) : { el: lerpPt(x.el, y.el, k), wr: lerpPt(x.wr, y.wr, k) }
+  return { el, wr, hand: k < 0.6 ? (x.hand === 'pocket' || x.hand === 'hooked' || x.hand === 'hidden' ? 'fist' : x.hand) : y.hand }
 }
 
 /**
@@ -62,7 +88,7 @@ function build(keys: Key[]): GestureFrame[] {
     for (let i = 1; i <= n; i++) {
       const k = i / (n + 1)
       out.push({
-        frame: { ...prev, back: lerpArm(prev.back, key.frame.back, IDLE_BACK, k), front: lerpArm(prev.front, key.frame.front, IDLE_FRONT, k), armsBehind: k > 0.5 ? key.frame.armsBehind : prev.armsBehind, held: lerpHeld(prev.held, key.frame.held, k) },
+        frame: { ...prev, back: lerpArm('back', prev.back, key.frame.back, k, key.swing), front: lerpArm('front', prev.front, key.frame.front, k, key.swing), held: lerpHeld(prev.held, key.frame.held, k) },
         ms: 70,
       })
     }
@@ -73,6 +99,32 @@ function build(keys: Key[]): GestureFrame[] {
 }
 
 const IDLE: PoseFrame = {}
+
+/**
+ * Both hands behind the head, at the arms' idle length: elbows out at chin height, forearms
+ * bending in behind the head (the head layer covers the hands). Mirrored about the body's
+ * centre line; shared with the photo scenes.
+ */
+export const HANDS_BEHIND_HEAD: PoseFrame = (() => {
+  const back: ArmSpec = { el: [19.6, 31.4], wr: [30.1, 26.6], hand: 'fist' }
+  const mirror = ([x, y]: Pt): Pt => [80.6 - x, y]
+  return { back, front: { el: mirror(back.el), wr: mirror(back.wr), hand: 'fist' } }
+})()
+
+/**
+ * Leaning back with his hands behind his head: the arms swing out and up at the shoulders, the
+ * elbows bend, and the hands go behind his head (the arms keep their idle length throughout, so
+ * nothing looks pulled out of its socket). Eyes shut for a moment, then back down.
+ */
+function handsBehindHead(): Key[] {
+  const up = HANDS_BEHIND_HEAD
+  return [
+    { frame: up, hold: 900, tween: 4, swing: true },
+    { frame: { ...up, eyes: 'closed' }, hold: 700, tween: 0 },
+    { frame: up, hold: 300, tween: 0 },
+    { frame: IDLE, hold: 80, tween: 4, swing: true },
+  ]
+}
 
 function cleanGlasses(): Key[] {
   // the hand at the temple, pinching the glasses' arm (beside the head, so it stays in view)
@@ -118,13 +170,7 @@ export const GESTURES: Record<GestureId, GestureFrame[]> = {
     { frame: IDLE, hold: 80, tween: 3 },
   ]),
   // both hands up behind the head, elbows wide: a relaxed lean, eyes closed for a moment
-  handsBehindHead: build([
-    { frame: { back: { el: [19, 36], wr: [24, 27], hand: 'fist' }, front: { el: [61, 36], wr: [56, 27], hand: 'fist' } }, hold: 60, tween: 2 },
-    { frame: { back: { el: [16, 28], wr: [30, 17], hand: 'hidden' }, front: { el: [64, 28], wr: [50, 17], hand: 'hidden' }, armsBehind: true }, hold: 900, tween: 2 },
-    { frame: { back: { el: [16, 28], wr: [30, 17], hand: 'hidden' }, front: { el: [64, 28], wr: [50, 17], hand: 'hidden' }, armsBehind: true, eyes: 'closed' }, hold: 700, tween: 0 },
-    { frame: { back: { el: [16, 28], wr: [30, 17], hand: 'hidden' }, front: { el: [64, 28], wr: [50, 17], hand: 'hidden' }, armsBehind: true }, hold: 300, tween: 0 },
-    { frame: IDLE, hold: 80, tween: 3 },
-  ]),
+  handsBehindHead: build(handsBehindHead()),
   // a hand up into the fringe, ruffling it back and forth, then down again
   ruffleHair: build([
     { frame: { front: { el: [62, 32], wr: [55, 13], hand: 'open' } }, hold: 90, tween: 3 },

@@ -1441,3 +1441,41 @@ body {
 [data-motion='reduced'] .bg-stripes.stripe-wipe {
   animation: none;
 }
+
+/* Main menu backdrop: the skyline bands pan a tile at a time, one art pixel per step; clouds drift
+   across the top; stars twinkle at night (MenuSky.tsx) */
+.skyline-pan {
+  animation-name: skyline-pan;
+  animation-iteration-count: infinite;
+}
+@keyframes skyline-pan {
+  to {
+    transform: translateX(var(--pan));
+  }
+}
+.cloud-drift {
+  animation-name: cloud-drift;
+  animation-iteration-count: infinite;
+}
+@keyframes cloud-drift {
+  from {
+    transform: translateX(var(--from));
+  }
+  to {
+    transform: translateX(var(--to));
+  }
+}
+.menu-star {
+  background: #fffbe0;
+  animation: star-twinkle 3s steps(2) infinite;
+}
+@keyframes star-twinkle {
+  50% {
+    opacity: 0.35;
+  }
+}
+[data-motion='reduced'] .skyline-pan,
+[data-motion='reduced'] .cloud-drift,
+[data-motion='reduced'] .menu-star {
+  animation: none;
+}

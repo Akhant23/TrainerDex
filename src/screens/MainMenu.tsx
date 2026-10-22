@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { clearReturnTo } from '../systems/returnTo'
 import { DSShell } from '../app/DSShell'
 import { navigate } from '../app/router'
@@ -18,6 +18,11 @@ import { progress, useProgress } from '../systems/progress'
 import { medals } from '../content/medals'
 import { MedalArt } from '../ui/Medals'
 import { hasShinyCharm } from '../systems/konami'
+import { crispScale } from '../ui/CharacterSprite'
+import { CHAR_H } from '../sprites/character'
+import { SYDNEY_H } from '../sprites/skyline'
+import { MenuSky, SkylineBands } from '../ui/MenuSky'
+import { isLit, useSky } from '../ui/useSky'
 
 const COLS = 2
 // remembered for the session so Back returns the cursor to where it was
@@ -61,11 +66,11 @@ const STRIPE_PERIOD = 2400
 const stripePhase = () => `-${Math.round(performance.now() % STRIPE_PERIOD)}ms`
 
 /**
- * The scrolling stripes behind the trainer, in the focused tile's colours. A new colour wipes in
- * over the old one from the left in a few hard steps (pixel-style), then becomes the base; with
- * reduced motion it just switches.
+ * The scrolling stripes behind the trainer, in the focused tile's colours, and whatever `scene` draws
+ * on them in those tones (the skyline). A new colour wipes in over the old one from the left in a
+ * few hard steps (pixel-style), then becomes the base; with reduced motion it just switches.
  */
-function StripeBackdrop({ colors }: { colors: readonly [string, string] }) {
+function StripeBackdrop({ colors, scene }: { colors: readonly [string, string]; scene?: (tones: [string, string]) => ReactNode }) {
   const { reducedMotion } = useSettings()
   const tones = stripeTones(colors)
   const [shown, setShown] = useState(() => ({ tones, phase: stripePhase() }))
@@ -74,14 +79,18 @@ function StripeBackdrop({ colors }: { colors: readonly [string, string] }) {
   const layer = (t: [string, string], phase: string) => ({ ['--s1' as string]: t[0], ['--s2' as string]: t[1], animationDelay: phase })
   return (
     <div aria-hidden className="absolute inset-0">
-      <div className="bg-stripes absolute inset-0" style={layer(reducedMotion ? tones : shown.tones, shown.phase)} />
+      <div className="bg-stripes absolute inset-0 overflow-hidden" style={layer(reducedMotion ? tones : shown.tones, shown.phase)}>
+        {scene?.(reducedMotion ? tones : shown.tones)}
+      </div>
       {changing && (
         <div
           key={tones.join()}
-          className="bg-stripes stripe-wipe absolute inset-0"
+          className="bg-stripes stripe-wipe absolute inset-0 overflow-hidden"
           style={layer(tones, incomingPhase)}
           onAnimationEnd={(e) => e.animationName === 'stripe-wipe' && setShown({ tones, phase: incomingPhase })}
-        />
+        >
+          {scene?.(tones)}
+        </div>
       )}
     </div>
   )
@@ -92,6 +101,8 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
   const playtime = usePlaytime()
   const { sfx, reducedMotion } = useSettings()
   const [shiny, setShiny] = useState(() => hasShinyCharm() || Math.random() < 1 / shinyOdds)
+  const sky = useSky()
+  const { rootRef, colRef, cardRef, layout } = useStatusLayout()
   const earnedIds = Object.keys(useProgress().medals)
   const earned = earnedIds.length
   useEffect(() => {
@@ -156,19 +167,20 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
   }
 
   return (
-    <div className="absolute inset-0 flex flex-col">
-      <StripeBackdrop colors={entry.color} />
+    <div ref={rootRef} className="absolute inset-0 flex flex-col">
+      <StripeBackdrop colors={entry.color} scene={(tones) => <SkylineBands tones={tones} scale={layout.band} width={layout.w} ground={layout.ground} stage={layout.stage} lit={isLit(sky)} />} />
+      <MenuSky sky={sky} scale={layout.band} width={layout.w} height={layout.h} />
       <div className="relative flex min-h-0 flex-1">
         {/* trainer and partner on a platform */}
-        <div className="relative w-[44%]">
+        <div ref={colRef} className="relative w-[44%]">
           <div aria-hidden className="absolute bottom-[5%] left-[4%] h-[14%] w-[94%] rounded-[50%] bg-[#f8d8a8] shadow-[inset_0_-6px_0_#d8a870,0_0_0_3px_#1c1a24]" />
           <button
             type="button"
             onClick={poke}
             aria-label="Talk to Aaryan"
-            className="absolute bottom-[10%] left-[40%] z-[2] flex h-[80%] -translate-x-1/2 cursor-pointer items-end border-0 bg-transparent p-0"
+            className="absolute bottom-[10%] left-1/2 z-[2] flex -translate-x-1/2 cursor-pointer items-end border-0 bg-transparent p-0"
           >
-            <TrainerSprite fill={0.98} shiny={shiny} gestures gestureTrigger={wave} alt={shiny ? 'Shiny pixel-art sprite of Aaryan' : undefined} />
+            <TrainerSprite scale={layout.aaryan} shiny={shiny} gestures gestureTrigger={wave} alt={shiny ? 'Shiny pixel-art sprite of Aaryan' : undefined} />
             {shiny && (
               <span aria-hidden className="sparkle absolute -top-1 -right-1 text-gold text-xl">
                 ✦
@@ -187,7 +199,7 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
 
         {/* status plate and medal case */}
         <div className="flex w-[56%] flex-col justify-center gap-[4%] py-[4%] pr-[4%]">
-          <PixelBox variant="plate" className="px-[5%] py-[4%]">
+          <PixelBox ref={cardRef} variant="plate" className="px-[5%] py-[4%]">
             <div className="font-display cq-text-md flex items-center justify-between text-dex-red">
               <span>{profile.name}</span>
               {shiny && <span className="cq-text-xs text-gold">✦SHINY</span>}
@@ -238,6 +250,43 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
       </PixelBox>
     </div>
   )
+}
+
+/** Rows of clear space above Aaryan's hair in his 120-row frame. */
+const AARYAN_HEADROOM = 3
+
+/**
+ * The top screen's measurements: its size, where the ground (the bottom of the stage, above the
+ * context line) is, the skyline's pixel scale, and Aaryan's scale, the largest crisp one at which
+ * he stands as tall as the status card beside him (the top of his hair level with the card's top).
+ */
+function useStatusLayout() {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const colRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [layout, setLayout] = useState({ w: 0, h: 0, ground: 0, stage: 0, band: 0, aaryan: 2 })
+  useLayoutEffect(() => {
+    const [root, col, card] = [rootRef.current, colRef.current, cardRef.current]
+    if (!root || !col || !card) return
+    const measure = () => {
+      const r = root.getBoundingClientRect()
+      // the shell may be scaled to fit: measure on screen, then back into the layout's own pixels
+      const k = root.offsetHeight / (r.height || 1)
+      const c = col.getBoundingClientRect()
+      const top = (card.getBoundingClientRect().top - r.top) * k
+      const colBottom = (c.bottom - r.top) * k
+      const colH = c.height * k
+      // his frame stands on a line 10% of the column up from its foot; his hair is the frame's height less the headroom above it
+      const base = colBottom - colH * 0.1
+      const aaryan = Math.max(1, crispScale((base - top) / (CHAR_H - AARYAN_HEADROOM)))
+      setLayout({ w: root.offsetWidth, h: root.offsetHeight, ground: root.offsetHeight - colBottom, stage: colH, band: Math.max(1, crispScale((colH * 0.22) / SYDNEY_H)), aaryan })
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    for (const el of [root, col, card]) ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return { rootRef, colRef, cardRef, layout }
 }
 
 /* ---------------- Bottom screen ---------------- */

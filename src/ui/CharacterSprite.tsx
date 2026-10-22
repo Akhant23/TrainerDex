@@ -228,22 +228,15 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
   }
   const layer = (src: string, cls: string) => <img src={src} width={w} height={h} alt="" aria-hidden draggable={false} className={`pixelated absolute inset-0 ${animate ? cls : ''}`} />
 
-  const behind = !!frame?.armsBehind
-  const arms = (
-    <>
-      {layer(posed.armBack, 'bw-arm-a')}
-      {layer(posed.armFront, pose === 'victory' ? 'bw-pump' : pose === 'point' ? '' : 'bw-breathe')}
-    </>
-  )
   // a gesture's own eyes (glancing down, closed) take over from the random blink
   const headUrl = blink && !frame?.eyes ? posed.headBlink : posed.head
   return (
     <div ref={ref} role="img" aria-label={alt} className={`relative ${className}`} style={{ width: w, height: h, ['--px' as string]: `${scale}px`, ...style }}>
-      {behind && arms}
       {layer(posed.hairBack, nod ? 'bw-nod' : 'bw-hair')}
       {layer(posed.legs, '')}
       {layer(posed.torso, 'bw-breathe')}
-      {!behind && arms}
+      {layer(posed.armBack, 'bw-arm-a')}
+      {layer(posed.armFront, pose === 'victory' ? 'bw-pump' : pose === 'point' ? '' : 'bw-breathe')}
       {layer(headUrl, nod ? 'bw-nod' : 'bw-head')}
       {/* anything a gesture holds up (his glasses, a cloth) goes in front of the face, moving with the hand */}
       {heldUrl && layer(heldUrl, 'bw-breathe')}
