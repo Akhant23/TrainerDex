@@ -11,9 +11,11 @@ import { signature } from '../content/aaryan'
 const ids = Object.keys(GESTURES) as GestureId[]
 
 describe('idle gestures', () => {
-  it('has all five gestures, each with a weight', () => {
-    expect(ids.sort()).toEqual(['cleanGlasses', 'handsBehindHead', 'ruffleHair', 'smirkPoint', 'wave'])
-    for (const id of ids) expect(GESTURE_WEIGHTS[id]).toBeGreaterThan(0)
+  it('has the five idle gestures, each with a weight, and the on-request menu point', () => {
+    expect(ids.sort()).toEqual(['cleanGlasses', 'handsBehindHead', 'pointMenu', 'ruffleHair', 'smirkPoint', 'wave'])
+    for (const id of ids) expect(GESTURE_WEIGHTS[id], id).toBeGreaterThan(id === 'pointMenu' ? -1 : 0)
+    // the menu point only plays when asked: never in the idle rotation
+    expect(GESTURE_WEIGHTS.pointMenu).toBe(0)
   })
 
   it('every gesture ends back on the standing idle', () => {

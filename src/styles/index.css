@@ -1386,3 +1386,58 @@ body {
 .dex-bar-btn:active {
   transform: translateY(1px);
 }
+
+/* ---------------- main menu: backdrop wipe and medal case ---------------- */
+
+/* a new tile colour wipes in over the stripes from the left, in hard steps */
+.bg-stripes.stripe-wipe {
+  animation:
+    stripes-scroll 2.4s linear infinite,
+    stripe-wipe 320ms steps(8) forwards;
+}
+@keyframes stripe-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+/* the medal case: a felt-lined tray with a socket for every medal */
+.medal-case {
+  background: #f8e8a8;
+  border-radius: calc(var(--u) * 2);
+  box-shadow:
+    inset 0 calc(var(--u) * -0.67) 0 #d8b860,
+    0 0 0 calc(var(--u) * 0.67) var(--gv-ink),
+    0 calc(var(--u) * 1.33) 0 calc(var(--u) * 0.67) var(--gv-drop);
+}
+.medal-case:hover,
+.medal-case:focus-visible {
+  background: #fff0b8;
+  outline: var(--u) solid var(--color-gold);
+  outline-offset: 2px;
+}
+.medal-slots {
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  background: #3a2a4a;
+  border-radius: calc(var(--u) * 1.5);
+  padding: 6px;
+  box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.35);
+}
+.medal-slot {
+  aspect-ratio: 1;
+}
+.medal-socket {
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #241a30;
+  box-shadow:
+    inset 0 2px 0 rgb(0 0 0 / 0.45),
+    0 1px 0 rgb(255 255 255 / 0.12);
+}
+[data-motion='reduced'] .bg-stripes.stripe-wipe {
+  animation: none;
+}

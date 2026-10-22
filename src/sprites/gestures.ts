@@ -9,7 +9,7 @@
  */
 import { GLASSES_ON_FACE, type ArmSpec, type Held, type PoseFrame, type Pt } from './character.ts'
 
-export type GestureId = 'wave' | 'handsBehindHead' | 'ruffleHair' | 'cleanGlasses' | 'smirkPoint'
+export type GestureId = 'wave' | 'handsBehindHead' | 'ruffleHair' | 'cleanGlasses' | 'smirkPoint' | 'pointMenu'
 
 /** The standing idle arms, as articulated specs (to tween from and back to). */
 const IDLE_BACK: ArmSpec = { el: [25.4, 54], wr: [25.8, 65.5], hand: 'relaxed' }
@@ -139,6 +139,14 @@ export const GESTURES: Record<GestureId, GestureFrame[]> = {
   // and puts them back on. The free hand comes out of the pocket to do it; whatever's held
   // travels with the hand between keyframes.
   cleanGlasses: build(cleanGlasses()),
+  // on the main menu, when the cursor settles on a tile: a grin and a point out toward the menu
+  // (his front arm thrust out to your right, as on the VS screen), then back to idle
+  pointMenu: build([
+    { frame: { front: { el: [60, 47], wr: [64, 44], hand: 'fist' } }, hold: 60, tween: 2 },
+    { frame: { front: { el: [61, 44], wr: [69.5, 41], hand: 'pointOut' }, mouth: 'grin', brow: 'up' }, hold: 860, tween: 1 },
+    { frame: { front: { el: [60, 47], wr: [64, 44], hand: 'fist' } }, hold: 70, tween: 1 },
+    { frame: IDLE, hold: 80, tween: 2 },
+  ]),
   // a smirk, then a point straight at you, a beat, and back to idle
   smirkPoint: build([
     { frame: { mouth: 'smirk', brow: 'up' }, hold: 420, tween: 0 },
@@ -149,7 +157,7 @@ export const GESTURES: Record<GestureId, GestureFrame[]> = {
   ]),
 }
 
-/** How often each gesture comes up while idling (wave is mostly saved for when you tap him). */
-export const GESTURE_WEIGHTS: Record<GestureId, number> = { ruffleHair: 3, cleanGlasses: 3, handsBehindHead: 3, smirkPoint: 2, wave: 1 }
+/** How often each gesture comes up while idling; 0 = only on request (pointMenu answers the menu cursor). */
+export const GESTURE_WEIGHTS: Record<GestureId, number> = { ruffleHair: 3, cleanGlasses: 3, handsBehindHead: 3, smirkPoint: 2, wave: 1, pointMenu: 0 }
 
 export const gestureLength = (id: GestureId) => GESTURES[id].reduce((t, f) => t + f.ms, 0)

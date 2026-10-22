@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { clearReturnTo } from '../systems/returnTo'
 import { DSShell } from '../app/DSShell'
 import { navigate } from '../app/router'
@@ -16,11 +16,18 @@ import type { GestureId } from '../sprites/gestures'
 import { TrainerSprite } from '../ui/TrainerSprite'
 import { progress, useProgress } from '../systems/progress'
 import { medals } from '../content/medals'
+import { MedalArt } from '../ui/Medals'
 import { hasShinyCharm } from '../systems/konami'
 
 const COLS = 2
 // remembered for the session so Back returns the cursor to where it was
 let lastFocus = 0
+/** Aaryan's partner on the platform: his ace (loaded on its own, so the menu's first paint doesn't wait for battle art). */
+const MenuCompanion = lazy(() => import('../ui/MenuCompanion'))
+const PARTNER = 'gavelion' as const
+/** After the cursor rests on a tile this long, Aaryan points at it (at most once per cooldown). */
+const SETTLE_MS = 450
+const POINT_COOLDOWN_MS = 6000
 
 export default function MainMenu() {
   useEffect(clearReturnTo, [])
@@ -41,12 +48,52 @@ export default function MainMenu() {
 
 /* ---------------- Top screen ---------------- */
 
+/** Two close tones of a tile's colour, for the stripes behind the trainer. */
+function stripeTones([c0, c1]: readonly [string, string]): [string, string] {
+  const n = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  const [a, b] = [n(c0), n(c1)]
+  const mid = a.map((v, i) => Math.round(v + (b[i] - v) * 0.16).toString(16).padStart(2, '0')).join('')
+  return [c0, `#${mid}`]
+}
+
+/** The stripes' scroll, on one clock for every layer (so a new layer wipes in exactly in step). */
+const STRIPE_PERIOD = 2400
+const stripePhase = () => `-${Math.round(performance.now() % STRIPE_PERIOD)}ms`
+
+/**
+ * The scrolling stripes behind the trainer, in the focused tile's colours. A new colour wipes in
+ * over the old one from the left in a few hard steps (pixel-style), then becomes the base; with
+ * reduced motion it just switches.
+ */
+function StripeBackdrop({ colors }: { colors: readonly [string, string] }) {
+  const { reducedMotion } = useSettings()
+  const tones = stripeTones(colors)
+  const [shown, setShown] = useState(() => ({ tones, phase: stripePhase() }))
+  const [incomingPhase] = useState(stripePhase)
+  const changing = !reducedMotion && (shown.tones[0] !== tones[0] || shown.tones[1] !== tones[1])
+  const layer = (t: [string, string], phase: string) => ({ ['--s1' as string]: t[0], ['--s2' as string]: t[1], animationDelay: phase })
+  return (
+    <div aria-hidden className="absolute inset-0">
+      <div className="bg-stripes absolute inset-0" style={layer(reducedMotion ? tones : shown.tones, shown.phase)} />
+      {changing && (
+        <div
+          key={tones.join()}
+          className="bg-stripes stripe-wipe absolute inset-0"
+          style={layer(tones, incomingPhase)}
+          onAnimationEnd={(e) => e.animationName === 'stripe-wipe' && setShown({ tones, phase: incomingPhase })}
+        />
+      )}
+    </div>
+  )
+}
+
 function StatusScreen({ entry }: { entry: MenuEntry }) {
   const { name } = useVisitor()
   const playtime = usePlaytime()
-  const { sfx } = useSettings()
+  const { sfx, reducedMotion } = useSettings()
   const [shiny, setShiny] = useState(() => hasShinyCharm() || Math.random() < 1 / shinyOdds)
-  const earned = Object.keys(useProgress().medals).length
+  const earnedIds = Object.keys(useProgress().medals)
+  const earned = earnedIds.length
   useEffect(() => {
     if (shiny) progress.unlock('shiny')
   }, [shiny])
@@ -58,6 +105,23 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
   const [bubble, setBubble] = useState<string | null>(null)
   // tapping Aaryan makes him wave (if he isn't mid-gesture)
   const [wave, setWave] = useState<{ id: GestureId; key: number } | undefined>(undefined)
+  // the partner hops (and Aaryan points at the menu) once the cursor settles on a tile
+  const [hop, setHop] = useState(0)
+  const lastPoint = useRef(0)
+  const firstEntry = useRef(entry.id)
+  useEffect(() => {
+    if (entry.id === firstEntry.current) return
+    firstEntry.current = ''
+    const t = window.setTimeout(() => {
+      setHop((h) => h + 1)
+      const now = Date.now()
+      if (!reducedMotion && now - lastPoint.current > POINT_COOLDOWN_MS) {
+        lastPoint.current = now
+        setWave((w) => ({ id: 'pointMenu', key: (w?.key ?? 0) + 1 }))
+      }
+    }, SETTLE_MS)
+    return () => window.clearTimeout(t)
+  }, [entry.id, reducedMotion])
   // dev only: window.__aaryanGesture('ruffleHair') plays a gesture on demand for QA
   useEffect(() => {
     if (!import.meta.env.DEV) return
@@ -85,22 +149,24 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
     }
     sfx('bump')
     setWave((w) => ({ id: 'wave', key: (w?.key ?? 0) + 1 }))
+    setHop((h) => h + 1)
     setBubble(fill(line, name))
     window.clearTimeout(bubbleTimer.current)
     bubbleTimer.current = window.setTimeout(() => setBubble(null), 3200)
   }
 
   return (
-    <div className="bg-stripes absolute inset-0 flex flex-col" style={{ ['--s1' as string]: '#d8343a', ['--s2' as string]: '#c42a31' }}>
-      <div className="flex min-h-0 flex-1">
-        {/* trainer on a platform */}
+    <div className="absolute inset-0 flex flex-col">
+      <StripeBackdrop colors={entry.color} />
+      <div className="relative flex min-h-0 flex-1">
+        {/* trainer and partner on a platform */}
         <div className="relative w-[44%]">
-          <div aria-hidden className="absolute bottom-[5%] left-[10%] h-[14%] w-[80%] rounded-[50%] bg-[#f8d8a8] shadow-[inset_0_-6px_0_#d8a870,0_0_0_3px_#1c1a24]" />
+          <div aria-hidden className="absolute bottom-[5%] left-[4%] h-[14%] w-[94%] rounded-[50%] bg-[#f8d8a8] shadow-[inset_0_-6px_0_#d8a870,0_0_0_3px_#1c1a24]" />
           <button
             type="button"
             onClick={poke}
             aria-label="Talk to Aaryan"
-            className="absolute bottom-[10%] left-1/2 flex h-[80%] -translate-x-1/2 cursor-pointer items-end border-0 bg-transparent p-0"
+            className="absolute bottom-[10%] left-[40%] z-[2] flex h-[80%] -translate-x-1/2 cursor-pointer items-end border-0 bg-transparent p-0"
           >
             <TrainerSprite fill={0.98} shiny={shiny} gestures gestureTrigger={wave} alt={shiny ? 'Shiny pixel-art sprite of Aaryan' : undefined} />
             {shiny && (
@@ -109,6 +175,9 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
               </span>
             )}
           </button>
+          <Suspense fallback={null}>
+            <MenuCompanion id={PARTNER} hop={hop} />
+          </Suspense>
           {bubble && (
             <PixelBox variant="plate" role="status" className="cq-text-xs absolute top-[4%] left-[6%] z-10 max-w-[150%] px-3 py-2 font-semibold">
               {bubble}
@@ -116,8 +185,8 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
           )}
         </div>
 
-        {/* status plate */}
-        <div className="flex w-[56%] flex-col justify-center py-[4%] pr-[4%]">
+        {/* status plate and medal case */}
+        <div className="flex w-[56%] flex-col justify-center gap-[4%] py-[4%] pr-[4%]">
           <PixelBox variant="plate" className="px-[5%] py-[4%]">
             <div className="font-display cq-text-md flex items-center justify-between text-dex-red">
               <span>{profile.name}</span>
@@ -137,13 +206,14 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
                 {time.minutes}
               </dd>
             </dl>
+            {/* phones: the compact medals row (the top screen is too short for the case) */}
             <button
               type="button"
               onClick={() => {
                 sfx('select')
                 navigate('/medals')
               }}
-              className="font-display cq-text-xs mt-[6%] flex w-full cursor-pointer items-center justify-between border-0 bg-[#f8e8a8] px-[4%] py-[3%] text-ink gv-card hover:bg-[#fff0b8]"
+              className="font-display cq-text-xs mt-[6%] flex w-full cursor-pointer items-center justify-between border-0 bg-[#f8e8a8] px-[4%] py-[3%] text-ink gv-card hover:bg-[#fff0b8] sm:hidden"
             >
               <span>★ MEDALS</span>
               <span>
@@ -151,6 +221,13 @@ function StatusScreen({ entry }: { entry: MenuEntry }) {
               </span>
             </button>
           </PixelBox>
+          <MedalCase
+            earned={earnedIds}
+            onOpen={() => {
+              sfx('select')
+              navigate('/medals')
+            }}
+          />
         </div>
       </div>
 
@@ -256,3 +333,34 @@ function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) =
     </div>
   )
 }
+
+/**
+ * The medal case under the trainer card, as BW's Trainer Card shows badges: every medal in its
+ * slot, the earned ones lit in their tier and the rest dark sockets. Opens the medal box.
+ */
+function MedalCase({ earned, onOpen }: { earned: readonly string[]; onOpen: () => void }) {
+  const have = new Set(earned)
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Medal case: ${have.size} of ${medals.length} medals. Open the medal box.`}
+      className="medal-case hidden w-full cursor-pointer border-0 px-[4%] py-[3%] text-left sm:block"
+    >
+      <span className="font-display cq-text-xs flex items-center justify-between text-ink">
+        <span>★ MEDALS</span>
+        <span>
+          {have.size}/{medals.length}
+        </span>
+      </span>
+      <span className="medal-slots mt-[3%] grid">
+        {medals.map((m) => (
+          <span key={m.id} className="medal-slot flex items-center justify-center" title={have.has(m.id) ? m.name : undefined}>
+            {have.has(m.id) ? <MedalArt medal={m} earned scale={2} /> : <span className="medal-socket" />}
+          </span>
+        ))}
+      </span>
+    </button>
+  )
+}
+

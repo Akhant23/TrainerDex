@@ -7,7 +7,7 @@ const GAP_MIN = 7
 const GAP_MAX = 13
 
 function pickGesture(last: GestureId | null): GestureId {
-  const ids = (Object.keys(GESTURE_WEIGHTS) as GestureId[]).filter((id) => id !== last)
+  const ids = (Object.keys(GESTURE_WEIGHTS) as GestureId[]).filter((id) => id !== last && GESTURE_WEIGHTS[id] > 0)
   const total = ids.reduce((t, id) => t + GESTURE_WEIGHTS[id], 0)
   let r = Math.random() * total
   for (const id of ids) if ((r -= GESTURE_WEIGHTS[id]) < 0) return id
