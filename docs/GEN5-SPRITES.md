@@ -45,6 +45,10 @@ wearer (`riderFor(look, 'left' | 'right')`) rather than mirroring the left rider
 flames, the watch and the bracelets stay where they belong; a symmetric outfit comes out as an
 exact mirror, which a test checks. Capture: `docs/qa/riders-left-right.png`.
 
+The mounts work the same way: each flyer has its own right-facing frames (`framesRight`), drawn
+mirrored and then shaded, so the light stays upper-left and a held item (Hootour's flag) stays on
+the near wing. Capture: `docs/qa/mounts-left-flipped-native.png`.
+
 ## Identity kept at this size (Aaryan)
 
 Mullet with the wavy top, bold rectangular glasses, white jersey with red sleeve stripes, side

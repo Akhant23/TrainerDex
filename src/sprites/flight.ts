@@ -35,7 +35,14 @@ export interface FlightFrame {
 
 export interface FlightSprite {
   palette: Palette
+  /** facing left, as authored */
   frames: FlightFrame[]
+  /**
+   * Facing right: drawn from the same shapes through a mirroring canvas, then shaded, so the light
+   * still comes from the upper left; anything held comes round to the near side (see `held`).
+   * Never just the left frames flipped, which would mirror the lighting and the held item.
+   */
+  framesRight: FlightFrame[]
   style: FlightStyle
   /** ms per frame */
   frameMs: number
@@ -48,7 +55,47 @@ export interface FlightSprite {
   saddle: Array<[number, number]> | null
 }
 
-const grid = () => new HiGrid(FLIGHT_BASE_W, FLIGHT_BASE_H, K2)
+/** Drawing the right-facing frames: shapes go through MirrorGrid, held items come to the near side. */
+let MIRROR = false
+
+/**
+ * A HiGrid that draws everything mirrored left-to-right, so the right-facing frames come from
+ * the same shape code as the left-facing ones but are rasterised (and then shaded) in place,
+ * rather than being a flipped copy of finished art.
+ */
+class MirrorGrid extends HiGrid {
+  private mx(x: number) {
+    return FLIGHT_BASE_W - 1 - x
+  }
+  set(x: number, y: number, ch: string) {
+    return super.set(this.mx(x), y, ch)
+  }
+  get(x: number, y: number) {
+    return super.get(this.mx(x), y)
+  }
+  ellipse(cx: number, cy: number, rx: number, ry: number, ch: string, shade?: string, light?: string) {
+    return super.ellipse(this.mx(cx), cy, rx, ry, ch, shade, light)
+  }
+  rect(x0: number, y0: number, x1: number, y1: number, ch: string) {
+    return super.rect(this.mx(x1), y0, this.mx(x0), y1, ch)
+  }
+  poly(points: Array<[number, number]>, ch: string) {
+    return super.poly(points.map(([x, y]) => [FLIGHT_BASE_W - x, y]), ch)
+  }
+  line(x0: number, y0: number, x1: number, y1: number, ch: string, thick = 1) {
+    return super.line(FLIGHT_BASE_W - 0.5 - x0, y0, FLIGHT_BASE_W - 0.5 - x1, y1, ch, thick)
+  }
+  stamp(x: number, y: number, rows: string[]) {
+    // pixel by pixel through the base set (HiGrid.stamp calls this.set, which would mirror twice)
+    rows.forEach((r, dy) => [...r].forEach((c, dx) => c !== '.' && super.set(this.mx(x + dx), y + dy, c)))
+    return this
+  }
+  sample(x0: number, y0: number, x1: number, y1: number, fn: (x: number, y: number) => string | null) {
+    return super.sample(FLIGHT_BASE_W - x1, y0, FLIGHT_BASE_W - x0, y1, (x, y) => fn(FLIGHT_BASE_W - x, y))
+  }
+}
+
+const grid = (): HiGrid => (MIRROR ? new MirrorGrid(FLIGHT_BASE_W, FLIGHT_BASE_H, K2) : new HiGrid(FLIGHT_BASE_W, FLIGHT_BASE_H, K2))
 type Pt = [number, number]
 
 /** Body bob per frame (base px): rises on the downstroke. */
@@ -124,10 +171,22 @@ function swingWing(g: HiGrid, root: Pt, ang: number, rx: number, ry: number, col
   }
 }
 
+/**
+ * Draw what a flyer carries. Facing left the item sits at its authored depth; facing right the
+ * creature has turned round, so the side that was away from you now faces you: the item is drawn
+ * over that layer's shapes (and outlined) instead of under them. Returns the ink pass to run after
+ * the layer is outlined.
+ */
 function held(g: HiGrid, id: FlyerId, bob: number, wave: number) {
   const h = HOLDS[id]
   if (!h?.flight) return null
   const at: Hold = { ...h.flight, y: h.flight.y + bob, wave }
+  if (MIRROR)
+    return () => {
+      drawItem(g, h.item, at)
+      g.outline(OL)
+      itemDetails(g, h.item, at)
+    }
   drawItem(g, h.item, at)
   return () => itemDetails(g, h.item, at)
 }
@@ -297,21 +356,30 @@ function buildFlyer(id: FlyerId): FlightSprite {
   const spec = SPECS[id]
   let palette: Palette = { ...creatureArtHi[id].palette, ...ITEM_PALETTE, ...spec.extra }
   const frames: FlightFrame[] = []
+  const framesRight: FlightFrame[] = []
   const saddle: Array<[number, number]> = []
   let rideable = true
-  for (let f = 0; f < 4; f++) {
-    const { far, body, near, saddle: s } = spec.draw(f)
-    const layers = [far, body, near].map((g) => {
-      const sh = formShade(g.toPixels(), palette, K2 + 1)
-      const r = selectiveOutline(sh.pixels, sh.palette)
-      palette = r.palette
-      return r.pixels
-    })
-    frames.push({ far: layers[0], body: layers[1], near: layers[2] })
-    if (s) saddle.push([s[0] * K2, s[1] * K2])
-    else rideable = false
+  const finish = (g: HiGrid) => {
+    const sh = formShade(g.toPixels(), palette, K2 + 1)
+    const r = selectiveOutline(sh.pixels, sh.palette)
+    palette = r.palette
+    return r.pixels
   }
-  return { palette, frames, style: spec.style, frameMs: spec.frameMs, world: spec.world, saddle: rideable ? saddle : null }
+  try {
+    for (let f = 0; f < 4; f++) {
+      MIRROR = false
+      const { far, body, near, saddle: s } = spec.draw(f)
+      frames.push({ far: finish(far), body: finish(body), near: finish(near) })
+      if (s) saddle.push([s[0] * K2, s[1] * K2])
+      else rideable = false
+      MIRROR = true
+      const r = spec.draw(f)
+      framesRight.push({ far: finish(r.far), body: finish(r.body), near: finish(r.near) })
+    }
+  } finally {
+    MIRROR = false
+  }
+  return { palette, frames, framesRight, style: spec.style, frameMs: spec.frameMs, world: spec.world, saddle: rideable ? saddle : null }
 }
 
 export const FLYERS: FlyerId[] = ['megaphawk', 'hootour', 'riffin', 'campfly', 'diplomoth']

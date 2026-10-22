@@ -1,7 +1,7 @@
 # Gen V visual audit
 
 Where the site stands against Pokémon Black and White's visual principles, what the reference
-standard is, and what's still open. Updated 22 Oct 2026 (second pass: battle flow, poses, idle
+standard is, and what's still open. Updated 22 Oct 2026 (fifth pass: the departure; second pass: battle flow, poses, idle
 gestures, platforms; see GEN5-TIMING.md and QA-CHECKLIST.md).
 
 ## Ground rules
@@ -150,11 +150,38 @@ to.
 Foe platform at 44% of the field height and yours cut off by the bottom edge, as in the BW
 footage frames.
 
+## Leaving the resort by air (fifth pass)
+
+BACK (on the resort screen) and EXIT (in the menu) now ask *Would you like to leave the Battle
+Resort?* in the game's own dialogue box, YES / NO. NO closes the box and play carries on. YES
+locks input and runs `src/resort/departure.ts`, a pure timeline driven by elapsed time:
+
+| Phase | ms | What happens |
+|---|---|---|
+| prepare | 600 | the player turns towards the side the mount will come from |
+| approach | 2200 | the mount glides in from off-screen on that side, descending, and lands beside the player |
+| boarding | 700 | the player hops onto the saddle in an arc (the walker sprite, not a teleport) |
+| takeoff | 1100 | a gradual lift with a little forward drift; the shadow shrinks |
+| flight | 2800 | mount and rider fly on and away north, smaller and higher, until gone |
+| complete | — | fade out, then the existing exit destination (`/`), exactly as before |
+
+The mount is the first flyer in the party that can carry a rider (Megaphawk, Hootour,
+Diplomoth), else Megaphawk. Indoors (no sky) and with reduced motion it fades straight out. The
+timer is cleared on unmount, and the prompt can't reopen or the sequence run twice. The phase
+timings are this site's own choice; BW2's Fly cut-in wasn't measured.
+
+**Mount direction.** Flyers used to be drawn facing left and mirrored to fly right, which moved a
+held item (Hootour's flag) to the far wing and put the light on the wrong side. Every flyer now
+has native right-facing frames (`framesRight` in `flight.ts`), drawn through a mirroring grid
+*before* shading, so the light stays upper-left and a held item is redrawn on the near wing.
+Riders were already per-direction. Captures: `docs/qa/mounts-left-flipped-native.png` (left,
+old mirror, new right for every flyer), `docs/qa/departure-both-directions.png` (landing → take-off
+from each side, drawn with the game's own renderer).
+
 ## Open gaps
 
 - Original BW overworld sprite sheets weren't reachable; walker numbers are footage-measured.
 - Which BW moves dim the background was only observed for Electro Ball.
 - Tile and backdrop colours are compared against compressed video, so they're approximate.
-- Flying mounts are still mirrored when flying right (their art is near-symmetric, but a held
-  item, like Hootour's flag, switches wing); riders are not (fourth pass).
-- Flyers only fly left or right; there's no toward/away-from-camera flight to support.
+- Flyers only fly left or right; the departure's flight away is a left/right flyer drifting north
+  and shrinking, not a true away-from-camera view.

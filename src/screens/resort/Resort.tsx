@@ -11,8 +11,9 @@ import { maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile,
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { skyAt, skyLabel } from '../../resort/sky'
-import { ambientItems, drawSkyFlyers, MOUNTS, newAmbient, SURFERS, tickFlyers, type AmbientState } from '../../resort/ambient'
+import { ambientItems, departureItems, drawSkyFlyers, MOUNTS, newAmbient, SURFERS, tickFlyers, type AmbientState } from '../../resort/ambient'
 import { staff } from '../../resort/npcs'
+import { departureAt, departureMount, type Departure } from '../../resort/departure'
 import { WALK_CYCLE, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
 import { audio } from '../../systems/audio'
@@ -240,9 +241,10 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   // where everyone on the map is standing (window.__resortChars)
   useEffect(() => {
     if (!import.meta.env.DEV) return
-    const w = window as unknown as { __resortAmbient?: AmbientState; __resortChars?: () => Char[] }
+    const w = window as unknown as { __resortAmbient?: AmbientState; __resortChars?: () => Char[]; __resortMe?: () => unknown }
     w.__resortAmbient = ambient.current
     w.__resortChars = () => charsRef.current
+    w.__resortMe = () => ({ ...me.current, departing: !!departure.current })
   }, [])
   const sky = useRef(skyAt())
   const [skyStatus, setSkyStatus] = useState(() => skyLabel(sky.current))
@@ -256,6 +258,11 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const [onlineState, setOnlineState] = useState<'off' | 'loading' | 'ok' | 'error'>(trainersOnline ? 'loading' : 'off')
   const [syncNote, setSyncNote] = useState('')
   const [fade, setFade] = useState(false)
+  // leaving by air: the running departure (read by the render loop) and whether one is under way
+  const departure = useRef<(Departure & { done?: boolean }) | null>(null)
+  const [departing, setDeparting] = useState(false)
+  const leaveTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // the view gets taller (sees further) when the screen is taller than 4:3
@@ -282,7 +289,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const tapped = useRef<Facing | null>(null)
   const run = useRef(false)
   const blocked = useRef(false)
-  blocked.current = !!dialogue || panel !== 'none' || fade
+  blocked.current = !!dialogue || panel !== 'none' || fade || departing
 
   const map = maps[mapId]
   const avatar = save.avatar ?? DEFAULT_AVATAR
@@ -360,6 +367,40 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const say = (d: Dialogue) => {
     setChoicesReady(false)
     setDialogue(d)
+  }
+
+  /**
+   * Leaving the resort (BACK or EXIT): ask first, in the game's own dialogue box. Yes calls a
+   * flying creature to carry you off (departure.ts); No just closes the box. Ignored while a
+   * departure is already under way or another dialogue is open, so it can't run twice.
+   */
+  const requestLeave = () => {
+    if (departure.current || departing || dialogue) return
+    say({
+      lines: ['Would you like to leave the Battle Resort?'],
+      choices: [
+        { label: 'YES', action: startDeparture },
+        { label: 'NO', action: () => undefined },
+      ],
+    })
+  }
+  const startDeparture = () => {
+    if (departure.current) return
+    const m = me.current
+    const mp = maps[m.map]
+    setDeparting(true)
+    // indoors there's no sky to fly in, and reduced motion skips the flight: fade out instead
+    if (reducedMotion || !mp.outdoor) {
+      setFade(true)
+      leaveTimer.current = window.setTimeout(() => navigate('/'), reducedMotion ? 150 : 450)
+      return
+    }
+    // if they were mid-step, the creature comes to the tile they're stepping onto
+    const tx = m.moving ? m.moving.tx : m.x
+    const ty = m.moving ? m.moving.ty : m.y
+    const fromLeft = tx < size(mp).w / 2
+    held.current = []
+    departure.current = { t0: performance.now(), x: tx * TILE + 8, y: ty * TILE + 14, mount: departureMount(resortSave.get().party), fromLeft }
   }
 
   const talk = (c: Char) => {
@@ -568,7 +609,22 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
       const cam = cameraFor(mp, px + 8, py + 14)
       const walkFrame = WALK_CYCLE[Math.floor(now / 140) % 4]
       const actors: Actor[] = charsRef.current.map((c) => ({ look: c.look, facing: c.facing, frame: 0, x: c.x * TILE + 8, y: c.y * TILE + 14 }))
-      actors.push({ look: resortSave.get().avatar ?? DEFAULT_AVATAR, facing: m.facing, frame: m.moving ? walkFrame : 0, x: px + 8, y: py + 14 })
+      const dep = departure.current
+      const depFrame = dep ? departureAt(dep, now) : null
+      // turn to face the side the creature is coming from
+      const depFacing = dep ? (dep.fromLeft ? 'left' : 'right') : null
+      if (depFacing && !m.moving && m.facing !== depFacing) {
+        m.facing = depFacing
+        m.turnAt = now
+      }
+      // once they hop on, the player is drawn by the departure (on the hop, then as the rider)
+      if (!depFrame || depFrame.standing) actors.push({ look: resortSave.get().avatar ?? DEFAULT_AVATAR, facing: m.facing, frame: m.moving ? walkFrame : 0, x: px + 8, y: py + 14 })
+      if (dep && depFrame?.phase === 'complete' && !dep.done) {
+        // gone over the horizon: fade out and leave the way the exit always has
+        dep.done = true
+        setFade(true)
+        leaveTimer.current = window.setTimeout(() => navigate('/'), 450)
+      }
       const pt = pet.current
       if (pt.moving && now - pt.moving.t0 >= pt.moving.dur) {
         pt.x = pt.moving.tx
@@ -577,7 +633,8 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
       }
       const lead = resortSave.get().party[0]
       const creatures: CreatureActor[] = []
-      if (lead) {
+      // the creature following you goes back in its ball as you board
+      if (lead && (!depFrame || depFrame.standing)) {
         const pk = pt.moving ? Math.min(1, (now - pt.moving.t0) / pt.moving.dur) : 0
         const fx = pt.moving ? pt.moving.fx + (pt.moving.tx - pt.moving.fx) * pk : pt.x
         const fy = pt.moving ? pt.moving.fy + (pt.moving.ty - pt.moving.fy) * pk : pt.y
@@ -592,7 +649,10 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
       drawWorld(ctx, mp, cam, actors, now, creatures, viewH.current, {
         sky: sky.current,
         skyLayer: mp.id === 'plaza' ? (c, horizonY) => drawSkyFlyers(c, amb, now, horizonY) : undefined,
-        items: mp.id === 'plaza' ? (proj) => ambientItems(amb, now, proj, viewH.current) : undefined,
+        items: (proj) => [
+          ...(mp.id === 'plaza' ? ambientItems(amb, now, proj, viewH.current) : []),
+          ...(dep ? departureItems(dep, now, proj, viewH.current, resortSave.get().avatar ?? DEFAULT_AVATAR) : []),
+        ],
       })
 
       // name tags + bubbles follow their owners
@@ -639,7 +699,8 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         if (panel !== 'none' && save.avatar) {
           sfx('back')
           setPanel('none')
-        } else navigate('/')
+        } else if (!save.avatar) navigate('/')
+        else requestLeave()
       }}
       scrollKey={panel}
       top={
@@ -778,6 +839,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
           onBag={() => setPanel('bag')}
           onRecord={() => setPanel('record')}
           onIdeas={() => setPanel('suggest')}
+          onExit={requestLeave}
           place={map.name}
           status={skyStatus}
         />
@@ -803,6 +865,7 @@ function Controls({
   onBag,
   onRecord,
   onIdeas,
+  onExit,
   place,
   status,
 }: {
@@ -820,6 +883,7 @@ function Controls({
   onBag: () => void
   onRecord: () => void
   onIdeas: () => void
+  onExit: () => void
   place: string
   status: string
 }) {
@@ -838,7 +902,7 @@ function Controls({
         navigate('/pager/compose')
       },
     },
-    { label: 'EXIT', icon: 'settings', color: '#5a5d70', onClick: () => navigate('/') },
+    { label: 'EXIT', icon: 'settings', color: '#5a5d70', onClick: onExit },
   ]
   const pad = (d: Facing, label: string, cls: string) => (
     <button

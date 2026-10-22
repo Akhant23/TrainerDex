@@ -19,6 +19,8 @@ What the tests guard (behaviour, not pixels, so correct art changes don't break 
 | Trainer gestures | `src/sprites/gestures.test.ts` | start/end on idle, valid at 1× and 2× |
 | Flying scale | `src/resort/ambient.test.ts` | airScale endpoints, smooth growth, take-off mirrors landing |
 | NPC persistence | `src/resort/resort.test.ts` | visitors keep their tiles across arrivals, departures and player movement |
+| Departure | `src/resort/departure.test.ts` | phase order, smooth per-frame movement, lands beside (not on) the player, rider aboard only after boarding, both directions mirror, mount choice |
+| Mount direction | `src/sprites/creatures.test.ts` | every flyer has valid right-facing frames that aren't just the left ones mirrored |
 
 ## Previews
 
@@ -33,6 +35,7 @@ What the tests guard (behaviour, not pixels, so correct art changes don't break 
 - `window.__aaryanGesture('wave')`: play a trainer gesture on the main menu.
 - `window.__resortAmbient.nextGuest = 0`: bring a travelling trainer in now.
 - `window.__resortChars()`: everyone on the current map and where they stand.
+- `window.__resortMe()`: the player's tile, facing and whether a departure is running.
 
 A hidden browser tab throttles animation frames and timers, so timing checks must run with the
 page visible.
@@ -68,3 +71,8 @@ Use a 1280×800 desktop window and a 375×812 phone viewport.
     battlers (HUD and creatures not dimmed), quick throw, dim gone before the HP drains.
 16. **Reduced motion**: Settings → reduced motion. No camera moves, short effect timings, no
     gestures or idles.
+17. **Leaving the resort**: in the plaza press BACK (or EXIT in the menu). The prompt appears;
+    keys don't move you. NO: the box closes and you can walk. YES: a flyer lands beside you, you
+    hop on, it lifts off and flies away, then the main menu. Repeat from the left and the right
+    half of the plaza (the mount faces the way it flies; Hootour's flag is on the near wing).
+    Indoors or with reduced motion it fades straight out.

@@ -109,3 +109,19 @@ describe('species idle animations', () => {
         }
   })
 })
+
+describe('flyers facing right', () => {
+  const flip = (px: string[]) => px.map((r) => [...r].reverse().join(''))
+  it('every flyer has its own right-facing frames, not a flipped copy', () => {
+    for (const id of FLYERS) {
+      const a = flightArt[id]
+      expect(a.framesRight, id).toHaveLength(a.frames.length)
+      for (let f = 0; f < a.frames.length; f++)
+        for (const layer of ['far', 'body', 'near'] as const) {
+          expect(validate(a.framesRight[f][layer], a.palette, FLIGHT_W, FLIGHT_H), `${id} ${f} ${layer}`).toEqual([])
+        }
+      // re-shaded after mirroring (light stays upper-left), so never identical to the flipped art
+      expect(a.framesRight[0].body, id).not.toEqual(flip(a.frames[0].body))
+    }
+  })
+})

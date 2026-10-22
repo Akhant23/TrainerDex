@@ -16,6 +16,7 @@ import { creatureArtHi } from '../sprites/creatures'
 import { flightArt, FLIGHT_H, FLIGHT_W, FLYERS as FLYER_IDS, RIDEABLE, type FlyerId } from '../sprites/flight'
 import { flipX } from '../sprites/raster'
 import { characterFrames, inView, pixelCanvas, RES, VIEW_W, type WorldItem } from './render'
+import { departureAt, type Departure } from './departure'
 import { TILE } from './tiles'
 
 export const FLYERS: SpeciesId[] = FLYER_IDS
@@ -132,10 +133,11 @@ export const skyScale = (near: number) => 0.42 + 0.2 * Math.max(0, Math.min(1, (
 
 /* ---------------- sprites ---------------- */
 
-function flightLayer(id: FlyerId, frame: number, layer: 'far' | 'body' | 'near', flip: boolean) {
+/** A flyer's layer for one frame, facing right from its own right-facing art (not a flipped copy). */
+function flightLayer(id: FlyerId, frame: number, layer: 'far' | 'body' | 'near', faceRight: boolean) {
   const art = flightArt[id]
-  const px = art.frames[frame][layer]
-  return pixelCanvas(flip ? flipX(px) : px, art.palette, `fl:${id}:${frame}:${layer}:${flip}`)
+  const px = (faceRight ? art.framesRight : art.frames)[frame][layer]
+  return pixelCanvas(px, art.palette, `fl:${id}:${frame}:${layer}:${faceRight}`)
 }
 /** The riding sprite for this look and direction (each side drawn as itself, not mirrored). */
 const riderPx = new Map<string, ReturnType<typeof riderFor>>()
@@ -158,6 +160,17 @@ export function flightFrame(id: FlyerId, t: number): number {
  * pixel. Order: far wing, body, rider, near wing — so the rider sits between the wings and the
  * near wing sweeps over their legs.
  */
+/** Where a flyer drawn by drawFlyer has its saddle (canvas px), for the same arguments. */
+export function saddlePoint(id: FlyerId, t: number, x: number, y: number, s: number, faceRight: boolean): { x: number; y: number } | null {
+  const art = flightArt[id]
+  if (!art.saddle) return null
+  const k = art.world * s
+  const ox = Math.round(x - (FLIGHT_W / 2) * k)
+  const oy = Math.round(y - FLIGHT_H * 0.62 * k)
+  const [sx, sy] = art.saddle[flightFrame(id, t)]
+  return { x: ox + (faceRight ? FLIGHT_W - sx : sx) * k, y: oy + sy * k }
+}
+
 export function drawFlyer(ctx: CanvasRenderingContext2D, id: FlyerId, t: number, x: number, y: number, s: number, faceRight: boolean, rider?: Appearance) {
   const art = flightArt[id]
   const f = flightFrame(id, t)
@@ -268,4 +281,54 @@ export function ambientItems(a: AmbientState, now: number, proj: (wx: number, wy
     })
   }
   return items
+}
+
+/* ---------------- leaving by air (see departure.ts) ---------------- */
+
+/**
+ * The departure as a depth-sorted world item: the mount (with its shadow) swooping in, landing,
+ * the player hopping onto its back, then mount and rider taking off and flying away as one.
+ * The rider is the per-direction riding sprite and sits on the mount's saddle frame by frame.
+ */
+export function departureItems(d: Departure, now: number, proj: (wx: number, wy: number) => { x: number; y: number; s: number }, vh: number, look: Appearance): WorldItem[] {
+  const f = departureAt(d, now)
+  if (f.phase === 'complete' || f.phase === 'prepare') return []
+  const p = proj(f.x, f.y)
+  if (!inView(p, vh)) return []
+  const id = d.mount as FlyerId
+  return [
+    {
+      depth: f.y,
+      draw: (ctx) => {
+        const s = p.s * RES
+        const fs = s * airScale(f.alt)
+        const lift = f.alt * s
+        const sh = Math.max(0.35, 1 - f.alt / 200)
+        ctx.fillStyle = 'rgba(20,24,40,0.25)'
+        ctx.beginPath()
+        ctx.ellipse(p.x * RES, p.y * RES, 12 * s * sh, 4 * s * sh, 0, 0, Math.PI * 2)
+        ctx.fill()
+        const mx = p.x * RES
+        const my = p.y * RES - lift - 8 * fs
+        drawFlyer(ctx, id, now, mx, my, fs, f.faceRight, f.aboard ? look : undefined)
+        if (f.phase === 'boarding') {
+          // the hop: from where they stood, up in an arc, landing astride the saddle
+          const seat = saddlePoint(id, now, mx, my, fs, f.faceRight)
+          const from = proj(d.x, d.y)
+          if (!seat) return
+          const rs = OW_WORLD * s
+          const sx = from.x * RES
+          const sy = from.y * RES
+          // where the walker's feet end up when their hips are on the saddle
+          const ex = seat.x
+          const ey = seat.y + (64 - RIDER_HIP[1]) * rs
+          const k = f.hop
+          const x = sx + (ex - sx) * k
+          const y = sy + (ey - sy) * k - Math.sin(k * Math.PI) * 16 * s
+          const img = characterFrames(look)[d.fromLeft ? 'left' : 'right'][k < 0.85 ? 1 : 0]
+          ctx.drawImage(img, Math.round(x - (img.width / 2) * rs), Math.round(y - img.height * rs), Math.round(img.width * rs), Math.round(img.height * rs))
+        }
+      },
+    },
+  ]
 }
