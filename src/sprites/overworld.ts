@@ -60,7 +60,7 @@ const headX = (cx: number, x: number) => Math.round(cx + (x - cx) * HEAD_SX)
 const headY = (y: number) => Math.round(HEAD_TOP + y * HEAD_SY)
 /** The eyes in head space: either side of the centre line (front), toward the face (profile), and their top row. */
 const EYE_DX = 3.7879
-const EYE_PROFILE_DX = -6.818
+const EYE_PROFILE_DX = -5.1
 const EYE_Y = 11.6
 /** Where hats sit, in head space: hair above this row is clipped under a hat. */
 const BRIM: Partial<Record<Appearance['hat'], number>> = { cap: 9, beanie: 9, bucket: 8 }
@@ -469,18 +469,26 @@ function profile(a: Appearance, step: Step, side: Side, ride = false): Pixels {
   }
   if (BLAZERS.has(a.top)) g.poly([[cx - 4.5, SHOULDER_Y], [cx - 1.5, SHOULDER_Y], [cx - 5, 40]], a.top === 'suit' ? 'V' : 'G')
   if (has(a, 'bag')) g.rect(cx + 4.5, 40, cx + 8, 45, 'Z')
-  // the head in profile: hair behind, a big face toward the front
+  // the head in profile, BW-style: the hair makes most of the silhouette (the crown, the whole back
+  // of the head down to the nape, a sideburn in front of the ear) and the face is only its front
+  // lower part, the fringe falling forward to just above the one eye
   const hairC = a.hair === 'buzz' ? 'j' : 'H'
-  oval(h, cx + 2.4, 11.8, bigHair(a) ? 8.8 : 8.4, bigHair(a) ? 9 : 8.8, hairC, 'j')
+  const big = bigHair(a)
+  oval(h, cx + 1.5, 11.2, big ? 9.4 : 9, big ? 9.6 : 9.2, hairC, 'j')
   if (a.hair === 'mullet') h.poly([[cx + 1, 15], [cx + 10, 15], [cx + 10, 23], [cx + 6, 22], [cx + 2, 24]], 'H')
-  if (a.hair === 'long') h.rect(cx, 11, cx + 10, 27, 'H').rect(cx + 7, 11, cx + 10, 27, 'j')
+  if (a.hair === 'long') h.rect(cx + 1, 11, cx + 10, 27, 'H').rect(cx + 7, 11, cx + 10, 27, 'j')
   if (a.hair === 'bun') oval(h, cx + 8.5, 3, 3, 2.6, 'H', 'j')
-  oval(h, cx - 2, HEAD_Y, 7.2, 8.4, 'S', undefined, 'T')
-  oval(h, cx + 2.4, 7.8, a.hair === 'buzz' ? 7.8 : 8.2, a.hair === 'buzz' ? 4.6 : 5, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
-  if (a.hair !== 'buzz' && a.hair !== 'bun') h.poly([[cx - 9.5, 7.5], [cx + 2, 6.5], [cx - 1.5, 11], [cx - 5.5, 10.5], [cx - 9.5, 12.5]], 'H')
-  if (a.hair === 'curtains') h.poly([[cx - 9, 7.5], [cx - 5, 7.5], [cx - 6, 17], [cx - 9, 15.5]], 'H')
+  oval(h, cx - 2.6, 14.4, 6.3, 7.1, 'S', undefined, 'T')
+  // the back of the head stays hair, down behind the ear to the nape (short hair sits closer)
+  h.poly([[cx + 2.8, 6], [cx + 10, 8], [cx + 10.4, 14.5], [cx + 8, a.hair === 'buzz' ? 18 : 19.6], [cx + 3.2, a.hair === 'buzz' ? 17.5 : 19]], hairC)
+  // the crown, and the fringe swept forward over the brow
+  oval(h, cx + 1.5, 7.6, a.hair === 'buzz' ? 8.6 : 9, a.hair === 'buzz' ? 4.6 : 5.2, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
+  if (a.hair !== 'buzz' && a.hair !== 'bun') h.poly([[cx - 9.6, 7], [cx + 1, 5.6], [cx - 0.5, 10.6], [cx - 3.8, 10.2], [cx - 6.6, 11.6], [cx - 9.8, 11]], 'H')
+  if (a.hair === 'curtains') h.poly([[cx - 2.6, 8], [cx + 0.6, 8], [cx + 0.6, 16.5], [cx - 1.6, 16]], 'H')
   if (a.hair === 'spiky') for (const x of [cx - 4, cx + 1.5, cx + 7]) h.poly([[x - 2.6, 6], [x + 2.6, 6], [x + 2, -0.5]], 'H')
-  oval(h, cx + 4, HEAD_Y + 1, 1.5, 2, 'S', 's')
+  // a sideburn in front of the ear, and the ear halfway back along the head
+  if (a.hair !== 'buzz') h.poly([[cx + 0.4, 10], [cx + 2.8, 10], [cx + 2.6, 15.6], [cx + 1, 15.2]], hairC)
+  oval(h, cx + 3.8, 14.4, 1.5, 2, 'S', 's')
   clipHair(g, a, 1)
   hat(h, a, cx + 2, 'left')
   // the near arm: a short stub swinging with the step (riding, it reaches forward to hold on)
@@ -498,12 +506,14 @@ function profile(a: Appearance, step: Step, side: Side, ride = false): Pixels {
   stampOver(g, arm)
   g.outline().thicken()
   // a nose bump in the profile line, and one tall eye
-  const nose = headX(cx, cx - 9.848)
-  const noseY = headY(15.18)
+  const nose = headX(cx, cx - 9.4)
+  const noseY = headY(15.4)
   g.set(nose, noseY, 'S').set(nose, noseY + 1, 's')
+  // the ear, with an ink edge round its back (BW draws it as a small C against the hair)
+  if (!['beanie', 'bucket'].includes(a.hat)) g.stamp(headX(cx, cx + 3.2), headY(12.9), ['SKK', 'SsK', 'SsK', 'SSK', '.K.'])
   const eye = headX(cx, cx + EYE_PROFILE_DX) - 1
   const eT = headY(EYE_Y)
-  const ear = headX(cx, cx + 2.27)
+  const ear = headX(cx, cx + 2.6)
   if (has(a, 'sunglasses')) g.rect(eye - 1, eT, eye + 4, eT + 3, 'K').line(eye + 4, eT, ear, eT, 'K')
   else {
     g.stamp(eye, eT, ['KW', 'KK', 'KK', 'KK'])

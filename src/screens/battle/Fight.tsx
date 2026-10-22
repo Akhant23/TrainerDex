@@ -738,8 +738,8 @@ function PartyPanel({ battle, forced, onPick }: { battle: BattleState; forced: b
               <HpBar hp={m.hp} max={m.maxHp} showNumbers />
             </span>
           </span>
-          {i === side.active && !forced && <span className="font-display text-[11px] text-paper">IN BATTLE</span>}
-          {m.hp <= 0 && <span className="font-display text-[11px] text-paper">FAINTED</span>}
+          {i === side.active && !forced && <span className="font-display text-outline text-[clamp(11px,2.6cqi,14px)] text-paper">IN BATTLE</span>}
+          {m.hp <= 0 && <span className="font-display text-outline text-[clamp(11px,2.6cqi,14px)] text-paper">FAINTED</span>}
         </button>
       ))}
     </div>

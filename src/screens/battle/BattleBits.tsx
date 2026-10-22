@@ -136,7 +136,9 @@ export function HpBar({ hp, max, showNumbers = false, dark = false }: { hp: numb
         </div>
       </div>
       {showNumbers && (
-        <p className={`gv-label m-0 mt-0.5 text-right text-[clamp(10px,2.8cqi,17px)] ${dark ? 'text-paper' : ''}`}>
+        // on the dark battle plates the numbers are white labels with a drop; on a light panel (the
+        // party list) plain ink, no shadow, so they stay crisp
+        <p className={`m-0 mt-0.5 text-right leading-tight ${dark ? 'gv-label text-[clamp(10px,2.8cqi,17px)] text-paper' : 'font-display text-[clamp(12px,3cqi,18px)] tracking-wide text-ink'}`}>
           {Math.max(0, Math.round(hp))}/{max}
         </p>
       )}
