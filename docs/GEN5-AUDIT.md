@@ -284,10 +284,8 @@ Nothing here is extracted or official Pokémon art.
 - Original BW overworld sprite sheets weren't reachable; walker numbers are footage-measured.
 - Which BW moves dim the background was only observed for Electro Ball.
 - Tile and backdrop colours are compared against compressed video, so they're approximate.
-- The change from the side view to the rear view is a short cross-fade, not an animated turn.
-  Optional future enhancement: a three-quarter frame per mount (and per side, since turning from
-  left and from right show different sides) plus a three-quarter rider; not made, as it would be
-  six more mount poses and two rider poses for a ~140 ms moment.
+- The turn away is three discrete views (side, three-quarter, rear), one pose each per wingbeat
+  frame; there's no in-between yaw animation beyond that.
 - Only the three mounts have rear views (Riffin and Campfly never carry anyone away); the rear
   rider hides the watch and bracelets (the hands are forward, out of sight).
 - The departure's timing and sizes are this site's own; BW2's Fly sequence hasn't been measured
@@ -298,3 +296,65 @@ Nothing here is extracted or official Pokémon art.
   the riding pose; not needed for the hop to read at native size.
 - The main menu's first mount after a page load drops one frame while its portrait encodes its
   layers (GEN5-TIMING.md, frame timing); outside the flight, not changed.
+
+## Ninth pass: Pokédex habitats, the three-quarter turn, a wider resort, cleaning his glasses
+
+**Pokédex.** Entries no longer show an icon on a gradient. Each shows a habitat: a 256×192
+pixel-art scene (the DS top screen's size) of where that side of Aaryan is found, with him in it,
+dressed and posed for it, as a BW Pokédex shows a Pokémon in its habitat. 15 scenes, one per entry,
+chosen from the entry's own text: Sydney Harbour at dusk (ORIGIN: born in Australia), a courtroom
+(OBJECTION: mooting, witness examination), an eDiscovery review floor (DISCOVERY: Clayton Utz,
+Relativity), a biotech lab (GENOME), a society merch stall (BRANDSTORM: the sold-out merch), the
+campus walkway in O-Week (TOURGUIDE), a football pitch (STRIKER: the number 7), a cricket oval with
+a coach's bucket of balls (BOUNDARY), a DJ booth (SELECTA), his music corner with the guitar case
+(STRUMMER), a golden-hour lane with a camera (SHUTTER), a reading nook (PAGETURNER), a gaming den
+(PLAYER TWO), chambers at night with briefs in pink tape (QUICKTYPE), a society panel event
+(MULTITASK). Drawn in code (`src/sprites/habitat-kit.ts`, `src/sprites/habitats.ts`): flat fills,
+ink outlines, a light edge and a shade band, stepped bands and dithers, no smoothing; Aaryan is the
+site's own character model at 1:1 on the same grid. Several scenes have 2–4 frames of quiet motion
+(water, lights, a screen, rain, bubbles) cycled every 560 ms, never with reduced motion.
+
+The entry page follows the BW Pokédex's information page, adapted to the dual screen: on top, the
+TrainerDex red bezel round a status strip (number, name, types), the habitat window (crisp at the
+largest whole-pixel scale that fits, on the dex's green grid) and a HABITAT plate; below, on the
+green grid, an info card (number and name, category, type chips, the entry's old emblem in a
+footprint box, HABITAT and TYPE rows), the entry in a dex text box, sources, and a control bar
+(PREV, position, NEXT; pinned so it's always in reach). The list shows the focused entry's habitat;
+entries not yet seen show it in darkness with a "?". Phones use the full 4:3 top screen. Keyboard
+navigation, BACK, PREV/NEXT (wrapping), links and the seen tracking are unchanged.
+
+**Three-quarter turn.** Turning away from the side view to the rear view now passes through a
+three-quarter view from behind for its ~140 ms (`framesQuarter` in `flight.ts`, `riderQuarterFor`
+in `overworld.ts`): six mount poses (Megaphawk, Hootour, Diplomoth, each heading up-left and
+up-right; four wingbeat frames each) and two rider poses. Each is drawn as itself: the head turned
+toward the heading, the near wing full length in front of the body's edge, the far wing
+foreshortened behind it, the body on the diagonal; what a mount carries on its right (Megaphawk's
+megaphone, Hootour's flag) stays on its right, tucked behind the body heading left and in view
+heading right. The rider shows the near ear (with the glasses' arm), near arm and near leg; the
+back of the jersey keeps its flames on the wearer's right both ways (tested). No cross-fade any
+more.
+
+**A wider resort.** The plaza grew from 38 to 62 tiles across (`PLAZA_X` = 12 columns each side):
+gardens to the west (a pool, flower beds, benches, trees, a lamp) and palm grounds to the east, the
+three east–west paths running on into both, the beach and sea along the whole south. The edges
+are trees (and palms on the beach), solid all the way round (tested), so there's no invisible wall
+and nowhere to walk off. Past the map, `beyond` (maps.ts) fills everything the camera can see with
+woods (round trees and palms, thicker further out, the odd flowered clearing), beach with palms and
+the sea, chosen per tile from a hash so nothing repeats; the ground and the props are both drawn
+from it. Everything placed by coordinates moved with the layout (`PLAZA_X + x`): buildings, doors,
+signs, NPCs, the tower warps, the plaza battle's camera spot; visitors and travellers use the whole
+width; the saved spot's storage key changed so an old position can't land somewhere wrong.
+
+**Cleaning his glasses** replaces the pocket check on the main menu (SPRITES.md).
+
+**Provenance (this pass).** All new art (habitats, the three-quarter mounts and riders, the held
+glasses and cloth, the new resort layout and its scenery) is original, made in code for this site;
+the Pokémon BW Pokédex screenshot supplied was a layout reference only. Nothing is extracted or
+official art.
+
+Captures: `dex-entry-objection.png`, `dex-entry-selecta.png`, `dex-list-unseen.png`,
+`dex-entry-phone.png`, `dex-habitats-all.png`, `quarter-mount-poses.png`,
+`quarter-turn-from-left.png`, `quarter-turn-from-right.png`, `resort-expanded.png`,
+`glasses-clean-browser.png`, `glasses-clean-frames.png` (all but the two sprite sheets are the real
+site in a browser).
+

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { atResolution, CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderArmLayer, renderBack, renderHairBackLayer, renderHeadLayer, renderLayers, renderSide, type Appearance, type ArmPose, type CharacterLayers, type PoseFrame } from '../sprites/character'
+import { atResolution, CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderArmLayer, renderBack, renderHairBackLayer, renderHeadLayer, renderHeldLayer, renderLayers, renderSide, type Appearance, type ArmPose, type CharacterLayers, type PoseFrame } from '../sprites/character'
 import { GESTURES, type GestureId } from '../sprites/gestures'
 import { useGestures } from './useGestures'
 import { crop, type Pixels } from '../sprites/pixels'
@@ -34,10 +34,10 @@ function partUrl(key: string, hi: boolean, palette: ReturnType<typeof paletteFor
   if (!u) partCache.set(k, (u = pixelsToDataUrl(atResolution(hi ? 2 : 1, draw), palette)))
   return u
 }
-type LayerUrls = Record<keyof CharacterLayers, string>
+type LayerUrls = Record<keyof CharacterLayers | 'held', string>
 function frameUrls(a: Appearance, f: PoseFrame, hi: boolean, palette: ReturnType<typeof paletteFor>): Partial<LayerUrls> {
   const id = JSON.stringify(a)
-  const face: PoseFrame = { eyes: f.eyes, mouth: f.mouth, brow: f.brow, ruffle: f.ruffle, tilt: f.tilt }
+  const face: PoseFrame = { eyes: f.eyes, mouth: f.mouth, brow: f.brow, ruffle: f.ruffle, tilt: f.tilt, glasses: f.glasses }
   const fk = JSON.stringify(face)
   const out: Partial<LayerUrls> = {
     hairBack: partUrl(`hb:${id}:${f.tilt ?? 0}`, hi, palette, () => renderHairBackLayer(a, f.tilt ?? 0)),
@@ -46,6 +46,7 @@ function frameUrls(a: Appearance, f: PoseFrame, hi: boolean, palette: ReturnType
   }
   if (f.back) out.armBack = partUrl(`ab:${id}:${JSON.stringify(f.back)}`, hi, palette, () => renderArmLayer(a, 'back', f.back))
   if (f.front) out.armFront = partUrl(`af:${id}:${JSON.stringify(f.front)}`, hi, palette, () => renderArmLayer(a, 'front', f.front))
+  if (f.held) out.held = partUrl(`hd:${id}:${JSON.stringify(f.held)}`, hi, palette, () => renderHeldLayer(a, f.held))
   return out
 }
 
@@ -196,7 +197,9 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
     handle = window.setTimeout(step, 400)
     return () => window.clearTimeout(handle)
   }, [gesturing, appearance, hi, palette])
-  const posed = frame ? { ...urls, ...frameUrls(appearance, frame, hi, palette) } : urls
+  const framed = frame ? frameUrls(appearance, frame, hi, palette) : null
+  const posed = framed ? { ...urls, ...framed } : urls
+  const heldUrl = framed?.held
 
   if (isPortrait) {
     return (
@@ -242,6 +245,8 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
       {layer(posed.torso, 'bw-breathe')}
       {!behind && arms}
       {layer(headUrl, nod ? 'bw-nod' : 'bw-head')}
+      {/* anything a gesture holds up (his glasses, a cloth) goes in front of the face, moving with the hand */}
+      {heldUrl && layer(heldUrl, 'bw-breathe')}
     </div>
   )
 }

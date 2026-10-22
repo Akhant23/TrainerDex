@@ -84,8 +84,8 @@ export interface MountFrame<P extends string = DeparturePhase> {
   /** 1 → 0 as it disappears into the distance */
   fade: number
   /**
-   * 0 → 1 as it turns from the side view to the rear view (flying away from you), over a short
-   * cross-fade while its course bends north: a deliberate change of view, not an animated turn.
+   * Turning to fly away from you as its course bends north: 0 side-on, between 0 and 1 the
+   * three-quarter view from behind (the ~140 ms turn), 1 from behind.
    */
   back: number
 }
@@ -110,7 +110,8 @@ const AWAY_DY = 320
 /** Where in the hop (0–1) the trainer changes pose: in the air, hips just above the saddle. */
 export const HOP_SWAP = 0.78
 /**
- * The change to the rear view, over `u` (take-off + flight): from TURN_AT for TURN_LEN (≈140 ms),
+ * The turn to the rear view, over `u` (take-off + flight): three-quarters from behind from TURN_AT
+ * for TURN_LEN (≈140 ms; this site's own estimate, not a measured original-game timing),
  * as the sideways drift gives way to flying north. The drift finishes by DRIFT_END, so once it's
  * facing away it's flying away, not sliding sideways.
  */

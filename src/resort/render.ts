@@ -17,7 +17,7 @@ import { creatureArtHi } from '../sprites/creatures'
 import { flipX } from '../sprites/raster'
 import { tiles, tilePalette, TILE } from './tiles'
 import { structureArt } from './structures'
-import { size, tileAt, type ResortMap } from './maps'
+import { sceneryAt, size, tileAt, type ResortMap } from './maps'
 import { drawHorizon, drawSky, drawWeatherOverlay, type SkyState } from './sky'
 
 export const VIEW_W = 256
@@ -97,7 +97,7 @@ function ground(m: ResortMap, frame: 0 | 1): HTMLCanvasElement {
     for (let tx = -PAD; tx < w + PAD; tx++) {
       if (!m.outdoor && (tx < 0 || ty < 0 || tx >= w || ty >= h)) continue
       if (m.outdoor && ty < -NORTH_PAD) continue
-      const ch = tileAt(m, Math.max(0, Math.min(w - 1, tx)), Math.max(0, Math.min(h - 1, ty)))
+      const ch = sceneryAt(m, tx, ty)
       const def = tiles[ch] ?? tiles.X
       const v = !(frame && def.frame2) && def.variant ? def.variant(tx, ty) : null
       const px = frame && def.frame2 ? def.frame2 : (v?.px ?? def.px)
@@ -271,14 +271,15 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   }
 
   const lamps: Array<[number, number]> = []
-  // only tiles that can be on screen
-  const y0 = Math.max(0, Math.floor((cam.y - 320) / TILE))
-  const y1 = Math.min(h - 1, Math.ceil((cam.y + 70) / TILE))
-  const x0 = Math.max(0, Math.floor((cam.x - 260) / TILE))
-  const x1 = Math.min(w - 1, Math.ceil((cam.x + 260) / TILE))
+  // only tiles that can be on screen (outdoors, past the edges too: the scenery beyond the map)
+  const far = outdoor && m.beyond ? PAD : 0
+  const y0 = Math.max(far ? -NORTH_PAD : 0, Math.floor((cam.y - 320) / TILE))
+  const y1 = Math.min(h - 1 + far, Math.ceil((cam.y + 70) / TILE))
+  const x0 = Math.max(-far, Math.floor((cam.x - 260) / TILE))
+  const x1 = Math.min(w - 1 + far, Math.ceil((cam.x + 260) / TILE))
   for (let ty = y0; ty <= y1; ty++)
     for (let tx = x0; tx <= x1; tx++) {
-      const def = tiles[tileAt(m, tx, ty)]
+      const def = tiles[sceneryAt(m, tx, ty)]
       if (!def?.prop) continue
       if (def.wall) {
         // walls only face you where there is open floor in front of them

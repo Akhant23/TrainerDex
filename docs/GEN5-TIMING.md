@@ -175,10 +175,17 @@ Findings:
 | View while flying away | side view all the way | side → rear view (new original art) | a genuine away-from-you view | browser captures `docs/qa/rear-turn-*.png` |
 | Sideways drift | done by 75% of take-off + flight | done by 55% | so the mount isn't sliding sideways once it faces away (≥85% of the drift is done when the turn ends; after it, movement is >3× more north than sideways; both tested) | estimated, then checked in the browser captures |
 | Turn timing | — | starts at 40%, cross-fade 140 ms (first tried 195 ms: the half-and-half frames looked muddy), eased | brief enough not to read as a double image, long enough not to pop | visual comparison of 195 ms and 140 ms in the browser |
+| Turn (ninth pass) | cross-fade side → rear over 140 ms | side → three-quarters from behind for the same 140 ms (its own pose per mount and per way it turns, and a matching rider) → rear; no cross-fade | a turn, not a dissolve | browser captures `docs/qa/quarter-turn-from-left.png`, `quarter-turn-from-right.png` |
 | Scale and position at the turn | — | both views drawn at the same centre and scale | no jump in size or position | browser captures |
 
 Status: C (estimated, this site's own) and D (verified only on the site, in the browser). Nothing
 here is measured against BW2's Fly. Frame timing with the rear view (4 departures, 2 cold visitor
 arrivals, 2988 frames): no late frames during the flight or the turn; the only one is the known
 main-menu frame after leaving, on a cold first run.
+
+The 140 ms three-quarter moment is this site's own estimate (the length of the cross-fade it
+replaced), not a measured BW2 timing; the departure's total length is unchanged (7400 ms + 450 ms
+fade; measured in the browser after this change: phases on time, the page left at 7874–7881 ms).
+Frame timing after the ninth pass (resort widened, scenery past the edges, three-quarter poses):
+7 departures from both sides and 3 cold visitor arrivals, 5003 frames, none late.
 

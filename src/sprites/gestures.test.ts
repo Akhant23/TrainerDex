@@ -12,7 +12,7 @@ const ids = Object.keys(GESTURES) as GestureId[]
 
 describe('idle gestures', () => {
   it('has all five gestures, each with a weight', () => {
-    expect(ids.sort()).toEqual(['handsBehindHead', 'pockets', 'ruffleHair', 'smirkPoint', 'wave'])
+    expect(ids.sort()).toEqual(['cleanGlasses', 'handsBehindHead', 'ruffleHair', 'smirkPoint', 'wave'])
     for (const id of ids) expect(GESTURE_WEIGHTS[id]).toBeGreaterThan(0)
   })
 
@@ -30,7 +30,8 @@ describe('idle gestures', () => {
         expect(validate(renderPose(signature, frame), pal, CHAR_W, CHAR_H), id).toEqual([])
         expect(validate(atResolution(2, () => renderPose(signature, frame)), pal, CHAR_W * 2, CHAR_H * 2), id).toEqual([])
       }
-  })
+    // every frame of every gesture at both densities: ~4 s alone, longer when the suite runs in parallel
+  }, 20_000)
 
   it('gestures are short enough to feel like idles, long enough to read', () => {
     for (const id of ids) {
@@ -39,5 +40,33 @@ describe('idle gestures', () => {
       expect(ms, id).toBeLessThan(4500)
       for (const f of GESTURES[id]) expect(f.ms, id).toBeGreaterThanOrEqual(60)
     }
+  })
+})
+
+describe('cleaning his glasses', () => {
+  const frames = GESTURES.cleanGlasses.map((f) => f.frame)
+  it('takes them off, cleans them with a cloth, and puts them back on', () => {
+    // on at the start and the end; off, and in a hand, in between
+    expect(frames[0].glasses).toBeUndefined()
+    expect(frames[frames.length - 1]).toEqual({})
+    const off = frames.filter((f) => f.glasses === 'off')
+    expect(off.length).toBeGreaterThan(10)
+    expect(frames.some((f) => f.held?.cloth)).toBe(true)
+    // never both on the face and in a hand, and never gone altogether
+    for (const f of frames) {
+      if (f.glasses === 'off') expect(f.held?.glasses, JSON.stringify(f)).toBeDefined()
+      else expect(f.held?.glasses).toBeUndefined()
+    }
+  })
+  it('the glasses and cloth travel with the hand: no jumps between frames', () => {
+    for (let i = 1; i < frames.length; i++)
+      for (const what of ['glasses', 'cloth'] as const) {
+        const a = frames[i - 1].held?.[what]
+        const b = frames[i].held?.[what]
+        if (a && b) expect(Math.hypot(b[0] - a[0], b[1] - a[1]), `${what} ${i}`).toBeLessThan(10)
+      }
+  })
+  it('the pocket check it replaced is gone', () => {
+    expect(Object.keys(GESTURES)).not.toContain('pockets')
   })
 })

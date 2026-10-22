@@ -110,7 +110,7 @@ The idle animation is only for the large sprites; map walkers stand still, as in
 ## Idle gestures (main menu)
 
 On the main menu Aaryan breathes by default, and every 7–13 s he plays one of five gestures:
-hands behind the head, ruffling his hair, searching his pockets, smirking and pointing at you, or
+hands behind the head, ruffling his hair, cleaning his glasses, smirking and pointing at you, or
 (rarely) waving. Tapping him always waves. The clips are in `src/sprites/gestures.ts` and the
 scheduler is `src/ui/useGestures.ts`.
 
@@ -118,6 +118,13 @@ scheduler is `src/ui/useGestures.ts`.
   overrides: eyes, mouth, brow, hair ruffle, head tilt) and how long to hold it. Arms are tweened
   between keyframes with 70 ms in-between frames.
 - Every clip starts and ends on the standing idle, so it hands back to breathing without a jump.
+- Cleaning his glasses (replaced the pocket check, same weight): a hand to the temple, the glasses
+  come off with it, held at the chest while the other hand wipes the lenses with a cloth (eyes
+  down), lifted for a look, then back on. A pose can leave the glasses off the face
+  (`glasses: 'off'`) and hold things in a layer drawn in front of the head (`held`, see
+  `renderHeldLayer`): the glasses and the cloth, which the tweening moves with the hand so they
+  never float free. Away from the face the lenses are tinted so they read as glasses in a hand;
+  at the face the eyes show through them. 35 frames, 3.3 s.
 - Gestures never repeat back to back and never interrupt each other: a tap during a gesture is
   ignored. Weights live in `GESTURE_WEIGHTS`.
 - Only the standing `idle` pose gestures, and nothing plays with reduced motion on, in a hidden

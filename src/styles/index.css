@@ -1260,3 +1260,129 @@ body {
 .space-y-12 > :not(:last-child) {
   margin-block-end: calc(var(--spacing) * 12);
 }
+
+/* ---------------- Pokédex (BW-style entry pages) ---------------- */
+
+/* the device's red bezel round the top screen (TrainerDex red), lit along its top edge */
+.dex-bezel {
+  background: linear-gradient(#d24434, #c03424 60%, #a82a1e);
+  box-shadow: inset 0 var(--u) 0 rgb(255 255 255 / 0.22);
+}
+/* the status strip and the info cards: white panels with a dark rim and a grey inner line, as on the BW dex */
+.dex-strip,
+.dex-info,
+.dex-text {
+  background: #f8f8f2;
+  color: var(--color-ink);
+  border-radius: calc(var(--u) * 2.5);
+  box-shadow:
+    inset 0 0 0 calc(var(--u) * 0.67) #c6cad6,
+    0 0 0 calc(var(--u) * 0.67) var(--gv-ink),
+    0 calc(var(--u) * 1.33) 0 calc(var(--u) * 0.67) var(--gv-drop);
+}
+/* the habitat window: dark inset frame over the dex's green grid, which fills any space round the scene */
+.dex-window {
+  border-radius: calc(var(--u) * 1.5);
+  background-color: #2f8a5a;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.1) 1px, transparent 1px);
+  background-size: 8px 8px;
+  box-shadow:
+    0 0 0 calc(var(--u) * 0.67) var(--gv-ink),
+    0 0 0 calc(var(--u) * 1.67) #e8e8f0,
+    0 0 0 calc(var(--u) * 2.33) var(--gv-ink);
+}
+.dex-caption {
+  background: #2a2c3a;
+  color: var(--color-paper);
+  border-radius: calc(var(--u) * 1.5);
+  box-shadow: 0 0 0 calc(var(--u) * 0.67) var(--gv-ink);
+}
+/* the info page sits on the BW dex's green circuit grid */
+.dex-page {
+  background-color: #3e9a68;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.12) 1px, transparent 1px),
+    linear-gradient(rgb(0 0 0 / 0.08) 2px, transparent 2px);
+  background-size: 10px 10px, 10px 10px, 40px 40px;
+}
+.dex-category {
+  color: var(--color-muted);
+}
+/* the footprint box: the entry's emblem on a fine grid, as BW shows a footprint */
+.dex-footprint {
+  width: clamp(48px, 13cqi, 72px);
+  aspect-ratio: 1;
+  background-color: #f0f0ea;
+  background-image:
+    linear-gradient(#d8dae2 1px, transparent 1px),
+    linear-gradient(90deg, #d8dae2 1px, transparent 1px);
+  background-size: 6px 6px;
+  border-radius: calc(var(--u) * 1.5);
+  box-shadow: 0 0 0 calc(var(--u) * 0.67) var(--gv-ink);
+}
+/* HT / WT style rows: a dark label, the value to the right, a dotted rule beneath */
+.dex-rows > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 0;
+  border-bottom: 2px dotted #c6cad6;
+}
+.dex-rows dt {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+.dex-rows dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(13px, 3.3cqi, 17px);
+  text-align: right;
+}
+.dex-text {
+  line-height: 1.6;
+}
+.dex-sources {
+  background: rgb(248 248 242 / 0.92);
+  border-radius: calc(var(--u) * 1.5);
+  padding: 0.25rem 0.75rem 0.5rem;
+}
+.dex-sources > p {
+  border-top: 0;
+}
+/* the bottom control bar, as on the handheld: dark, with chunky buttons */
+.dex-bar {
+  background: linear-gradient(#2e3044, #1e2030);
+  border-radius: calc(var(--u) * 2);
+  box-shadow:
+    0 0 0 calc(var(--u) * 0.67) var(--gv-ink),
+    inset 0 calc(var(--u) * 0.67) 0 rgb(255 255 255 / 0.12);
+}
+.dex-bar-btn {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--color-paper);
+  background: #3e4258;
+  border: 0;
+  border-radius: calc(var(--u) * 1.5);
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 calc(var(--u) * 0.67) #0c0c16,
+    inset 0 calc(var(--u) * 0.67) 0 rgb(255 255 255 / 0.18),
+    inset 0 calc(var(--u) * -0.67) 0 rgb(0 0 0 / 0.3);
+}
+.dex-bar-btn:hover,
+.dex-bar-btn:focus-visible {
+  background: #4e5470;
+  outline: var(--u) solid var(--color-gold);
+  outline-offset: 2px;
+}
+.dex-bar-btn:active {
+  transform: translateY(1px);
+}

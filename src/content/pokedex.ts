@@ -1,5 +1,6 @@
 import type { SourceId } from './sources'
 import type { IconName } from '../sprites/icons'
+import type { HabitatId } from '../sprites/habitats'
 
 /** Elemental "types" used by the Pokédex (and, in Phase 4, the battle). */
 export const types = {
@@ -21,7 +22,10 @@ export interface DexEntry {
   name: string
   category: string
   types: [TypeId] | [TypeId, TypeId]
+  /** the entry's emblem: a small mark in the info page's footprint box (and the list) */
   art: DexArt
+  /** where this side of him is found: the scene the Pokédex shows him in (sprites/habitats.ts) */
+  habitat: HabitatId
   entry: string
   sources: SourceId[]
 }
@@ -34,6 +38,7 @@ export const pokedex: DexEntry[] = [
     category: 'Hometown Pokémon',
     types: ['NORMAL'],
     art: { kind: 'icon', name: 'profile' },
+    habitat: 'harbour',
     entry: 'Born in Australia, of Bangladeshi descent. Fluent in both English and Bengali, and switches between them without warning.',
     sources: ['resume', 'linkedin'],
   },
@@ -43,6 +48,7 @@ export const pokedex: DexEntry[] = [
     category: 'Advocate Pokémon',
     types: ['LAW'],
     art: { kind: 'badge', id: 'verdict' },
+    habitat: 'courtroom',
     entry: 'Has entered mooting, witness examination, negotiation and mediation competitions in every year of his law degree. Drawn to intellectual property, competition law, dispute resolution and pro bono.',
     sources: ['resume', 'linkedin'],
   },
@@ -52,6 +58,7 @@ export const pokedex: DexEntry[] = [
     category: 'eDiscovery Pokémon',
     types: ['LAW', 'TECH'],
     art: { kind: 'icon', name: 'pc' },
+    habitat: 'review',
     entry: 'Found in Clayton Utz’s Data Intelligence & Risk Advisory team. Performs First Line Review in Relativity, making judgment calls on nuanced facts at high volume.',
     sources: ['resume', 'linkedin'],
   },
@@ -61,6 +68,7 @@ export const pokedex: DexEntry[] = [
     category: 'Lab Pokémon',
     types: ['SCIENCE'],
     art: { kind: 'icon', name: 'flask' },
+    habitat: 'lab',
     entry: 'The other half of the double degree: a Bachelor of Science majoring in Biotechnology at UNSW.',
     sources: ['resume', 'linkedin'],
   },
@@ -70,6 +78,7 @@ export const pokedex: DexEntry[] = [
     category: 'Marketing Pokémon',
     types: ['CREATIVE', 'LEADER'],
     art: { kind: 'badge', id: 'prism' },
+    habitat: 'stall',
     entry: 'Has run marketing for the UNSW Law Society, UNSOC, Beyond The Bounds and the Student Legal Education Group. Its Law Society merch sold out two years running — the Dean was spotted wearing it.',
     sources: ['resume', 'linkedinVolunteering', 'aaryan'],
   },
@@ -79,6 +88,7 @@ export const pokedex: DexEntry[] = [
     category: 'Beacon Pokémon',
     types: ['LEADER'],
     art: { kind: 'badge', id: 'beacon' },
+    habitat: 'campus',
     entry: 'Led O-Week campus tours for 3,500 first-years — the most since COVID — and has been a Student Ambassador since 2023. Knows where every lecture theatre is.',
     sources: ['resume', 'linkedinVolunteering', 'aaryan'],
   },
@@ -88,6 +98,7 @@ export const pokedex: DexEntry[] = [
     category: 'Captain Pokémon',
     types: ['SPORT'],
     art: { kind: 'badge', id: 'pitch' },
+    habitat: 'pitch',
     entry: 'Played GPS Football from 2017 to 2022 and captained the side in 2017. Often sighted in a number 7 jersey.',
     sources: ['linkedin'],
   },
@@ -97,6 +108,7 @@ export const pokedex: DexEntry[] = [
     category: 'Coach Pokémon',
     types: ['SPORT', 'LEADER'],
     art: { kind: 'icon', name: 'cricket' },
+    habitat: 'oval',
     entry: 'Played GPS Cricket for six seasons, then returned to Sydney Boys High to coach — building training plans for 11 players.',
     sources: ['resume', 'linkedin'],
   },
@@ -106,6 +118,7 @@ export const pokedex: DexEntry[] = [
     category: 'DJ Pokémon',
     types: ['MUSIC'],
     art: { kind: 'icon', name: 'headphones' },
+    habitat: 'club',
     entry: 'DJing tops the hobbies list on his resume. Becomes noticeably more active after dark.',
     sources: ['resume'],
   },
@@ -115,6 +128,7 @@ export const pokedex: DexEntry[] = [
     category: 'Six-String Pokémon',
     types: ['MUSIC'],
     art: { kind: 'icon', name: 'guitar' },
+    habitat: 'bedroom',
     entry: 'Plays guitar. Keeps the case within arm’s reach at all times.',
     sources: ['aaryan'],
   },
@@ -124,6 +138,7 @@ export const pokedex: DexEntry[] = [
     category: 'Lens Pokémon',
     types: ['CREATIVE'],
     art: { kind: 'icon', name: 'camera' },
+    habitat: 'street',
     entry: 'Into photography — the same eye behind his event graphics and campaign shoots.',
     sources: ['aaryan'],
   },
@@ -133,6 +148,7 @@ export const pokedex: DexEntry[] = [
     category: 'Bookworm Pokémon',
     types: ['NORMAL'],
     art: { kind: 'icon', name: 'book' },
+    habitat: 'library',
     entry: 'Reads for fun, which law students are not supposed to have time for.',
     sources: ['resume'],
   },
@@ -142,6 +158,7 @@ export const pokedex: DexEntry[] = [
     category: 'Gamer Pokémon',
     types: ['TECH'],
     art: { kind: 'icon', name: 'gamepad' },
+    habitat: 'den',
     entry: 'Into technology and gaming. Probably the reason this website exists.',
     sources: ['aaryan'],
   },
@@ -151,6 +168,7 @@ export const pokedex: DexEntry[] = [
     category: 'Keyboard Pokémon',
     types: ['TECH'],
     art: { kind: 'icon', name: 'resume' },
+    habitat: 'chambers',
     entry: 'Types at 120 words per minute with 99% accuracy. Briefs to counsel fear it.',
     sources: ['resume'],
   },
@@ -160,6 +178,7 @@ export const pokedex: DexEntry[] = [
     category: 'Society Pokémon',
     types: ['LEADER', 'NORMAL'],
     art: { kind: 'icon', name: 'card' },
+    habitat: 'hall',
     entry: 'Has logged 21 volunteer roles across UNSW societies since 2023 — from road trips for 100 people to careers panels.',
     sources: ['linkedinVolunteering'],
   },

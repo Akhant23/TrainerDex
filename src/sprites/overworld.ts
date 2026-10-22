@@ -380,11 +380,14 @@ function up(a: Appearance, step: Step): Pixels {
   return step === 0 ? g.toPixels() : shiftDown(g.toPixels(), 1)
 }
 
-/** The head from behind: ears, the back of the hair (a mullet down the neck, a long fall, a bun), any hat. */
-function backOfHead(g: Grid, h: HeadSpace, a: Appearance, cx: number) {
+/**
+ * The head from behind: ears, the back of the hair (a mullet down the neck, a long fall, a bun),
+ * any hat. `turn` (−1 or 1) turns it three-quarters toward that side: only that side's ear shows.
+ */
+function backOfHead(g: Grid, h: HeadSpace, a: Appearance, cx: number, turn = 0) {
   if (a.top === 'hoodie') oval(g, cx, 36.5, 5.5, 2.2, 'a')
-  oval(h, cx - 8.4, HEAD_Y + 0.5, 1.4, 2, 'S', 's')
-  oval(h, cx + 8.4, HEAD_Y + 0.5, 1.4, 2, 's')
+  if (turn <= 0) oval(h, cx - 8.4, HEAD_Y + 0.5, 1.4, 2, 'S', 's')
+  if (turn >= 0) oval(h, cx + 8.4, HEAD_Y + 0.5, 1.4, 2, turn > 0 ? 'S' : 's', turn > 0 ? 's' : undefined)
   const hairC = a.hair === 'buzz' ? 'j' : 'H'
   const big = bigHair(a)
   oval(h, cx, 11.5, big ? 10.4 : 9.6, big ? 10.4 : 9.8, hairC, 'j', a.hair === 'buzz' ? undefined : 'h')
@@ -555,6 +558,47 @@ export function riderBackFor(a: Appearance): Pixels {
   g.outline().thicken()
   backHairLines(h, a, cx)
   bodyDetails(g, a, true)
+  return g.toPixels()
+}
+
+/**
+ * The rider three-quarters from behind as the mount turns away, heading up-left (`h` −1) or
+ * up-right (1): the head turned toward that side with its ear (and a glasses arm) showing, the
+ * near arm reaching forward to hold on, the near leg down the mount's flank (the far one is out of
+ * sight beyond it). The back of the top keeps its details where they are: from behind the wearer's
+ * right is on your right whichever way they turn, so this is drawn per side, never mirrored.
+ * Same canvas and hip point as the other riders.
+ */
+export function riderQuarterFor(a: Appearance, h: -1 | 1): Pixels {
+  const g = new Grid(OW_W, OW_H)
+  const cx = 24
+  const hc = cx + h * 1.5
+  const hs = new HeadSpace(g, hc)
+  const arms = new Grid(OW_W, OW_H)
+  owArm(arms, a, [cx + h * 8.2, SHOULDER_Y + 2.5], [cx + h * 11, 41.5], [cx + h * 9, 44], [cx + h * 7.5, 44.5])
+  arms.outline()
+  if (TEES.has(a.top)) arms.line(cx + h * 7.6, 40, cx + h * 11.5, 40, a.top === 'jersey' ? 'c' : 'a')
+  stampOver(g, arms)
+  const hip: Pt = [cx + h * 3, HIP_Y]
+  const knee: Pt = [cx + h * 9.5, 49]
+  const ankle: Pt = [cx + h * 10, 54]
+  if (bareLegs(a)) {
+    capsule(g, hip, knee, 3.1, 2.9, 'B', 'b')
+    capsule(g, knee, ankle, 2.3, 2.1, 'S', 's')
+  } else {
+    capsule(g, hip, knee, 3.1, 2.9, 'B', 'b', 'P')
+    capsule(g, knee, ankle, 2.7, 2.5, 'B', 'b')
+  }
+  oval(g, ankle[0] + h * 0.6, 56, 2.8, 2, 'F', 'f', 'e')
+  if (a.bottom === 'skirt') g.poly([[cx - 8.5, 44], [cx + 8.5, 44], [cx + h * 10.5, 49], [cx - h * 6, 49]], 'B')
+  g.poly([[cx - 7.5, 44.5], [cx + 7.5, 44.5], [cx + h * 8, 48.5], [cx - h * 6.5, 48.5]], 'B')
+  torsoFrontBack(g, a, cx)
+  backOfHead(g, hs, a, hc, h)
+  g.outline().thicken()
+  backHairLines(hs, a, hc)
+  bodyDetails(g, a, true)
+  // the arm of the glasses, from the near ear forward
+  if (has(a, 'glasses') || has(a, 'sunglasses')) g.line(hc + h * 11, 24, hc + h * 13, 24.5, 'K')
   return g.toPixels()
 }
 

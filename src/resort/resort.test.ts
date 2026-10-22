@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { maps, isSolidTile, placeVisitors, settleVisitors, size, tileAt, warpAt, FLOOR_ARRIVAL, FLOOR_BOSS, RECEPTIONIST } from './maps'
+import { maps, isSolidTile, placeVisitors, sceneryAt, settleVisitors, size, tileAt, warpAt, FLOOR_ARRIVAL, FLOOR_BOSS, PLAZA_X, RECEPTIONIST } from './maps'
 import { tiles, tilePalette, TILE } from './tiles'
 import { structureArt } from './structures'
 import { validate } from '../sprites/pixels'
@@ -61,9 +61,51 @@ describe('maps', () => {
     expect(tileAt(maps.reception, RECEPTIONIST.x, RECEPTIONIST.y + 1)).toBe('C')
   })
   it('the tower door leads to reception and back', () => {
-    const w = warpAt(maps.plaza, 18, 5)!
+    const w = warpAt(maps.plaza, PLAZA_X + 18, 5)!
     expect(w.to).toBe('reception')
-    expect(warpAt(maps.reception, 7, 11)!.to).toBe('plaza')
+    const back = warpAt(maps.reception, 7, 11)!
+    expect(back.to).toBe('plaza')
+    expect(isSolidTile(maps.plaza, back.tx, back.ty)).toBe(false)
+  })
+
+  describe('the plaza and what lies beyond it', () => {
+    const plaza = maps.plaza
+    const { w, h } = size(plaza)
+    it('is closed in by solid ground all the way round: trees, palms or the sea, never an invisible wall', () => {
+      for (let x = 0; x < w; x++) {
+        expect(isSolidTile(plaza, x, 0), `top ${x}`).toBe(true)
+        expect(isSolidTile(plaza, x, h - 1), `bottom ${x}`).toBe(true)
+      }
+      for (let y = 0; y < h; y++) {
+        expect(isSolidTile(plaza, 0, y), `left ${y}`).toBe(true)
+        expect(isSolidTile(plaza, w - 1, y), `right ${y}`).toBe(true)
+      }
+    })
+    it('keeps the original layout intact, moved over by PLAZA_X', () => {
+      // spot checks: the tower door, the fountain, the pool, the beach umbrella
+      expect(tileAt(plaza, PLAZA_X + 18, 5)).toBe('D')
+      expect(tileAt(plaza, PLAZA_X + 18, 13)).toBe('F')
+      expect(tileAt(plaza, PLAZA_X + 30, 22)).toBe('p')
+      expect(tileAt(plaza, PLAZA_X + 10, 25)).toBe('u')
+      // the side gardens are open ground you can walk into from the plaza's paths
+      for (const y of [6, 7, 13, 20, 21]) for (const x of [2, PLAZA_X, w - PLAZA_X - 1, w - 3]) expect(isSolidTile(plaza, x, y), `${x},${y}`).toBe(false)
+    })
+    it('carries on past the edges as woods, beach and sea, without repeating itself', () => {
+      const seen = new Set<string>()
+      for (let y = -1; y < h + 16; y++)
+        for (const x of [-16, -8, -1, w, w + 7, w + 15]) {
+          const ch = sceneryAt(plaza, x, y)
+          expect(tiles[ch], `${x},${y} '${ch}'`).toBeDefined()
+          seen.add(ch)
+          if (y >= 28) expect(ch).toBe('w')
+          if (y >= 24 && y <= 26) expect(['_', 'T']).toContain(ch)
+        }
+      expect([...seen]).toEqual(expect.arrayContaining(['O', 'Y', ',', '_', 'T', '~', 'w']))
+      // the woods west of the plaza aren't one column copied: neighbouring columns differ
+      const col = (x: number) => Array.from({ length: 24 }, (_, y) => sceneryAt(plaza, x, y)).join('')
+      expect(col(-3)).not.toBe(col(-4))
+      expect(col(-3)).not.toBe(col(w + 2))
+    })
   })
   it('every portal is a walkable door tile that opens a real section', () => {
     for (const p of maps.plaza.portals ?? []) {

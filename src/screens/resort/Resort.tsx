@@ -7,7 +7,7 @@ import { species, type SpeciesId } from '../../battle/data'
 import { challengeSetup, floors, floorSetup, unlockedSpecies } from '../../battle/tower'
 import { regulars } from '../../resort/regulars'
 import { formatRecord, type BattleRecord } from '../../../supabase/functions/_shared/trainer'
-import { maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, type MapId, type ResortMap, type VisitorSpot, type Warp } from '../../resort/maps'
+import { maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, PLAZA_X, type MapId, type ResortMap, type VisitorSpot, type Warp } from '../../resort/maps'
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { skyAt, skyLabel } from '../../resort/sky'
@@ -69,7 +69,8 @@ type Panel = 'none' | 'studio' | 'pc' | 'lift' | 'profile' | 'suggest' | 'bag' |
 // where you are survives leaving for a battle (and a page refresh) and coming back
 type Place = { map: MapId; x: number; y: number; facing: Facing }
 const start = maps.plaza.spawn!
-const SPOT_KEY = 'tdx:v1:resort-spot'
+// v2: the plaza grew (PLAZA_X); spots saved before that would land in the wrong place
+const SPOT_KEY = 'tdx:v2:resort-spot'
 function loadPlace(): Place {
   try {
     const p = JSON.parse(sessionStorage.getItem(SPOT_KEY) ?? 'null') as Place | null
@@ -144,16 +145,16 @@ function tickGuests(a: AmbientState, now: number, mp: ResortMap, chars: Char[], 
     const name = rnd(GUEST_NAMES)
     const party = [t.species, ...ALL_SPECIES.filter((x) => x !== t.species).sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2))]
     const wins = Math.floor(Math.random() * 20)
-    setGuests((g) => [...g, { id: t.id, x: t.tx, y: t.ty, look: t.look, name, party, greeting: anyLine(t.mode === 'air' ? 'guest.air' : 'guest.sea', { creature: species[t.species].name }), record: { titles: Math.random() < 0.1 ? 1 : 0, wins, losses: Math.floor(Math.random() * 15) }, mode: t.mode, species: t.species, until: now + 70_000 + Math.random() * 50_000, facing: t.mode === 'air' ? (t.fromX < 18 ? 'right' : 'left') : undefined }])
+    setGuests((g) => [...g, { id: t.id, x: t.tx, y: t.ty, look: t.look, name, party, greeting: anyLine(t.mode === 'air' ? 'guest.air' : 'guest.sea', { creature: species[t.species].name }), record: { titles: Math.random() < 0.1 ? 1 : 0, wins, losses: Math.floor(Math.random() * 15) }, mode: t.mode, species: t.species, until: now + 70_000 + Math.random() * 50_000, facing: t.mode === 'air' ? (t.fromX < 0 ? 'right' : 'left') : undefined }])
   }
   // guests whose time is up head off: by sea at once; by air they turn to where their mount
   // will land, and stay put (and talkable) until it has landed and they hop on
   for (const g of guests) {
     if (now < g.until || departed.has(g.id)) continue
     departed.add(g.id)
-    const fromX = g.mode === 'air' ? (landingSide(g.x, g.y, g.x < 18, blocked) ? -3 : 41) : g.x < 18 ? -3 : 41
+    const fromX = (g.mode === 'air' ? landingSide(g.x, g.y, g.x < w / 2, blocked) : g.x < w / 2) ? -3 : w + 3
     a.trips.push({ id: `${g.id}-out`, mode: g.mode, species: g.species, look: g.look, tx: g.x, ty: g.y, t0: now, dur: g.mode === 'air' ? DEPARTURE_BOARD_AT - HANDOVER_MS : 6000, leaving: true, seaY: 28, fromX })
-    if (g.mode === 'air') setGuests((list) => list.map((x) => (x.id === g.id ? { ...x, facing: fromX < 18 ? 'left' : 'right' } : x)))
+    if (g.mode === 'air') setGuests((list) => list.map((x) => (x.id === g.id ? { ...x, facing: fromX < 0 ? 'left' : 'right' } : x)))
     else setGuests((list) => list.filter((x) => x.id !== g.id))
   }
   for (const t of a.trips) {
@@ -170,13 +171,14 @@ function tickGuests(a: AmbientState, now: number, mp: ResortMap, chars: Char[], 
   const mode: 'air' | 'sea' = Math.random() < 0.6 ? 'air' : 'sea'
   const taken = new Set([...chars.map((c) => `${c.x},${c.y}`), `${me[0]},${me[1]}`, ...a.trips.map((t) => `${t.tx},${t.ty}`)])
   const spots: Array<[number, number]> = []
-  const [y0, y1, x0, x1] = mode === 'air' ? [8, 21, 9, 28] : [24, 26, 2, 35]
+  // by air anywhere on the open ground (the side gardens too); by sea along the beach
+  const [y0, y1, x0, x1] = mode === 'air' ? [8, 21, 3, w - 4] : [24, 26, 2, w - 3]
   const sideClear = (x: number, y: number) => [-1, 1].some((s) => !blocked(x + s, y) && !blocked(x + 2 * s, y))
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!isSolidTile(mp, x, y) && !taken.has(`${x},${y}`) && tileAt(mp, x, y) !== 'D' && (mode === 'sea' || sideClear(x, y))) spots.push([x, y])
   if (!spots.length) return
   const [tx, ty] = rnd(spots)
   // by air, the mount lands beside the spot: come in from a side where that's open ground
-  const fromX = (mode === 'air' ? landingSide(tx, ty, Math.random() < 0.5, blocked) : Math.random() < 0.5) ? -3 : 41
+  const fromX = (mode === 'air' ? landingSide(tx, ty, Math.random() < 0.5, blocked) : Math.random() < 0.5) ? -3 : w + 3
   a.trips.push({ id: `guest-${Math.floor(now)}`, mode, species: rnd(mode === 'air' ? MOUNTS : SURFERS), look: randomAvatar(), tx, ty, t0: now, dur: mode === 'air' ? ARRIVAL_HANDOFF : 4000 + Math.abs(tx - fromX) * 120, leaving: false, seaY: 28, fromX })
 }
 
@@ -224,7 +226,7 @@ export default function Resort() {
         opponent={{ look: t.look, name: t.name, tag: t.record ? `RECORD ${formatRecord(t.record)}` : 'TRAINER', winLines: [`${t.name}: Good battle! I’ll get you next time.`], loseLines: [`${t.name}: That was close! Rematch whenever you like.`] }}
         mode="challenge"
         // the foe's platform on open paving, the fountain off to the side
-        arena={{ map: 'plaza', x: 10, y: 20 }}
+        arena={{ map: 'plaza', x: PLAZA_X + 10, y: 20 }}
         onExit={(_to, won) => {
           recordResult(won)
           void syncTrainer().catch(() => undefined)

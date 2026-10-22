@@ -213,6 +213,16 @@ export interface PoseFrame {
   ruffle?: 0 | 1 | 2
   /** extra head dip in pixels (glancing down) */
   tilt?: number
+  /** 'off': the glasses aren't on the face (they're in a hand: see `held`) */
+  glasses?: 'off'
+  /** something held up in front of everything, centred on `at` (design pixels) */
+  held?: Held
+}
+
+/** What a gesture can hold out in front: the glasses (open), or the cloth that cleans them. */
+export interface Held {
+  glasses?: Pt
+  cloth?: Pt
 }
 export interface CharacterLayers {
   hairBack: Pixels
@@ -882,20 +892,55 @@ function head(a: Appearance, blink: boolean, f: PoseFrame = {}): Pixels {
     // a silver stud on each ear
     g.set(30, 23, 'X').set(30, 24, 'x').set(49, 23, 'X').set(49, 24, 'x')
   }
-  if (a.accessories.includes('glasses')) {
-    // bold rectangular frames that sit around the eyes, with a glint on each lens
-    for (const x0 of [31, 42]) {
-      g.rect(x0, 16, x0 + 7, 16, 'K').rect(x0, 23, x0 + 7, 23, 'K')
-      g.rect(x0, 17, x0, 22, 'K').rect(x0 + 7, 17, x0 + 7, 22, 'K')
-      g.set(x0 + 6, 17, 'W').set(x0 + 5, 17, 'L')
-    }
-    g.rect(39, 18, 41, 18, 'K')
-    g.set(30, 17, 'K').set(50, 17, 'K')
-  }
+  if (a.accessories.includes('glasses') && f.glasses !== 'off') glassesAt(g, 0, 0)
   if (a.accessories.includes('sunglasses')) {
     g.rect(31, 17, 48, 17, 'K')
     g.rect(32, 18, 38, 21, 'K').rect(42, 18, 48, 21, 'K')
     g.set(33, 18, 'l').set(34, 19, 'l').set(43, 18, 'l').set(44, 19, 'l')
+  }
+  return g.toPixels()
+}
+
+/**
+ * The glasses: bold rectangular frames round the eyes, with a glint on each lens and the arms
+ * at the temples. Drawn on the face at (0, 0), or anywhere else (a hand holding them) offset by
+ * (dx, dy) design pixels.
+ */
+function glassesAt(g: Raster, dx: number, dy: number) {
+  const x = (v: number) => Math.round(v + dx)
+  const y = (v: number) => Math.round(v + dy)
+  for (const x0 of [31, 42]) {
+    g.rect(x(x0), y(16), x(x0 + 7), y(16), 'K').rect(x(x0), y(23), x(x0 + 7), y(23), 'K')
+    g.rect(x(x0), y(17), x(x0), y(22), 'K').rect(x(x0 + 7), y(17), x(x0 + 7), y(22), 'K')
+    g.set(x(x0 + 6), y(17), 'W').set(x(x0 + 5), y(17), 'L')
+  }
+  g.rect(x(39), y(18), x(41), y(18), 'K')
+  g.set(x(30), y(17), 'K').set(x(50), y(17), 'K')
+}
+/** Where the glasses sit on the face: the centre of the frames, so `held.glasses` can start there. */
+export const GLASSES_ON_FACE: Pt = [40.5, 19.5]
+
+/**
+ * What a gesture holds out in front of everything else (the glasses lifted off the face, the
+ * cleaning cloth), so a hand holding them reads as holding them rather than the face hiding them.
+ * Empty when nothing is held.
+ */
+export function renderHeldLayer(a: Appearance, held?: Held): Pixels {
+  const g = canvas()
+  if (held?.glasses && a.accessories.includes('glasses')) {
+    // away from the face, the lenses' tint fills the frames so they read as glasses in a hand;
+    // at the face (just lifted off, or going back on) the eyes still show through them
+    const [gx, gy] = [held.glasses[0] - GLASSES_ON_FACE[0], held.glasses[1] - GLASSES_ON_FACE[1]]
+    if (Math.hypot(gx, gy) > 5) for (const x0 of [32, 43]) g.rect(Math.round(x0 + gx), Math.round(17 + gy), Math.round(x0 + 5 + gx), Math.round(22 + gy), 'L')
+    glassesAt(g, gx, gy)
+  }
+  if (held?.cloth) {
+    // a small folded lens cloth, light with a shaded fold
+    const [cx, cy] = [Math.round(held.cloth[0]), Math.round(held.cloth[1])]
+    g.rect(cx - 3, cy - 2, cx + 3, cy + 2, 'W')
+    g.rect(cx - 3, cy + 1, cx + 3, cy + 2, 'L')
+    g.outline()
+    g.line(cx - 2, cy, cx + 2, cy - 1, 'L')
   }
   return g.toPixels()
 }
@@ -940,7 +985,8 @@ export function renderHairBackLayer(a: Appearance, tilt = 0): Pixels {
 /** Stack a posed frame into one image, putting the arms behind the head when the pose asks. */
 export function renderPose(a: Appearance, f: PoseFrame): Pixels {
   const l = renderLayers(a, 'idle', f)
-  return flatten(f.armsBehind ? [l.armBack, l.armFront, l.hairBack, l.legs, l.torso, l.head] : LAYER_ORDER.map((k) => l[k]))
+  const layers = f.armsBehind ? [l.armBack, l.armFront, l.hairBack, l.legs, l.torso, l.head] : LAYER_ORDER.map((k) => l[k])
+  return flatten(f.held ? [...layers, renderHeldLayer(a, f.held)] : layers)
 }
 
 /** Stack layers into one frame (later layers win). */

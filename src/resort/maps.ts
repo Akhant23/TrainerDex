@@ -39,77 +39,91 @@ export interface ResortMap {
   music?: 'resort' | 'floor1' | 'floor2' | 'floor3' | 'floor4' | 'floor5'
   /** Outdoors the map edges extend into the distance; indoors it fades to black. */
   outdoor?: boolean
+  /**
+   * What lies past the map's edges (outdoors), tile by tile: drawn, never walkable (moving off the
+   * map is always blocked). Without it, the edge tiles are carried on.
+   */
+  beyond?: (tx: number, ty: number) => string
 }
+
+/**
+ * Where the original plaza layout starts: the gardens added either side (twelve columns each) put
+ * everything that was at x at PLAZA_X + x. Anything placed on the plaza by coordinates adds it.
+ */
+export const PLAZA_X = 12
+/** The plaza's width in tiles, gardens included. */
+const PLAZA_W = PLAZA_X * 2 + 38
 
 const plaza: ResortMap = {
   id: 'plaza',
   name: 'BATTLE RESORT',
   rows: [
-    'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh',
-    'h,,,,,,,,,,OO,,,,,,,,,,,,O,,,,,,,,,,,h',
-    'h,######,,,,,,##########,,,,,,,######h',
-    'h,######,,,,,,##########,#####,######h',
-    'h,######,O,,,,##########,#####,######h',
-    'h,###D##,,,,,,####DD####,##D##,##D###h',
-    'h::x::::s:::::::q::::q::s::::x:::::::h',
-    'h::::::::::::::::::::::::::::::::::::h',
-    'hO,,,,,,O:l::::::::::::::::l:O,,,,,,Oh',
-    'h,,,,,,,,::::O::::::::::O::::,,,,,,,,h',
-    'h,#####,,::::::::::::::::::::,,#####,h',
-    'h,#####,,::::::::::::::::::::,,#####,h',
-    'h,##D##,,::::::::::::::::::::,,##D##,h',
-    'h:x::::s::::::::::FF::::::::::s::::x:h',
-    'h:::::::::::::::::FF:::::::::::::::::h',
-    'hO,,,,,,,::::::::::::::::::::,,,,,,,,h',
-    'h,,,,,,,O::::::::::::::::::::O,,,,,,Oh',
-    'h,####,,,::::::::::::::::::::,,,####,h',
-    'h,####,,,::::::::::::::::::::,,,####,h',
-    'h,#E##,,,::::::::::::::::::::,,,#D##,h',
-    'h:::::s::::::::::::::::::::::::s:::x:h',
-    'h:::::::::l::::::::::::::::l:::::::::h',
-    'h,ffffff,,,,b,,,,,,,,,,,,b,,,,pppppp,h',
-    'h,nnnnnn,,,,,,f,f,,,,f,f,,,,,,pppppp,h',
-    '______________________________________',
-    '_____T____u________________u____T_____',
-    '______________________________________',
-    '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
-    'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
-    'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
+    'OOOOOOOOOOOOOhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhOOOOOOOOOOOOO',
+    'O,,,ff,,,O,,,,,,,,,,,,,OO,,,,,,,,,,,,O,,,,,,,,,,,,,,,O,,,,ff,O',
+    'O,O,,,,,,,,,,,######,,,,,,##########,,,,,,,######,,,,,,,Y,,,,O',
+    'O,,,,pppp,,,,,######,,,,,,##########,#####,######,,Y,,,,,,,,OO',
+    'OO,,,pppp,f,,,######,O,,,,##########,#####,######,,,,,ff,,Y,,O',
+    'O,,,,pppp,,,,,###D##,,,,,,####DD####,##D##,##D###,,,Y,ff,,,,,O',
+    'O::::::::::::::x::::s:::::::q::::q::s::::x:::::::::::::::::::O',
+    'O::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::O',
+    'O,,b,,,O,,,,,O,,,,,,O:l::::::::::::::::l:O,,,,,,O,,,,,O,,,b,,O',
+    'O,f,,,,,,,,,,,,,,,,,,::::O::::::::::O::::,,,,,,,,,,f,,,,,,,,,O',
+    'OO,,Y,,,,Y,,,,#####,,::::::::::::::::::::,,#####,,,,,Y,,,,Y,OO',
+    'O,,,,,,,,,,,,,#####,,::::::::::::::::::::,,#####,,,,,,,,,,,,,O',
+    'O,,Y,,,,,Y,,,,##D##,,::::::::::::::::::::,,##D##,,,b,,,,ff,,,O',
+    'O:::::::::::::x::::s::::::::::FF::::::::::s::::x:::::::::::::O',
+    'O::::::l::::::::::::::::::::::FF::::::::::::::::::::l::::::::O',
+    'O,,,,,,,,,,,,O,,,,,,,::::::::::::::::::::,,,,,,,,,,,,,,,,,,,,O',
+    'O,O,,ff,,,,,,,,,,,,,O::::::::::::::::::::O,,,,,,O,,,,,O,,,Y,,O',
+    'O,,,,ff,,O,,,,####,,,::::::::::::::::::::,,,####,,,ff,,,,,,,OO',
+    'OO,,,,,,,,,,,,####,,,::::::::::::::::::::,,,####,,,ff,,Y,,,,,O',
+    'O,,b,,,,,,b,,,#E##,,,::::::::::::::::::::,,,#D##,,,,,,,,,b,,,O',
+    'O:::::::::::::::::s::::::::::::::::::::::::s:::x:::::::::::::O',
+    'O:::::::::::::::::::::l::::::::::::::::l:::::::::::::::::::::O',
+    'O,ffff,,,,,,,,ffffff,,,,b,,,,,,,,,,,,b,,,,pppppp,,,,,,,,ffff,O',
+    'O,nnnn,,,,,,,,nnnnnn,,,,,,f,f,,,,f,f,,,,,,pppppp,,,,,,,,nnnn,O',
+    'T____________________________________________________________T',
+    'T_u_____T________T____u________________u____T________T____u__T',
+    'T____________________________________________________________T',
+    '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
+    'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
   ],
   structures: [
-    { kind: 'tower', x: 14, y: 2, w: 10, d: 4 },
-    { kind: 'home', x: 2, y: 2, w: 6, d: 4 },
-    { kind: 'card', x: 25, y: 3, w: 5, d: 3 },
-    { kind: 'lab', x: 31, y: 2, w: 6, d: 4 },
-    { kind: 'pc', x: 2, y: 10, w: 5, d: 3 },
-    { kind: 'gallery', x: 31, y: 10, w: 5, d: 3 },
-    { kind: 'studio', x: 2, y: 17, w: 4, d: 3 },
-    { kind: 'post', x: 32, y: 17, w: 4, d: 3 },
-    { kind: 'fountain', x: 18, y: 13, w: 2, d: 2 },
+    { kind: 'tower', x: PLAZA_X + 14, y: 2, w: 10, d: 4 },
+    { kind: 'home', x: PLAZA_X + 2, y: 2, w: 6, d: 4 },
+    { kind: 'card', x: PLAZA_X + 25, y: 3, w: 5, d: 3 },
+    { kind: 'lab', x: PLAZA_X + 31, y: 2, w: 6, d: 4 },
+    { kind: 'pc', x: PLAZA_X + 2, y: 10, w: 5, d: 3 },
+    { kind: 'gallery', x: PLAZA_X + 31, y: 10, w: 5, d: 3 },
+    { kind: 'studio', x: PLAZA_X + 2, y: 17, w: 4, d: 3 },
+    { kind: 'post', x: PLAZA_X + 32, y: 17, w: 4, d: 3 },
+    { kind: 'fountain', x: PLAZA_X + 18, y: 13, w: 2, d: 2 },
   ],
-  spawn: { x: 18, y: 19, facing: 'up' },
+  spawn: { x: PLAZA_X + 18, y: 19, facing: 'up' },
   warps: [
-    { x: 18, y: 5, to: 'reception', tx: 7, ty: 10, facing: 'up' },
-    { x: 19, y: 5, to: 'reception', tx: 8, ty: 10, facing: 'up' },
+    { x: PLAZA_X + 18, y: 5, to: 'reception', tx: 7, ty: 10, facing: 'up' },
+    { x: PLAZA_X + 19, y: 5, to: 'reception', tx: 8, ty: 10, facing: 'up' },
   ],
   portals: [
-    { x: 5, y: 5, route: '/profile', name: 'HOME' },
-    { x: 27, y: 5, route: '/card', name: 'CARD HALL' },
-    { x: 33, y: 5, route: '/pokedex', name: 'DEX LAB' },
-    { x: 4, y: 12, route: '/pc', name: 'PC CENTRE' },
-    { x: 33, y: 12, route: '/album', name: 'GALLERY' },
-    { x: 33, y: 19, route: '/pager', name: 'PAGER' },
+    { x: PLAZA_X + 5, y: 5, route: '/profile', name: 'HOME' },
+    { x: PLAZA_X + 27, y: 5, route: '/card', name: 'CARD HALL' },
+    { x: PLAZA_X + 33, y: 5, route: '/pokedex', name: 'DEX LAB' },
+    { x: PLAZA_X + 4, y: 12, route: '/pc', name: 'PC CENTRE' },
+    { x: PLAZA_X + 33, y: 12, route: '/album', name: 'GALLERY' },
+    { x: PLAZA_X + 33, y: 19, route: '/pager', name: 'PAGER' },
   ],
   things: [
-    { x: 3, y: 19, id: 'studio' },
-    { x: 8, y: 6, id: 'sign', textKey: 'sign.home' },
-    { x: 24, y: 6, id: 'sign', textKey: 'sign.resort' },
-    { x: 7, y: 13, id: 'sign', textKey: 'sign.pc' },
-    { x: 30, y: 13, id: 'sign', textKey: 'sign.gallery' },
-    { x: 6, y: 20, id: 'sign', textKey: 'sign.studio' },
-    { x: 31, y: 20, id: 'sign', textKey: 'sign.guestboard' },
+    { x: PLAZA_X + 3, y: 19, id: 'studio' },
+    { x: PLAZA_X + 8, y: 6, id: 'sign', textKey: 'sign.home' },
+    { x: PLAZA_X + 24, y: 6, id: 'sign', textKey: 'sign.resort' },
+    { x: PLAZA_X + 7, y: 13, id: 'sign', textKey: 'sign.pc' },
+    { x: PLAZA_X + 30, y: 13, id: 'sign', textKey: 'sign.gallery' },
+    { x: PLAZA_X + 6, y: 20, id: 'sign', textKey: 'sign.studio' },
+    { x: PLAZA_X + 31, y: 20, id: 'sign', textKey: 'sign.guestboard' },
   ],
-  visitorArea: { x0: 1, y0: 8, x1: 36, y1: 26 },
+  visitorArea: { x0: 1, y0: 8, x1: PLAZA_X + 48, y1: 26 },
+  beyond: plazaBeyond,
   music: 'resort',
   outdoor: true,
 }
@@ -132,8 +146,8 @@ const reception: ResortMap = {
     'XXXXXXXmmXXXXXXX',
   ],
   warps: [
-    { x: 7, y: 11, to: 'plaza', tx: 18, ty: 6, facing: 'down' },
-    { x: 8, y: 11, to: 'plaza', tx: 19, ty: 6, facing: 'down' },
+    { x: 7, y: 11, to: 'plaza', tx: PLAZA_X + 18, ty: 6, facing: 'down' },
+    { x: 8, y: 11, to: 'plaza', tx: PLAZA_X + 19, ty: 6, facing: 'down' },
   ],
   things: [
     { x: 1, y: 1, id: 'pc' },
@@ -204,6 +218,36 @@ export const RECEPTIONIST = { x: 6, y: 2 }
 
 export const size = (m: ResortMap) => ({ w: m.rows[0].length, h: m.rows.length })
 export const tileAt = (m: ResortMap, x: number, y: number) => m.rows[y]?.[x] ?? 'X'
+/** The tile to draw at (x, y): the map's own, or past its edge what lies beyond (else the nearest edge tile). */
+export function sceneryAt(m: ResortMap, x: number, y: number): string {
+  const { w, h } = size(m)
+  if (x >= 0 && y >= 0 && x < w && y < h) return tileAt(m, x, y)
+  return m.beyond?.(x, y) ?? tileAt(m, Math.max(0, Math.min(w - 1, x)), Math.max(0, Math.min(h - 1, y)))
+}
+
+/** A steady 0–1 value per tile, for scattering scenery without a visible repeat. */
+function tileHash(x: number, y: number): number {
+  let n = Math.imul(x, 374761393) + Math.imul(y, 668265263)
+  n = Math.imul(n ^ (n >>> 13), 1274126177)
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296
+}
+
+/**
+ * Past the plaza, as far as the camera sees: woods inland (round trees and palms, thicker the
+ * further out, with the odd clearing of flowers) and, along the coast, the beach with scattered
+ * palms and the sea running on. No pattern repeats: every tile is chosen from its own position.
+ */
+function plazaBeyond(tx: number, ty: number): string {
+  const W = PLAZA_W
+  if (ty >= 28) return 'w'
+  if (ty === 27) return '~'
+  if (ty >= 24) return tileHash(tx, ty) < 0.14 ? 'T' : '_'
+  const out = tx < 0 ? -tx : tx >= W ? tx - W + 1 : ty < 0 ? -ty : 0
+  const r = tileHash(tx, ty)
+  const trees = Math.min(0.82, 0.46 + out * 0.07)
+  if (r < trees) return r < trees * 0.2 ? 'Y' : 'O'
+  return r > 0.95 ? 'f' : ','
+}
 export const isSolidTile = (m: ResortMap, x: number, y: number) => tiles[tileAt(m, x, y)]?.solid ?? true
 export const warpAt = (m: ResortMap, x: number, y: number) => m.warps.find((w) => w.x === x && w.y === y)
 export const thingAt = (m: ResortMap, x: number, y: number) => m.things.find((t) => t.x === x && t.y === y)

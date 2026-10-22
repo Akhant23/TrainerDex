@@ -9,7 +9,7 @@ import { HOLDS, ITEM_PALETTE } from './held'
 import { flightArt, FLYERS, FLIGHT_H, FLIGHT_W, RIDEABLE } from './flight'
 import { validate } from './pixels'
 import { species } from '../battle/data'
-import { overworldFor, riderBackFor, riderFor, RIDER_HIP } from './overworld'
+import { overworldFor, riderBackFor, riderFor, RIDER_HIP, riderQuarterFor } from './overworld'
 import { signature } from '../content/aaryan'
 import { OW_H, OW_W } from './overworld'
 import { paletteFor } from './character'
@@ -180,3 +180,40 @@ describe('flying away, seen from behind', () => {
   })
 })
 
+describe('turning away, three-quarters from behind', () => {
+  const flip = (px: string[]) => px.map((r) => [...r].reverse().join(''))
+  it('every mount has its own pose for each way it turns, never one mirrored into the other', () => {
+    for (const id of RIDEABLE) {
+      const a = flightArt[id]
+      expect(a.framesQuarter, id).not.toBeNull()
+      for (const side of ['left', 'right'] as const) {
+        expect(a.framesQuarter![side], `${id} ${side}`).toHaveLength(4)
+        expect(a.saddleQuarter![side], `${id} ${side}`).toHaveLength(4)
+        for (const fr of a.framesQuarter![side]) for (const layer of ['far', 'body', 'near'] as const) expect(validate(fr[layer], a.palette, FLIGHT_W, FLIGHT_H), `${id} ${side} ${layer}`).toEqual([])
+      }
+      for (let f = 0; f < 4; f++) {
+        const l = a.framesQuarter!.left[f]
+        const r = a.framesQuarter!.right[f]
+        expect(r.body, `${id} ${f}`).not.toEqual(flip(l.body))
+        expect(l.body, `${id} ${f}`).not.toEqual(a.framesBack![f].body)
+      }
+    }
+  })
+  it("the riders three-quarters from behind keep the jersey's flames on the wearer's right", () => {
+    for (const h of [-1, 1] as const) {
+      const px = riderQuarterFor(signature, h)
+      expect(validate(px, paletteFor(signature), OW_W, OW_H)).toEqual([])
+      expect(px[RIDER_HIP[1]][RIDER_HIP[0]]).not.toBe('.')
+      let left = 0
+      let right = 0
+      for (let y = 39; y <= 46; y++)
+        for (let x = 17; x <= 31; x++) {
+          if (px[y][x] !== 'R') continue
+          if (x < 24) left++
+          else right++
+        }
+      expect(right, `heading ${h}`).toBeGreaterThan(left)
+    }
+    expect(riderQuarterFor(signature, 1)).not.toEqual(flip(riderQuarterFor(signature, -1)))
+  })
+})

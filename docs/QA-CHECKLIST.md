@@ -22,6 +22,10 @@ What the tests guard (behaviour, not pixels, so correct art changes don't break 
 | Departure + arrival | `src/resort/departure.test.ts` | phase order, smooth per-frame movement, lands beside (not on) the trainer, rider aboard exactly from the pose change, take-off without a stall, fades out exactly at the end, visitors hand over when their feet touch down, landing side avoids blocked tiles, both directions mirror, mount choice |
 | Distance scaling | `src/resort/ambient.test.ts` | arrival grows smoothly to full size; stepped shrinking is exact on the ground, within one step of true size, steps under 3% |
 | Mount direction | `src/sprites/creatures.test.ts` | every flyer has valid right-facing frames that aren't just the left ones mirrored |
+| Three-quarter turn | `src/sprites/creatures.test.ts` | every mount has its own valid pose for each way it turns (not one mirrored into the other); the three-quarter riders keep the jersey's flames on the wearer's right |
+| Habitats | `src/sprites/habitats.test.ts` | every entry has its own habitat; every frame paints the whole window; painting is repeatable; animated ones change; Aaryan is in each |
+| Glasses gesture | `src/sprites/gestures.test.ts` | glasses on at both ends, never both on the face and in a hand, held things move without jumps; the pocket check is gone |
+| Wider resort | `src/resort/resort.test.ts` | solid edges all round, the original layout intact at PLAZA_X, the gardens walkable, the scenery beyond uses real tiles without repeating |
 | Rear view | `src/sprites/creatures.test.ts`, `src/resort/departure.test.ts` | every mount has valid rear frames (not the side view or its mirror) with the seat on its back; only mounts have them; the rear rider is its own pose, seated like the side riders, with the jersey's flames on the wearer's right; the turn happens once, briefly, in the flight, after most of the drift |
 
 ## Previews
@@ -84,7 +88,7 @@ Use a 1280×800 desktop window and a 375×812 phone viewport.
     keys don't move you. NO: the box closes and you can walk. YES: the follower flashes back into
     its ball, a flyer lands beside you (not on anyone), you crouch, jump, turn at the top and
     settle onto the saddle with no jump in your head or body; it lifts off and flies on, then
-    changes to the view from behind (a short cross-fade: mount and rider from the back, rider on
+    turns three-quarters away for a moment and then shows mount and rider from behind (rider on
     the saddle) and flies away north, shrinking, and fades out; then the main menu. Repeat from the left and the right half
     of the plaza (the mount faces the way it flies; Hootour's flag is on the near wing). Keys,
     BACK and EXIT during it do nothing. Indoors or with reduced motion it fades straight out.
@@ -92,3 +96,13 @@ Use a 1280×800 desktop window and a 375×812 phone viewport.
     beside their spot, they hop off onto it and stay; the mount flies away empty. Then
     `__resortGuestsLeave()`: they turn, their mount lands, they hop on and fly off. No visitor
     flickers or vanishes at the hand-overs; `__resortChars()` shows no one else moved.
+19. **Pokédex**: open several entries: each shows its habitat (the scene matches the entry), the
+    info page (emblem, HABITAT, TYPE, entry, sources), PREV/NEXT and arrow keys move (wrapping at
+    the ends), BACK returns to the list with the cursor kept; unseen entries in the list show a
+    dark habitat with "?". Check a phone viewport too.
+20. **Resort edges**: walk into the west gardens and the east grounds and along the beach to each
+    end: trees or palms close it off (no invisible wall), and past them the woods, beach and sea
+    carry on with no flat colour or hard edge.
+21. **Cleaning his glasses**: main menu, `__aaryanGesture('cleanGlasses')`: glasses off with the
+    hand, wiped with a cloth, back on; then breathing.
+

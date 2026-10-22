@@ -64,6 +64,14 @@ export interface FlightSprite {
    */
   framesBack: FlightFrame[] | null
   saddleBack: Array<[number, number]> | null
+  /**
+   * Turning away, three-quarters from behind: heading up and to the left (you see its back and
+   * left flank) or up and to the right (its back and right flank). Each is drawn as itself, not a
+   * mirror of the other: anything carried on its right (Megaphawk's megaphone, Hootour's flag)
+   * stays on its right, tucked behind the body heading left and in view heading right.
+   */
+  framesQuarter: Record<'left' | 'right', FlightFrame[]> | null
+  saddleQuarter: Record<'left' | 'right', Array<[number, number]>> | null
 }
 
 /** Drawing the right-facing frames: shapes go through MirrorGrid, held items come to the near side. */
@@ -483,6 +491,106 @@ function diplomothBack(f: number) {
 
 const BACKS: Partial<Record<FlyerId, BackDraw>> = { megaphawk: megaphawkBack, hootour: hootourBack, diplomoth: diplomothBack }
 
+/* ---------------- three-quarters from behind (turning away) ---------------- */
+
+/**
+ * `h`: the way it's heading, −1 up-left or 1 up-right. The head is turned toward that side, the
+ * near wing (on that side) spreads full length in front of the body's edge, the far wing is
+ * foreshortened and half hidden behind it, and the body lies on the diagonal with the tail toward
+ * you on the other side. What it carries on its right is on your right in both: behind the body
+ * heading left, in front of it heading right.
+ */
+type QuarterDraw = (f: number, h: -1 | 1) => { far: Pixels; body: Pixels; near: Pixels; saddle: Pt }
+
+function megaphawkQuarter(f: number, h: -1 | 1) {
+  const b = BOB[f]
+  const farWing = grid()
+  birdWingBack(farWing, [MID - h * 3, 15.5 + b], (-h) as -1 | 1, f, 11, 7, 'd', 'E', 'd')
+  farWing.outline(OL)
+  // the megaphone points the way it's heading: its bell shows past that side of the head
+  const horn = grid().ellipse(MID + h * 11, 9.5 + b, 4.6, 5.6, 'R').ellipse(MID + h * 11, 9.5 + b, 3.6, 4.6, 'W', 'w')
+  horn.outline(OL)
+  const head = grid().ellipse(MID + h * 6.5, 12.5 + b, 5.8, 5.4, 'D', 'd')
+  head.poly([[MID + h * 4.5, 9.5 + b], [MID + h * 2, 3 + b], [MID + h * 7, 9 + b]], 'd').poly([[MID + h * 7, 9 + b], [MID + h * 10, 2.5 + b], [MID + h * 10.5, 10 + b]], 'D')
+  head.outline(OL)
+  const back = grid()
+  back.ellipse(MID - h * 2.5, 28 + b, 1.6, 1.2, 'Y')
+  rotEllipse(back, MID + h * 0.5, 20 + b, 9.5, 7, h * -0.35, 'D', 'd')
+  back.outline(OL)
+  const nearWing = grid()
+  birdWingBack(nearWing, [MID + h * 5, 17 + b], h, f, 19, 10, 'D', 'd', 'C')
+  nearWing.outline(OL)
+  const tail = grid().poly([[MID - h * 2, 24 + b], [MID - h * 7.5, 23.5 + b], [MID - h * 11, 32 + b], [MID - h * 5, 34.5 + b], [MID + h * 1, 31 + b]], 'd')
+  tail.outline(OL)
+  for (const dx of [0, 3, 6]) tail.line(MID - h * 3.5, 25.5 + b, MID - h * (2 + dx), 33 + b, 'D')
+  return { far: stack(farWing, horn, head), body: stack(back, nearWing), near: stack(tail), saddle: [MID, 14.5 + b] as Pt }
+}
+
+function hootourQuarter(f: number, h: -1 | 1) {
+  const b = BOB[f]
+  const wave = f / 4
+  const farWing = grid()
+  birdWingBack(farWing, [MID - h * 3.5, 16.5 + b], (-h) as -1 | 1, f, 10, 7, 'h', 'E', 'h')
+  farWing.outline(OL)
+  const head = grid()
+  head.poly([[MID + h * 1.5, 10 + b], [MID + h * 0.5, 3 + b], [MID + h * 5, 9 + b]], 'H').poly([[MID + h * 8, 9 + b], [MID + h * 12.5, 3.5 + b], [MID + h * 11.5, 10.5 + b]], 'h')
+  head.ellipse(MID + h * 6.5, 13 + b, 7, 6.4, 'H', 'h')
+  head.outline(OL)
+  // the flag in its talons, on its right: heading left that side is away from you
+  const flag = grid()
+  // (heading right it's in front: gripped lower, so the pole hangs clear of the body)
+  drawItem(flag, 'flag', h > 0 ? { x: MID + 7, y: 31 + b, angle: Math.PI - 0.35, scale: 0.6, wave } : { x: MID + 5, y: 28 + b, angle: Math.PI - 0.5, scale: 0.62, wave })
+  flag.outline(OL)
+  const back = grid()
+  rotEllipse(back, MID + h * 0.5, 21 + b, 10, 8, h * -0.3, 'H', 'h')
+  // the scarf round its neck, its tail flapping back along the body
+  const w = Math.sin(wave * Math.PI * 2) * 1.2
+  back.poly([[MID + h * 1, 15.5 + b], [MID + h * 10, 16.5 + b], [MID + h * 9.5, 18.5 + b], [MID + h * 0.5, 18 + b]], 'Y')
+  back.poly([[MID + h * 1, 18 + b], [MID + h * 3.5, 18 + b], [MID - h * 2 + w, 27 + b], [MID - h * 5 + w, 26.5 + b]], 'Y')
+  back.ellipse(MID - h * 3, 29.5 + b, 1.8, 1.4, 'O')
+  back.outline(OL)
+  const nearWing = grid()
+  birdWingBack(nearWing, [MID + h * 5.5, 17.5 + b], h, f, 16, 11, 'H', 'h', 'C')
+  nearWing.outline(OL)
+  const tail = grid().poly([[MID - h * 1.5, 26 + b], [MID - h * 6.5, 25.5 + b], [MID - h * 8.5, 31.5 + b], [MID - h * 3.5, 33.5 + b], [MID + h * 1, 31 + b]], 'h')
+  tail.outline(OL)
+  const parts = h > 0 ? { far: stack(farWing, head), body: stack(back, nearWing, flag) } : { far: stack(farWing, flag, head), body: stack(back, nearWing) }
+  return { ...parts, near: stack(tail), saddle: [MID, 15 + b] as Pt }
+}
+
+function diplomothQuarter(f: number, h: -1 | 1) {
+  const b = BOB[f] * 0.7
+  const e = [-0.95, -0.4, 0.4, -0.15][f]
+  const ang = (side: number, a: number) => (side > 0 ? a : Math.PI - a)
+  // the far pair, foreshortened behind the body
+  const farWings = grid()
+  swingWing(farWings, [MID - h * 2, 16.5 + b], ang(-h, e - 0.15), 7, 4.6, 'm', 'E', ['V', 1.6])
+  swingWing(farWings, [MID - h * 2, 19.5 + b], ang(-h, e + 0.4), 4.8, 3.6, 'm', 'E')
+  farWings.outline(OL)
+  const antennae = grid()
+  antennae.line(MID + h * 3, 12 + b, MID + h * 4, 4 + b, 'G').line(MID + h * 6, 12.5 + b, MID + h * 11, 5 + b, 'G')
+  antennae.outline(OL)
+  for (const [x, y] of [[MID + h * 4, 4], [MID + h * 11, 5]]) antennae.set(x, y + b, 'G')
+  const placard = grid()
+  drawItem(placard, 'placard', { x: MID - h * 1, y: 26 + b, angle: Math.PI, scale: 0.78 })
+  placard.outline(OL)
+  const body = grid()
+  rotEllipse(body, MID + h * 1.5, 17 + b, 5, 4, h * -0.3, 'G', 'g')
+  body.ellipse(MID + h * 3, 14.5 + b, 4.2, 2.2, 'W', 'w')
+  body.outline(OL)
+  const nearWings = grid()
+  swingWing(nearWings, [MID + h * 3, 17 + b], ang(h, e), 11.5, 5.6, 'M', 'm', ['V', 2.2])
+  swingWing(nearWings, [MID + h * 3, 20 + b], ang(h, e + 0.5), 7.4, 4.4, 'M', 'm')
+  nearWings.outline(OL)
+  const abdomen = grid()
+  rotEllipse(abdomen, MID - h * 1.5, 24 + b, 3.6, 6, h * 0.35, 'G', 'g')
+  abdomen.outline(OL)
+  for (const y of [22, 25, 28]) abdomen.line(MID - h * 1.5 - 2.5, y + b - h * 0.4, MID - h * 1.5 + 2.5, y + b + h * 0.4, 'g')
+  return { far: stack(farWings, antennae, placard), body: stack(body, nearWings), near: stack(abdomen), saddle: [MID + h * 1, 15.5 + b] as Pt }
+}
+
+const QUARTERS: Partial<Record<FlyerId, QuarterDraw>> = { megaphawk: megaphawkQuarter, hootour: hootourQuarter, diplomoth: diplomothQuarter }
+
 /* ---------------- assembly ---------------- */
 
 const SPECS: Record<FlyerId, { draw: (f: number) => { far: HiGrid; body: HiGrid; near: HiGrid; saddle: Pt | null }; style: FlightStyle; frameMs: number; world: number; extra?: Palette }> = {
@@ -532,7 +640,20 @@ function buildFlyer(id: FlyerId): FlightSprite {
       saddleBack.push([r.saddle[0] * K2, r.saddle[1] * K2])
     }
   }
-  return { palette, frames, framesRight, framesBack, saddleBack, style: spec.style, frameMs: spec.frameMs, world: spec.world, saddle: rideable ? saddle : null }
+  const quarter = QUARTERS[id]
+  let framesQuarter: FlightSprite['framesQuarter'] = null
+  let saddleQuarter: FlightSprite['saddleQuarter'] = null
+  if (quarter) {
+    framesQuarter = { left: [], right: [] }
+    saddleQuarter = { left: [], right: [] }
+    for (const [side, h] of [['left', -1], ['right', 1]] as const)
+      for (let f = 0; f < 4; f++) {
+        const r = quarter(f, h)
+        framesQuarter[side].push({ far: finish(r.far), body: finish(r.body), near: finish(r.near) })
+        saddleQuarter[side].push([r.saddle[0] * K2, r.saddle[1] * K2])
+      }
+  }
+  return { palette, frames, framesRight, framesBack, saddleBack, framesQuarter, saddleQuarter, style: spec.style, frameMs: spec.frameMs, world: spec.world, saddle: rideable ? saddle : null }
 }
 
 export const FLYERS: FlyerId[] = ['megaphawk', 'hootour', 'riffin', 'campfly', 'diplomoth']

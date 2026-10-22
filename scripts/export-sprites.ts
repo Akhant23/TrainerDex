@@ -9,7 +9,8 @@ import { dirname } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { hexToRgba, type Palette, type Pixels } from '../src/sprites/pixels.ts'
 import { creatureArt, creatureArtHi, trainerdexBadge } from '../src/sprites/creatures.ts'
-import { overworldFor, riderBackFor, riderFor, RIDER_HIP } from '../src/sprites/overworld.ts'
+import { overworldFor, riderBackFor, riderFor, RIDER_HIP, riderQuarterFor } from '../src/sprites/overworld.ts'
+import { habitatIds, HABITATS, HAB_H, HAB_W, paintHabitat } from '../src/sprites/habitats.ts'
 import { flightArt, FLYERS } from '../src/sprites/flight.ts'
 import { renderFlat, renderBack, renderSide, renderPose, paletteFor, atResolution, PORTRAIT } from '../src/sprites/character.ts'
 import { GESTURES } from '../src/sprites/gestures.ts'
@@ -139,7 +140,11 @@ for (const [id, frames] of Object.entries(GESTURES)) {
   const views = FLYERS.flatMap((id) => {
     const art = flightArt[id]
     const side = { file: `flight-${id}`, id, frames: art.frames, saddle: art.saddle, rider }
-    return art.framesBack && art.saddleBack ? [side, { file: `flight-${id}-back`, id, frames: art.framesBack, saddle: art.saddleBack, rider: riderBack }] : [side]
+    const out = [side]
+    if (art.framesQuarter && art.saddleQuarter)
+      for (const [dir, h] of [['left', -1], ['right', 1]] as const) out.push({ file: `flight-${id}-quarter-${dir}`, id, frames: art.framesQuarter[dir], saddle: art.saddleQuarter[dir], rider: riderQuarterFor(signature, h) })
+    if (art.framesBack && art.saddleBack) out.push({ file: `flight-${id}-back`, id, frames: art.framesBack, saddle: art.saddleBack, rider: riderBack })
+    return out
   })
   for (const v of views) {
     const art = flightArt[v.id]
@@ -215,3 +220,14 @@ const manifest = {
 mkdirSync('public/assets', { recursive: true })
 writeFileSync('public/assets/manifest.json', JSON.stringify(manifest, null, 2) + '\n')
 console.log('Wrote sprites to sprites-export/ and public/assets/manifest.json')
+
+/* Pokédex habitats: every frame of every scene, 1:1 (sprites-export/habitat-<id>.png, frames side by side). */
+for (const id of habitatIds) {
+  const n = HABITATS[id].frames
+  const rgba = new Uint8Array(HAB_W * n * HAB_H * 4)
+  for (let f = 0; f < n; f++) {
+    const px = paintHabitat(id, f).toRGBA()
+    for (let y = 0; y < HAB_H; y++) rgba.set(px.subarray(y * HAB_W * 4, (y + 1) * HAB_W * 4), (y * HAB_W * n + f * HAB_W) * 4)
+  }
+  writeFileSync(`sprites-export/habitat-${id}.png`, encodePng(HAB_W * n, HAB_H, rgba))
+}

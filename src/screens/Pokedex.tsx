@@ -9,8 +9,9 @@ import { progress, useProgress } from '../systems/progress'
 import { useSettings } from '../systems/settings'
 import { useGameKeys } from '../systems/input'
 import { DexArtView } from '../ui/PixelArt'
-import { PixelBox } from '../ui/PixelBox'
 import { Bullets, Sources, TypeChip } from '../ui/bits'
+import { DexHabitat } from '../ui/DexHabitat'
+import { HABITATS } from '../sprites/habitats'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 
@@ -36,6 +37,7 @@ function List() {
   return (
     <SectionScreen
       entry={entry}
+      compactTop={false}
       title={`SEEN ${dexSeen.length}/${pokedex.length}`}
       top={<DexScreen dex={focused} seen={dexSeen.includes(focused.no)} />}
     >
@@ -116,58 +118,85 @@ function Detail({ dex }: { dex: DexEntry }) {
       </SectionScreen>
     )
 
+  const hab = HABITATS[dex.habitat]
   return (
-    <SectionScreen entry={entry} backTo="/pokedex" title={`No.${pad(dex.no)}`} top={<DexScreen dex={dex} seen />} scrollKey={dex.no}>
-      <div className="space-y-6 p-[4%]">
-        <PixelBox className="px-[5%] py-[4%]">
-          <p className="font-display m-0 text-[clamp(15px,3.9cqi,21px)]">
-            {dex.name} <span className="text-[0.75em] text-muted">· {dex.category.toUpperCase()}</span>
-          </p>
-          <div className="mt-2 flex gap-2">
-            {dex.types.map((t) => (
-              <TypeChip key={t} type={t} />
-            ))}
+    <SectionScreen entry={entry} compactTop={false} backTo="/pokedex" title={`No.${pad(dex.no)}`} top={<DexScreen dex={dex} seen />} scrollKey={dex.no}>
+      {/* the BW Pokédex's info page: who, what type, where found; the entry; then the controls */}
+      <div className="dex-page flex min-h-full flex-col gap-[clamp(10px,2.4cqi,16px)] p-[3.5%]">
+        <section className="dex-info px-[4%] py-[3%]" aria-label={`${dex.name}, entry ${dex.no}`}>
+          <div className="flex items-start gap-[4%]">
+            <div className="min-w-0 flex-1">
+              <p className="font-display m-0 flex items-baseline gap-2 text-[clamp(16px,4.2cqi,24px)]">
+                <span className="text-dex-red">•{pad(dex.no)}</span>
+                <span className="truncate">{dex.name}</span>
+              </p>
+              <p className="dex-category m-0 mt-1 text-[clamp(13px,3.3cqi,17px)]">{dex.category}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {dex.types.map((t) => (
+                  <TypeChip key={t} type={t} />
+                ))}
+              </div>
+            </div>
+            <figure className="dex-footprint m-0 flex shrink-0 items-center justify-center" title="Emblem">
+              <DexArtView art={dex.art} scale={2} />
+              <figcaption className="sr-only">Emblem</figcaption>
+            </figure>
           </div>
-          <Bullets items={dex.entry} className="mt-4 text-[17px]" />
-          <Sources ids={dex.sources} className="mt-5" />
-        </PixelBox>
-        <div className="flex justify-between">
-          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(-1)}>
+          <dl className="dex-rows mt-3 mb-0">
+            <div>
+              <dt>HABITAT</dt>
+              <dd>{hab.label}</dd>
+            </div>
+            <div>
+              <dt>TYPE</dt>
+              <dd>{dex.types.map((t) => types[t].label).join(' / ')}</dd>
+            </div>
+          </dl>
+        </section>
+        <section className="dex-text px-[4.5%] py-[3.5%]" aria-label="Pokédex entry">
+          <Bullets items={dex.entry} className="text-[17px]" />
+        </section>
+        <div className="dex-sources px-[1%]">
+          <Sources ids={dex.sources} />
+        </div>
+        <nav className="dex-bar sticky bottom-[2%] z-10 mt-auto flex items-center justify-between gap-2 px-[2.5%] py-[1.5%]" aria-label="Pokédex entries">
+          <button type="button" className="dex-bar-btn" onClick={() => go(-1)} aria-label="Previous entry">
             ◀ PREV
           </button>
-          <button type="button" className="pixel-btn !text-[14px]" onClick={() => go(1)}>
+          <span className="font-display text-[13px] text-paper" aria-live="polite">
+            {idx + 1} / {pokedex.length}
+          </span>
+          <button type="button" className="dex-bar-btn" onClick={() => go(1)} aria-label="Next entry">
             NEXT ▶
           </button>
-        </div>
+        </nav>
       </div>
     </SectionScreen>
   )
 }
 
+/**
+ * The top screen: the entry in its habitat, like a BW Pokédex's creature window — a status strip
+ * (number, name, type), the scene filling the window, and the habitat's name on a plate beneath.
+ */
 function DexScreen({ dex, seen }: { dex: DexEntry; seen: boolean }) {
-  const main = types[dex.types[0]].color
+  const hab = HABITATS[dex.habitat]
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#c83a2a] p-[3%]">
-      <div className="flex min-h-0 flex-1 gap-[3%]">
-        <div
-          className="relative flex flex-1 items-center justify-center overflow-hidden shadow-[0_0_0_var(--u)_var(--color-ink),inset_0_0_0_var(--u)_#ffffff55]"
-          style={{ background: `radial-gradient(circle at 50% 60%, #ffffff 0%, ${main}55 45%, #1c2030 100%)` }}
-        >
-          <span className="font-display absolute top-[5%] left-[5%] text-[clamp(13px,3.4cqi,20px)] text-paper text-outline">No.{pad(dex.no)}</span>
-          <div className={seen ? '' : 'brightness-0'}>
-            <span className="hidden sm:inline">
-              <DexArtView art={dex.art} scale={8} />
-            </span>
-            <span className="sm:hidden">
-              <DexArtView art={dex.art} scale={5} />
-            </span>
-          </div>
-        </div>
+    <div className="dex-bezel absolute inset-0 flex flex-col p-[2.4%]">
+      <div className="dex-strip flex items-center justify-between gap-2 px-[3%] py-[1.1%]">
+        <span className="font-display flex min-w-0 items-baseline gap-2 text-[clamp(13px,3.6cqi,21px)]">
+          <span className="text-dex-red">No.{pad(dex.no)}</span>
+          <span className="truncate">{seen ? dex.name : '?????'}</span>
+        </span>
+        <span className="flex shrink-0 gap-1.5">{seen && dex.types.map((t) => <TypeChip key={t} type={t} />)}</span>
       </div>
-      <PixelBox variant="plate" className="mt-[3%] flex items-center justify-between gap-2 px-[4%] py-[2%]">
-        <span className="font-display text-[clamp(14px,4.2cqi,25px)]">{seen ? dex.name : '?????'}</span>
-        <span className="flex gap-1.5">{seen && dex.types.map((t) => <TypeChip key={t} type={t} />)}</span>
-      </PixelBox>
+      <div className="dex-window mt-[2%] min-h-0 flex-1">
+        <DexHabitat key={dex.habitat} id={dex.habitat} seen={seen} className="h-full w-full" />
+      </div>
+      <div className="dex-caption mt-[2%] flex items-center justify-between gap-2 px-[3%] py-[1%]">
+        <span className="font-display text-[clamp(11px,2.6cqi,14px)] tracking-wide opacity-80">HABITAT</span>
+        <span className="font-display truncate text-[clamp(12px,3.2cqi,18px)]">{seen ? hab.label.toUpperCase() : 'UNKNOWN'}</span>
+      </div>
     </div>
   )
 }
