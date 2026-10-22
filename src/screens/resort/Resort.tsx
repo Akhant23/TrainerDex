@@ -11,9 +11,9 @@ import { maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile,
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { skyAt, skyLabel } from '../../resort/sky'
-import { ambientItems, departureItems, drawSkyFlyers, MOUNTS, newAmbient, SURFERS, tickFlyers, type AmbientState } from '../../resort/ambient'
+import { ambientItems, departureItems, drawSkyFlyers, MOUNTS, newAmbient, recallItem, SURFERS, tickFlyers, tripEnds, type AmbientState } from '../../resort/ambient'
 import { staff } from '../../resort/npcs'
-import { departureAt, departureMount, type Departure } from '../../resort/departure'
+import { ARRIVAL_HANDOFF, DEPARTURE_BOARD_AT, departureAt, HANDOVER_MS, departureMount, landingSide, type Departure } from '../../resort/departure'
 import { WALK_CYCLE, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
 import { audio } from '../../systems/audio'
@@ -120,6 +120,8 @@ interface Guest {
   species: SpeciesId
   /** when they head off again */
   until: number
+  /** which way they stand (default: facing you) */
+  facing?: Facing
 }
 
 const GUEST_NAMES = ['RAFA', 'JUNO', 'IMOGEN', 'THEO', 'ZARA', 'ARLO', 'NOOR', 'LEVI', 'MAYA', 'FINN', 'ODETTE', 'KOFI']
@@ -127,38 +129,55 @@ const ALL_SPECIES = Object.keys(species) as SpeciesId[]
 const rnd = <T,>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)]
 const arrived = new WeakSet<object>()
 const departed = new Set<string>()
+const boarded = new WeakSet<object>()
 
 /** Every so often a trainer flies or surfs in; they stay a while, then leave the way they came. */
-function tickGuests(a: AmbientState, now: number, mp: ResortMap, chars: Char[], me: [number, number], guests: Guest[], setGuests: (fn: (g: Guest[]) => Guest[]) => void) {
-  // arrivals that just touched down become guests you can talk to
+function tickGuests(a: AmbientState, now: number, mp: ResortMap, chars: Char[], me: [number, number], guests: Guest[], setGuests: (fn: (g: Guest[]) => Guest[]) => void, spawn = true) {
+  const { w, h } = size(mp)
+  // a mount lands two tiles to one side: not on a wall, a tree or anyone standing there
+  const people = new Set([...chars.map((c) => `${c.x},${c.y}`), `${me[0]},${me[1]}`])
+  const blocked = (x: number, y: number) => x < 0 || y < 0 || x >= w || y >= h || isSolidTile(mp, x, y) || people.has(`${x},${y}`)
+  // arrivals whose feet just touched their spot become guests you can talk to
   for (const t of a.trips) {
     if (t.leaving || arrived.has(t) || now - t.t0 < t.dur) continue
     arrived.add(t)
     const name = rnd(GUEST_NAMES)
     const party = [t.species, ...ALL_SPECIES.filter((x) => x !== t.species).sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2))]
     const wins = Math.floor(Math.random() * 20)
-    setGuests((g) => [...g, { id: t.id, x: t.tx, y: t.ty, look: t.look, name, party, greeting: anyLine(t.mode === 'air' ? 'guest.air' : 'guest.sea', { creature: species[t.species].name }), record: { titles: Math.random() < 0.1 ? 1 : 0, wins, losses: Math.floor(Math.random() * 15) }, mode: t.mode, species: t.species, until: now + 70_000 + Math.random() * 50_000 }])
+    setGuests((g) => [...g, { id: t.id, x: t.tx, y: t.ty, look: t.look, name, party, greeting: anyLine(t.mode === 'air' ? 'guest.air' : 'guest.sea', { creature: species[t.species].name }), record: { titles: Math.random() < 0.1 ? 1 : 0, wins, losses: Math.floor(Math.random() * 15) }, mode: t.mode, species: t.species, until: now + 70_000 + Math.random() * 50_000, facing: t.mode === 'air' ? (t.fromX < 18 ? 'right' : 'left') : undefined }])
   }
-  // guests whose time is up head off
+  // guests whose time is up head off: by sea at once; by air they turn to where their mount
+  // will land, and stay put (and talkable) until it has landed and they hop on
   for (const g of guests) {
     if (now < g.until || departed.has(g.id)) continue
     departed.add(g.id)
-    setGuests((list) => list.filter((x) => x.id !== g.id))
-    a.trips.push({ id: `${g.id}-out`, mode: g.mode, species: g.species, look: g.look, tx: g.x, ty: g.y, t0: now, dur: g.mode === 'air' ? 2600 : 6000, leaving: true, seaY: 28, fromX: g.x < 18 ? -3 : 41 })
+    const fromX = g.mode === 'air' ? (landingSide(g.x, g.y, g.x < 18, blocked) ? -3 : 41) : g.x < 18 ? -3 : 41
+    a.trips.push({ id: `${g.id}-out`, mode: g.mode, species: g.species, look: g.look, tx: g.x, ty: g.y, t0: now, dur: g.mode === 'air' ? DEPARTURE_BOARD_AT - HANDOVER_MS : 6000, leaving: true, seaY: 28, fromX })
+    if (g.mode === 'air') setGuests((list) => list.map((x) => (x.id === g.id ? { ...x, facing: fromX < 18 ? 'left' : 'right' } : x)))
+    else setGuests((list) => list.filter((x) => x.id !== g.id))
   }
-  a.trips = a.trips.filter((t) => now - t.t0 < t.dur + 500)
-  if (now < a.nextGuest) return
+  for (const t of a.trips) {
+    if (!t.leaving || t.mode !== 'air' || boarded.has(t) || now - t.t0 < t.dur) continue
+    boarded.add(t)
+    const id = t.id.replace(/-out$/, '')
+    setGuests((list) => list.filter((x) => x.id !== id))
+  }
+  a.trips = a.trips.filter((t) => now - t.t0 < tripEnds(t) + 500)
+  // no one new flies in while you're being picked up (their mounts would crowd yours)
+  if (!spawn || now < a.nextGuest) return
   a.nextGuest = now + 35_000 + Math.random() * 35_000
   if (guests.length >= 4) return
   const mode: 'air' | 'sea' = Math.random() < 0.6 ? 'air' : 'sea'
   const taken = new Set([...chars.map((c) => `${c.x},${c.y}`), `${me[0]},${me[1]}`, ...a.trips.map((t) => `${t.tx},${t.ty}`)])
   const spots: Array<[number, number]> = []
   const [y0, y1, x0, x1] = mode === 'air' ? [8, 21, 9, 28] : [24, 26, 2, 35]
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!isSolidTile(mp, x, y) && !taken.has(`${x},${y}`) && tileAt(mp, x, y) !== 'D') spots.push([x, y])
+  const sideClear = (x: number, y: number) => [-1, 1].some((s) => !blocked(x + s, y) && !blocked(x + 2 * s, y))
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!isSolidTile(mp, x, y) && !taken.has(`${x},${y}`) && tileAt(mp, x, y) !== 'D' && (mode === 'sea' || sideClear(x, y))) spots.push([x, y])
   if (!spots.length) return
   const [tx, ty] = rnd(spots)
-  const fromX = Math.random() < 0.5 ? -3 : 41
-  a.trips.push({ id: `guest-${Math.floor(now)}`, mode, species: rnd(mode === 'air' ? MOUNTS : SURFERS), look: randomAvatar(), tx, ty, t0: now, dur: mode === 'air' ? 2600 : 4000 + Math.abs(tx - fromX) * 120, leaving: false, seaY: 28, fromX })
+  // by air, the mount lands beside the spot: come in from a side where that's open ground
+  const fromX = (mode === 'air' ? landingSide(tx, ty, Math.random() < 0.5, blocked) : Math.random() < 0.5) ? -3 : 41
+  a.trips.push({ id: `guest-${Math.floor(now)}`, mode, species: rnd(mode === 'air' ? MOUNTS : SURFERS), look: randomAvatar(), tx, ty, t0: now, dur: mode === 'air' ? ARRIVAL_HANDOFF : 4000 + Math.abs(tx - fromX) * 120, leaving: false, seaY: 28, fromX })
 }
 
 /* ---------------- screen ---------------- */
@@ -241,10 +260,12 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   // where everyone on the map is standing (window.__resortChars)
   useEffect(() => {
     if (!import.meta.env.DEV) return
-    const w = window as unknown as { __resortAmbient?: AmbientState; __resortChars?: () => Char[]; __resortMe?: () => unknown }
+    const w = window as unknown as { __resortAmbient?: AmbientState; __resortChars?: () => Char[]; __resortMe?: () => unknown; __resortGuestsLeave?: () => void }
     w.__resortAmbient = ambient.current
     w.__resortChars = () => charsRef.current
-    w.__resortMe = () => ({ ...me.current, departing: !!departure.current })
+    w.__resortMe = () => ({ ...me.current, departing: !!departure.current, departure: departure.current, size: size(maps[me.current.map]) })
+    // send every travelling trainer home now (to watch them board and fly off)
+    w.__resortGuestsLeave = () => setGuests((gs) => gs.map((g) => ({ ...g, until: 0 })))
   }, [])
   const sky = useRef(skyAt())
   const [skyStatus, setSkyStatus] = useState(() => skyLabel(sky.current))
@@ -334,7 +355,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         const p = placed.get(o.id)
         if (p) list.push({ id: o.id, ...p, look: o.appearance, name: o.name, kind: 'visitor', party: o.party, greeting: o.greeting, message: o.message, record: o.record, regular: o.regular })
       }
-      for (const g of guests) list.push({ id: g.id, x: g.x, y: g.y, facing: 'down', look: g.look, name: g.name, kind: 'visitor', party: g.party, greeting: g.greeting, record: g.record, regular: true, badge: 'TRAVELLING TRAINER' })
+      for (const g of guests) list.push({ id: g.id, x: g.x, y: g.y, facing: g.facing ?? 'down', look: g.look, name: g.name, kind: 'visitor', party: g.party, greeting: g.greeting, record: g.record, regular: true, badge: 'TRAVELLING TRAINER' })
     }
     return list
   }, [mapId, online, guests])
@@ -398,7 +419,10 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
     // if they were mid-step, the creature comes to the tile they're stepping onto
     const tx = m.moving ? m.moving.tx : m.x
     const ty = m.moving ? m.moving.ty : m.y
-    const fromLeft = tx < size(mp).w / 2
+    // the mount comes in from the nearer edge of the map, unless it would land in a wall, a tree or on someone
+    const { w, h } = size(mp)
+    const people = new Set(charsRef.current.map((c) => `${c.x},${c.y}`))
+    const fromLeft = landingSide(tx, ty, tx < w / 2, (x, y) => x < 0 || y < 0 || x >= w || y >= h || isSolidTile(mp, x, y) || people.has(`${x},${y}`))
     held.current = []
     departure.current = { t0: performance.now(), x: tx * TILE + 8, y: ty * TILE + 14, mount: departureMount(resortSave.get().party), fromLeft }
   }
@@ -633,25 +657,26 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
       }
       const lead = resortSave.get().party[0]
       const creatures: CreatureActor[] = []
-      // the creature following you goes back in its ball as you board
-      if (lead && (!depFrame || depFrame.standing)) {
-        const pk = pt.moving ? Math.min(1, (now - pt.moving.t0) / pt.moving.dur) : 0
-        const fx = pt.moving ? pt.moving.fx + (pt.moving.tx - pt.moving.fx) * pk : pt.x
-        const fy = pt.moving ? pt.moving.fy + (pt.moving.ty - pt.moving.fy) * pk : pt.y
-        creatures.push({ id: lead, facing: pt.facing, x: fx * TILE + 8, y: fy * TILE + 13, hop: pt.moving ? Math.sin(pk * Math.PI) * 3 : 0, breath: pt.moving ? 0 : Math.floor(now / 520) % 2 })
-      }
+      const pk = pt.moving ? Math.min(1, (now - pt.moving.t0) / pt.moving.dur) : 0
+      const petX = (pt.moving ? pt.moving.fx + (pt.moving.tx - pt.moving.fx) * pk : pt.x) * TILE + 8
+      const petY = (pt.moving ? pt.moving.fy + (pt.moving.ty - pt.moving.fy) * pk : pt.y) * TILE + 13
+      // the creature following you goes back in its ball while you wait for your mount: a flash
+      // over the second half of the wait, then it's gone
+      const recall = !depFrame ? 0 : depFrame.phase === 'prepare' ? Math.max(0, (depFrame.k - 0.45) / 0.55) : 1
+      if (lead && recall < 0.3) creatures.push({ id: lead, facing: pt.facing, x: petX, y: petY, hop: pt.moving ? Math.sin(pk * Math.PI) * 3 : 0, breath: pt.moving ? 0 : Math.floor(now / 520) % 2 })
       // life around the plaza: flyers overhead, trainers flying or surfing in and out
       const amb = ambient.current
       if (mp.id === 'plaza') {
         tickFlyers(amb, now, randomAvatar)
-        tickGuests(amb, now, mp, charsRef.current, [m.x, m.y], guestsRef.current, setGuests)
+        tickGuests(amb, now, mp, charsRef.current, [m.x, m.y], guestsRef.current, setGuests, !dep)
       }
       drawWorld(ctx, mp, cam, actors, now, creatures, viewH.current, {
         sky: sky.current,
         skyLayer: mp.id === 'plaza' ? (c, horizonY) => drawSkyFlyers(c, amb, now, horizonY) : undefined,
         items: (proj) => [
-          ...(mp.id === 'plaza' ? ambientItems(amb, now, proj, viewH.current) : []),
+          ...(mp.id === 'plaza' ? ambientItems(amb, now, proj, viewH.current, (id) => charsRef.current.some((c) => c.id === id)) : []),
           ...(dep ? departureItems(dep, now, proj, viewH.current, resortSave.get().avatar ?? DEFAULT_AVATAR) : []),
+          ...(lead && recall > 0 && recall < 1 ? recallItem(petX, petY, recall, proj, viewH.current) : []),
         ],
       })
 

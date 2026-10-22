@@ -158,11 +158,11 @@ locks input and runs `src/resort/departure.ts`, a pure timeline driven by elapse
 
 | Phase | ms | What happens |
 |---|---|---|
-| prepare | 600 | the player turns towards the side the mount will come from |
+| prepare | 600 | the player turns towards the side the mount will come from; the follower goes back in its ball (a red-and-white flash) |
 | approach | 2200 | the mount glides in from off-screen on that side, descending, and lands beside the player |
-| boarding | 700 | the player hops onto the saddle in an arc (the walker sprite, not a teleport) |
-| takeoff | 1100 | a gradual lift with a little forward drift; the shadow shrinks |
-| flight | 2800 | mount and rider fly on and away north, smaller and higher, until gone |
+| boarding | 700 | the player hops onto the saddle in an arc (sixth pass: see below) |
+| takeoff | 1100 | a gradual lift that carries on in the direction it faces; the shadow shrinks |
+| flight | 2800 | on across the resort, bending north (away from the camera), smaller and higher, fading out over the last ~20% |
 | complete | — | fade out, then the existing exit destination (`/`), exactly as before |
 
 The mount is the first flyer in the party that can carry a rider (Megaphawk, Hootour,
@@ -175,13 +175,68 @@ held item (Hootour's flag) to the far wing and put the light on the wrong side. 
 has native right-facing frames (`framesRight` in `flight.ts`), drawn through a mirroring grid
 *before* shading, so the light stays upper-left and a held item is redrawn on the near wing.
 Riders were already per-direction. Captures: `docs/qa/mounts-left-flipped-native.png` (left,
-old mirror, new right for every flyer), `docs/qa/departure-both-directions.png` (landing → take-off
-from each side, drawn with the game's own renderer).
+old mirror, new right for every flyer).
+
+## Flight polish (sixth pass)
+
+**Browser verification.** The in-app browser pane couldn't render: the Mac's session was locked
+(`CGSSessionScreenIsLocked = 1`), so Chromium marked the page hidden and stopped animation frames
+(0–3 per second). The site was tested instead in headless Chrome (a scratch profile, driven over
+the DevTools protocol), where the page is visible at 60 fps and real key presses go through the
+game's own input. Every capture below is the game's own canvas in that browser, not an offline
+render. One quirk of that browser: it sometimes brings its own `chrome://settings/help` tab to
+the front, which hides the game tab exactly like the locked screen; the driver closes it.
+
+**Boarding without a pose jump.** Before, the player landed on the mount's back as the *standing*
+sprite facing the mount, then was replaced by the seated rider facing the other way, ~10 px lower
+(`docs/qa/departure-boarding-before.png`). Now the hop moves one point, the hips, from above the
+player's feet to the saddle. The walking and riding sprites share the head and body rows (38 of
+the 46 rows above the hip are identical) and put the hips on the same pixel, so drawing whichever
+sprite with its hips on that point keeps the head and body still; only the legs change. In order:
+a short crouch held on the ground (seventh pass: it used to start rising at once), the jump
+(facing the mount, with their shadow staying on the ground and fading as they rise), a turn to
+face the way it will fly at the top of the
+arc, the change to the seated pose in the air just above the saddle (78% through the hop, drawn
+between the wings like any rider), settling onto the saddle while the mount sinks one pixel under
+the weight. Captures: `departure-boarding-after-right.png`, `departure-boarding-after-left.png`.
+
+**Landing and dismounting (visiting trainers).** Travellers by air used to turn from mount+rider
+into a standing walker the instant they touched down, and back again when leaving. They now use
+the same timeline and hop (`arrivalAt` / `departureAt`): the mount lands beside their spot, they
+hop forward off its back onto the spot, and it flies away empty; leaving, they turn to where the
+mount will land, stay a normal (talkable) NPC until it has landed, hop on and fly off. At each
+hand-over the hop and the walker overlap for 250 ms in the same place, so neither is missing for
+a frame while the walker list updates (measured in the browser: the list updates 33 ms after the
+hand-over). Captures: `visitor-landing.png`, `visitor-boarding.png`.
+
+**Landing side.** The mount comes from the nearer map edge unless its two landing tiles there are
+a wall, a tree, the map edge or someone standing (the first browser run from the left landed it on
+an NPC); new visitors don't fly in during your own departure.
+
+**Flying away (distance effect, not a rear view).** Only left- and right-facing flight art
+exists. The battle *back* sprites were checked as a possible rear view: Megaphawk's and Hootour's
+are perched poses with folded wings; Diplomoth's has spread wings but is 80×80 battle art at a
+different scale, and there is no rider-from-behind art at all, so none is used. The existing
+side-view flight was made to read better as "away": one continuous take-off + flight curve (no
+stall at the phase change), sideways drift that eases off as the course bends north, size shrinking
+in ~3% steps (exactly full size on the ground) so nearest-neighbour scaling doesn't shimmer, and a
+fade over the last ~20% so it's gone when the sequence ends instead of popping out. Mount and rider
+always share one scale and the saddle point, so the rider stays attached. **It is still the
+side-view sprite: a convincing distance effect, not a rear-facing animation.** Captures:
+`departure-flight-before.png`, `departure-flight-after-right.png`, `departure-flight-after-left.png`.
 
 ## Open gaps
 
 - Original BW overworld sprite sheets weren't reachable; walker numbers are footage-measured.
 - Which BW moves dim the background was only observed for Electro Ball.
 - Tile and backdrop colours are compared against compressed video, so they're approximate.
-- Flyers only fly left or right; the departure's flight away is a left/right flyer drifting north
-  and shrinking, not a true away-from-camera view.
+- Flyers only fly left or right; the departure's flight away is a left/right flyer drifting north,
+  shrinking and fading, not a true away-from-camera view (no rear-facing flight art exists).
+- The departure's timing and sizes are this site's own; BW2's Fly sequence hasn't been measured
+  (confidence record in GEN5-TIMING.md).
+- The hop is two existing poses (walking frame, seated rider) moved along a path; there's no
+  dedicated jump or swing-a-leg-over frame. Optional future enhancement: one original pixel-art
+  frame for the jump (knees tucked) and one for swinging a leg over, drawn in `overworld.ts` like
+  the riding pose; not needed for the hop to read at native size.
+- The main menu's first mount after a page load drops one frame while its portrait encodes its
+  layers (GEN5-TIMING.md, frame timing); outside the flight, not changed.

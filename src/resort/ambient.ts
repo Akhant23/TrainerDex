@@ -15,8 +15,8 @@ import { OW_WORLD, riderFor, RIDER_HIP } from '../sprites/overworld'
 import { creatureArtHi } from '../sprites/creatures'
 import { flightArt, FLIGHT_H, FLIGHT_W, FLYERS as FLYER_IDS, RIDEABLE, type FlyerId } from '../sprites/flight'
 import { flipX } from '../sprites/raster'
-import { characterFrames, inView, pixelCanvas, RES, VIEW_W, type WorldItem } from './render'
-import { departureAt, type Departure } from './departure'
+import { characterFrames, FEET_DY, groundShadow, inView, pixelCanvas, RES, VIEW_W, WALKER_SHADOW, type WorldItem } from './render'
+import { ARRIVAL_HANDOFF, ARRIVAL_TOTAL, arrivalAt, DEPARTURE_BOARD_AT, DEPARTURE_TOTAL, departureAt, HOP_SWAP, type Departure, type MountFrame } from './departure'
 import { TILE } from './tiles'
 
 export const FLYERS: SpeciesId[] = FLYER_IDS
@@ -86,31 +86,23 @@ export function tickFlyers(a: AmbientState, now: number, randomLook: () => Appea
   })
 }
 
-/** Where a trip's traveller is right now (world pixels) and how high off the ground. */
-export function tripPosition(t: Trip, now: number): { x: number; y: number; alt: number; facing: Facing; surfing: boolean; flying: boolean } {
+/** Where a trip's traveller by sea is right now (world pixels) and how high off the ground. Trips by air follow departure.ts. */
+export function tripPosition(t: Trip, now: number): { x: number; y: number; alt: number; facing: Facing; surfing: boolean } {
   const k = Math.max(0, Math.min(1, (now - t.t0) / t.dur))
   const p = t.leaving ? 1 - k : k
   const gx = t.tx * TILE + 8
   const gy = t.ty * TILE + 14
-  if (t.mode === 'air') {
-    // glide in from the side and come down onto the spot
-    const side = t.fromX < 18 ? -1 : 1
-    const e = easeOut(p)
-    const facing: Facing = (side < 0) !== t.leaving ? 'right' : 'left'
-    return { x: gx + side * (1 - e) * 120, y: gy, alt: (1 - e) * CRUISE_ALT, facing, surfing: false, flying: p < 1 }
-  }
   // by sea: ride along the water to below the landing spot, then hop up the beach
   const sx = t.fromX * TILE + 8
   const sy = t.seaY * TILE + 14
   if (p < 0.78) {
     const q = p / 0.78
-    return { x: sx + (gx - sx) * q, y: sy, alt: Math.sin(now / 160) * 1.5, facing: (gx > sx) !== t.leaving ? 'right' : 'left', surfing: true, flying: false }
+    return { x: sx + (gx - sx) * q, y: sy, alt: Math.sin(now / 160) * 1.5, facing: (gx > sx) !== t.leaving ? 'right' : 'left', surfing: true }
   }
   const q = (p - 0.78) / 0.22
-  return { x: gx, y: sy + (gy - sy) * q, alt: Math.sin(q * Math.PI) * 6, facing: t.leaving ? 'down' : 'up', surfing: q < 0.6, flying: false }
+  return { x: gx, y: sy + (gy - sy) * q, alt: Math.sin(q * Math.PI) * 6, facing: t.leaving ? 'down' : 'up', surfing: q < 0.6 }
 }
 
-const easeOut = (x: number) => 1 - (1 - x) * (1 - x)
 
 /** Highest a traveller flies on the way in (world pixels above their landing spot). */
 export const CRUISE_ALT = 150
@@ -155,11 +147,6 @@ export function flightFrame(id: FlyerId, t: number): number {
   return Math.floor(t / art.frameMs) % 4
 }
 
-/**
- * Draw a flyer (and its rider) centred on (x, y) in canvas pixels; `s` is canvas pixels per world
- * pixel. Order: far wing, body, rider, near wing — so the rider sits between the wings and the
- * near wing sweeps over their legs.
- */
 /** Where a flyer drawn by drawFlyer has its saddle (canvas px), for the same arguments. */
 export function saddlePoint(id: FlyerId, t: number, x: number, y: number, s: number, faceRight: boolean): { x: number; y: number } | null {
   const art = flightArt[id]
@@ -171,7 +158,13 @@ export function saddlePoint(id: FlyerId, t: number, x: number, y: number, s: num
   return { x: ox + (faceRight ? FLIGHT_W - sx : sx) * k, y: oy + sy * k }
 }
 
-export function drawFlyer(ctx: CanvasRenderingContext2D, id: FlyerId, t: number, x: number, y: number, s: number, faceRight: boolean, rider?: Appearance) {
+/**
+ * Draw a flyer (and its rider) centred on (x, y) in canvas pixels; `s` is canvas pixels per world
+ * pixel. Order: far wing, body, rider, near wing — so the rider sits between the wings and the
+ * near wing sweeps over their legs. `riderOff` (canvas px) moves the rider off the saddle while
+ * they settle onto it or push off from it.
+ */
+export function drawFlyer(ctx: CanvasRenderingContext2D, id: FlyerId, t: number, x: number, y: number, s: number, faceRight: boolean, rider?: Appearance, riderOff: [number, number] = [0, 0]) {
   const art = flightArt[id]
   const f = flightFrame(id, t)
   const k = art.world * s
@@ -188,7 +181,7 @@ export function drawFlyer(ctx: CanvasRenderingContext2D, id: FlyerId, t: number,
     const hipX = faceRight ? img.width - RIDER_HIP[0] : RIDER_HIP[0]
     const px = ox + (faceRight ? FLIGHT_W - sx : sx) * k
     const py = oy + sy * k
-    ctx.drawImage(img, Math.round(px - hipX * rs), Math.round(py - RIDER_HIP[1] * rs), Math.round(img.width * rs), Math.round(img.height * rs))
+    ctx.drawImage(img, Math.round(px + riderOff[0] - hipX * rs), Math.round(py + riderOff[1] - RIDER_HIP[1] * rs), Math.round(img.width * rs), Math.round(img.height * rs))
   }
   ctx.drawImage(flightLayer(id, f, 'near', faceRight), ox, oy, w, h)
 }
@@ -224,10 +217,27 @@ const SURF_SEAT: Partial<Record<SpeciesId, { seat: [number, number]; head: numbe
 }
 
 /** Travellers flying in to land or surfing in to the beach, as depth-sorted world items. */
-export function ambientItems(a: AmbientState, now: number, proj: (wx: number, wy: number) => { x: number; y: number; s: number }, vh: number): WorldItem[] {
+/**
+ * `present(id)`: whether that travelling trainer is in the world's walker list right now. Around
+ * the hand-overs (stepping off the ground onto the hop, or off the hop onto the ground) the list
+ * updates a frame or two late, so the trip draws them standing on their spot whenever the world
+ * isn't: never both, never neither.
+ */
+export function ambientItems(a: AmbientState, now: number, proj: (wx: number, wy: number) => { x: number; y: number; s: number }, vh: number, present: (id: string) => boolean = () => false): WorldItem[] {
   const items: WorldItem[] = []
   for (const t of a.trips) {
-    if (now - t.t0 >= t.dur) continue
+    if (now - t.t0 >= tripEnds(t)) continue
+    if (t.mode === 'air') {
+      // flying in to land and hopping off, or hopping on and flying off (departure.ts)
+      const d = tripFlight(t)
+      // around each hand-over the walker is drawn here too, overlapping the world's own (see HANDOVER_MS)
+      const tt = now - t.t0
+      const onGround = t.leaving ? tt < DEPARTURE_BOARD_AT : tt >= ARRIVAL_HANDOFF
+      const who = t.leaving ? t.id.replace(/-out$/, '') : t.id
+      const stand: Facing | undefined = onGround && !present(who) ? (d.fromLeft === t.leaving ? 'left' : 'right') : undefined
+      if (t.species in flightArt) items.push(...mountItems(t.leaving ? departureAt(d, now) : arrivalAt(d, now), d, now, proj, vh, t.look, { boarding: t.leaving, wingT: now + t.t0, stand }))
+      continue
+    }
     const pos = tripPosition(t, now)
     const p = proj(pos.x, pos.y)
     if (!inView(p, vh)) continue
@@ -243,12 +253,6 @@ export function ambientItems(a: AmbientState, now: number, proj: (wx: number, wy
         ctx.ellipse(p.x * RES, p.y * RES, 10 * s * sh, 3.5 * s * sh, 0, 0, Math.PI * 2)
         ctx.fill()
         const faceRight = pos.facing === 'right'
-        if (pos.flying && t.species in flightArt) {
-          // the height is measured at the landing spot's scale; the sprite shrinks with distance
-          const fs = s * airScale(pos.alt)
-          drawFlyer(ctx, t.species as FlyerId, now + t.t0, p.x * RES, p.y * RES - lift - 8 * fs, fs, faceRight, t.look)
-          return
-        }
         if (pos.surfing) {
           // the surfer rides low in the water, the trainer sitting on its back
           const art = creatureArtHi[t.species]
@@ -283,51 +287,152 @@ export function ambientItems(a: AmbientState, now: number, proj: (wx: number, wy
   return items
 }
 
-/* ---------------- leaving by air (see departure.ts) ---------------- */
+/* ---------------- travelling by air: landing, boarding, alighting (see departure.ts) ---------------- */
+
+type Proj = (wx: number, wy: number) => { x: number; y: number; s: number }
 
 /**
- * The departure as a depth-sorted world item: the mount (with its shadow) swooping in, landing,
- * the player hopping onto its back, then mount and rider taking off and flying away as one.
- * The rider is the per-direction riding sprite and sits on the mount's saddle frame by frame.
+ * Size steps for a flyer shrinking into the distance: ~4% apart and exactly 1 at full size,
+ * instead of a size that changes every frame. Nearest-neighbour scaling to a new size each frame
+ * makes the pixels shimmer; held for a few frames at a time, the art stays crisp.
  */
-export function departureItems(d: Departure, now: number, proj: (wx: number, wy: number) => { x: number; y: number; s: number }, vh: number, look: Appearance): WorldItem[] {
-  const f = departureAt(d, now)
-  if (f.phase === 'complete' || f.phase === 'prepare') return []
+export function stepScale(r: number): number {
+  if (r >= 1) return 1
+  return 2 ** (Math.round(Math.log2(Math.max(r, 1e-3)) * 24) / 24)
+}
+
+/** How high the hop between the ground and the saddle arcs (world px). */
+const HOP_ARC = 10
+/**
+ * The part of the hop spent crouched on the ground: before the jump when boarding (the push-off),
+ * after it when alighting (absorbing the landing). The jump itself is the rest.
+ */
+const HOP_CROUCH = 0.12
+const smooth = (x: number) => x * x * (3 - 2 * x)
+
+/** A trip by air as a departure/arrival record (its spot, mount and side). */
+export function tripFlight(t: Trip): Departure {
+  return { t0: t.t0, x: t.tx * TILE + 8, y: t.ty * TILE + 14, mount: t.species, fromLeft: t.fromX < 18 }
+}
+
+/** When a trip has nothing left to draw: by air, once the mount has gone; by sea, on arrival. */
+export function tripEnds(t: Trip): number {
+  return t.mode === 'air' ? (t.leaving ? DEPARTURE_TOTAL : ARRIVAL_TOTAL) : t.dur
+}
+
+/**
+ * A mount and its trainer as a depth-sorted world item, from a departure or arrival frame: the
+ * shadow, the mount swooping in or flying off, the hop between the ground and the saddle, and the
+ * rider seated on the saddle frame by frame.
+ *
+ * The hop moves one point, the trainer's hips, from where they stand to the saddle. The walking
+ * and riding sprites share their head and body rows and put the hips on the same pixel, so the
+ * pose can change mid-air without the head or body jumping: only the legs change. It changes just
+ * before landing on the saddle (HOP_SWAP), and on the way up the trainer turns at the top of the
+ * jump from facing the mount to facing the way it will fly. `boarding` false runs it backwards:
+ * hopping forward off the mount onto the spot, facing the way they flew in.
+ */
+export function mountItems(f: MountFrame<string>, d: Departure, now: number, proj: Proj, vh: number, look: Appearance, opts: { boarding: boolean; wingT?: number; stand?: Facing }): WorldItem[] {
+  if (f.phase === 'complete' || f.phase === 'prepare' || f.fade <= 0) return []
   const p = proj(f.x, f.y)
   if (!inView(p, vh)) return []
   const id = d.mount as FlyerId
+  const g = proj(d.x, d.y)
+  // the trainer's feet where the world draws a walker standing on that spot
+  const gf = proj(d.x, d.y + FEET_DY)
+  const wingT = opts.wingT ?? now
   return [
     {
-      depth: f.y,
+      // just behind the trainer's own row: someone standing beside their mount (the world's
+      // walker, before boarding or after alighting) is drawn in front of it, as during the hop
+      depth: f.y - 0.5,
       draw: (ctx) => {
         const s = p.s * RES
-        const fs = s * airScale(f.alt)
-        const lift = f.alt * s
+        // the trainer's spot sets the full size; farther and higher it shrinks in steps
+        const s0 = g.s * RES
+        const fs = s0 * stepScale((p.s / g.s) * airScale(f.alt))
+        ctx.save()
+        ctx.globalAlpha = f.fade
         const sh = Math.max(0.35, 1 - f.alt / 200)
         ctx.fillStyle = 'rgba(20,24,40,0.25)'
         ctx.beginPath()
         ctx.ellipse(p.x * RES, p.y * RES, 12 * s * sh, 4 * s * sh, 0, 0, Math.PI * 2)
         ctx.fill()
-        const mx = p.x * RES
-        const my = p.y * RES - lift - 8 * fs
-        drawFlyer(ctx, id, now, mx, my, fs, f.faceRight, f.aboard ? look : undefined)
-        if (f.phase === 'boarding') {
-          // the hop: from where they stood, up in an arc, landing astride the saddle
-          const seat = saddlePoint(id, now, mx, my, fs, f.faceRight)
-          const from = proj(d.x, d.y)
-          if (!seat) return
-          const rs = OW_WORLD * s
-          const sx = from.x * RES
-          const sy = from.y * RES
-          // where the walker's feet end up when their hips are on the saddle
-          const ex = seat.x
-          const ey = seat.y + (64 - RIDER_HIP[1]) * rs
-          const k = f.hop
-          const x = sx + (ex - sx) * k
-          const y = sy + (ey - sy) * k - Math.sin(k * Math.PI) * 16 * s
-          const img = characterFrames(look)[d.fromLeft ? 'left' : 'right'][k < 0.85 ? 1 : 0]
-          ctx.drawImage(img, Math.round(x - (img.width / 2) * rs), Math.round(y - img.height * rs), Math.round(img.width * rs), Math.round(img.height * rs))
+        if (opts.stand) {
+          // the trainer standing on their spot, exactly as the world draws a walker
+          groundShadow(ctx, g.x * RES, g.y * RES, WALKER_SHADOW, g.s)
+          const img = characterFrames(look)[opts.stand][0]
+          const rs = OW_WORLD * s0
+          ctx.drawImage(img, Math.round(gf.x * RES - (img.width / 2) * rs), Math.round(gf.y * RES - img.height * rs), Math.round(img.width * rs), Math.round(img.height * rs))
         }
+        const mx = p.x * RES
+        const my = p.y * RES - f.alt * s - 8 * fs + Math.round(f.dip * s)
+        const travel: 'left' | 'right' = f.faceRight ? 'right' : 'left'
+        const seat = saddlePoint(id, wingT, mx, my, fs, f.faceRight)
+        if (!seat || f.hop <= 0 || f.hop >= 1) {
+          drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight, f.aboard ? look : undefined)
+          ctx.restore()
+          return
+        }
+        // the hop: a crouch on the ground, then the hips travel from above the trainer's feet to
+        // the saddle in an arc (j: 0–1 through the jump itself)
+        const rs = OW_WORLD * s0
+        const k = f.hop
+        const j = Math.max(0, (k - HOP_CROUCH) / (1 - HOP_CROUCH))
+        const e = smooth(j)
+        const hx0 = gf.x * RES
+        const hy0 = gf.y * RES - (64 - RIDER_HIP[1]) * rs
+        const hx = hx0 + (seat.x - hx0) * e
+        const hy = hy0 + (seat.y - hy0) * e - Math.sin(j * Math.PI) * HOP_ARC * s0
+        // their shadow stays on the ground below, shrinking and fading as they rise onto the mount
+        if (e < 1) groundShadow(ctx, g.x * RES, g.y * RES, WALKER_SHADOW * (1 - 0.3 * Math.sin(j * Math.PI)), g.s, 0.28 * (1 - e))
+        if (k >= HOP_SWAP) {
+          // seated: settling onto the saddle (or about to push off), between the wings
+          drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight, look, [Math.round(hx - seat.x), Math.round(hy - seat.y)])
+        } else {
+          drawFlyer(ctx, id, wingT, mx, my, fs, f.faceRight)
+          const toMount: 'left' | 'right' = f.faceRight ? 'left' : 'right'
+          const facing = opts.boarding && j < 0.5 ? toMount : travel
+          const crouch = k < HOP_CROUCH
+          const img = characterFrames(look)[facing][crouch ? 0 : 1]
+          const ox = hx - (img.width / 2) * rs
+          const oy = hy - RIDER_HIP[1] * rs + (crouch ? rs : 0)
+          ctx.drawImage(img, Math.round(ox), Math.round(oy), Math.round(img.width * rs), Math.round(img.height * rs))
+        }
+        ctx.restore()
+      },
+    },
+  ]
+}
+
+/** The player's departure (departure.ts) as world items. */
+export function departureItems(d: Departure, now: number, proj: Proj, vh: number, look: Appearance): WorldItem[] {
+  return mountItems(departureAt(d, now), d, now, proj, vh, look, { boarding: true })
+}
+
+/**
+ * The creature following you going back into its ball: a red-and-white flash that pulls in to a
+ * point over `k` (0–1). Pixel squares on the world's pixel grid, no smoothing.
+ */
+export function recallItem(x: number, y: number, k: number, proj: Proj, vh: number): WorldItem[] {
+  const p = proj(x, y)
+  if (!inView(p, vh) || k >= 1) return []
+  return [
+    {
+      depth: y + 0.5,
+      draw: (ctx) => {
+        const u = Math.max(1, Math.round(p.s * RES))
+        const cx = Math.round(p.x * RES)
+        const cy = Math.round((p.y - 7 * p.s) * RES)
+        const r = Math.round((1 - k) * 8) * u
+        ctx.fillStyle = '#e8384f'
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI) / 4 + k * 1.2
+          ctx.fillRect(cx + Math.round((Math.cos(a) * r) / u) * u - u, cy + Math.round((Math.sin(a) * r * 0.8) / u) * u - u, 2 * u, 2 * u)
+        }
+        const c = Math.round((k < 0.5 ? 1 + k * 4 : 5 - k * 4) * 0.5) * u + u
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(cx - c, cy - c, 2 * c, 2 * c)
       },
     },
   ]

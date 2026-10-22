@@ -89,3 +89,81 @@ three beam specials is a judgement call (IMPLEMENTED BUT NOT VERIFIED AGAINST OR
   aftermath is longer.
 - BW's camera pans in 3D; here it's a 2D push-in (scale 1.14 on your side, 1.28 on the foe's)
   with the same nearest-neighbour look.
+
+## Flight sequences: reference and confidence record
+
+No footage of BW2's Fly (or of a trainer mounting a flying Pokémon) has been measured, and no
+original sprite sheets were reachable, so nothing below is an original-game measurement. These
+are the site's own values, recorded so later changes can be measured against them.
+
+Status key: **A** compared against original footage; **B** checked visually against an original
+reference without frame measurement; **C** estimated from the Gen V style; **D** tested only in
+the site's own rendering (in a real browser unless marked offline); **E** not yet verified.
+
+| Animation | Value (source: `src/resort/departure.ts`, `ambient.ts`) | Status |
+|---|---|---|
+| Leave prompt → mount appears | 600 ms (prepare; follower recall flash over its second half) | C, D |
+| Mount approach | 2200 ms; from 150 px to the side at 105 px altitude, ease-out to touchdown 30 px beside the trainer | C, D |
+| Boarding hop | 700 ms; crouch held on the ground for the first 12% (84 ms), then a 10 px arc over the rest; turn at the top of the jump; seated pose from 78%; mount sinks 1 px over the last 22%; ground shadow shrinks and fades as they rise (seventh pass, below) | C, D |
+| Take-off + flight away | 1100 + 2800 ms as one curve: climb to 150 px (smoothstep), drift 120 px sideways (done by 75%), 320 px north (from 25%, accelerating), fade over the last 20% | C, D |
+| Size with altitude | `airScale`: 1.0 on the ground → 0.52 at 150 px, times the map's perspective scale; drawn in steps of 2^(1/24) (~2.9%) | C, D |
+| Visitor arrival by air | 2600 ms approach from 150 px altitude, 700 ms alighting hop, then 1100 + 2400 ms empty mount flying away | C, D |
+| Visitor leaving by air | as the player's departure; walker hand-over 250 ms before the hop | C, D |
+| Fade before leaving the page | 450 ms, unchanged | D |
+| Mount facing (left/right, held item on near wing) | native right-facing frames | D (browser, both directions) |
+| Total departure | 7400 ms + 450 ms fade; measured in the browser: phases within one frame of plan, page left at 7867–7877 ms | D |
+| Any of the above against BW2 | — | E |
+
+Remotion wasn't used: there's no original footage to compare against, and the browser contact
+sheets already capture the real renderer frame by frame.
+
+### Changes in the seventh pass (hop polish)
+
+| What | Before | After | Why | Evidence |
+|---|---|---|---|---|
+| Crouch before the jump | crouch frame shown for the first 12%, but the arc was already rising (sin starts at full slope), so the "crouch" left the ground at once | held on the ground for 12% (84 ms), then the jump over the remaining 88% (turn and pose change keyed to the jump, not the whole hop) | the push-off didn't read; it looked like a slide upwards | 1× captures every 45 ms in the browser (`docs/qa/hop-1x-before.png` vs `hop-1x-after-right.png`) |
+| Feet at the start / end of the hop | 1 world px above where the world draws a walker (walkers are drawn at spot + 1) | the same point (`FEET_DY`) | a half-pixel hop at hand-over; visitors' overlap doubled the outline | `render.ts` actor drawing vs `mountItems` |
+| Trainer's shadow during the hop | none (popped off as the hop began, popped on at hand-over) | the walker's own shadow on the ground, shrinking and fading as they rise onto the mount | visible pop at 1× | same captures |
+| Visitor hand-over | both drawn for 250 ms (overlap) | the trip draws the walker only on frames where the world isn't (`present`) | overlap would have doubled the shadow | `visitor-landing-handover.png`, `visitor-boarding-handover.png` |
+| Mount vs trainer on the same row | equal depth: the tie put the mount in front after hand-over, behind during the hop | mount half a row behind: trainer always in front | the visitor popped behind the mount's head at hand-over | first hand-over capture (Megaphawk) |
+
+Timings (phase lengths, totals) are unchanged.
+
+### Frame timing (seventh pass)
+
+Protocol: headless Chrome (60 Hz, visible page), the resort on a fixed tile, one run = enter the
+resort, press BACK → YES (or force a visitor by air), log every `requestAnimationFrame` interval and
+every long task (PerformanceObserver) from 200 ms before the start to 8.2 s after. "Cold" = page
+reloaded before the run; "warm" = left and re-entered the resort. Late frame = interval > 20 ms
+(one missed vsync ≈ 33 ms, two ≈ 50 ms). Script: a scratch DevTools-protocol driver (not in the repo).
+
+| Scenario | Runs | Frames | > 20 ms | > 33 ms | > 50 ms | Where |
+|---|---|---|---|---|---|---|
+| Idle plaza (baseline) | 3 | 1438 | 0 | 0 | 0 | — |
+| Departures, warm (dev) | 6 | 3024 | 0 | 0 | 0 | — |
+| Departures with the old recorder's canvas copies | 6 | 3023 | 1 | 0 | 0 | 8122 ms (after leaving) |
+| Departures, cold (dev) | 5 | 2515 | 5 | 0 | 0 | 8093–8126 ms, 4 of 5 runs (after leaving) |
+| Departures, cold (production build) | 5 | 2517 | 3 | 0 | 0 | 8123–8135 ms ×2 (after leaving); 18 ms after YES ×1 |
+| Departures, 4× CPU throttle | 4 | 2014 | 1 | 1 | 1 | 8145 ms, 62 ms long task (first run, after leaving) |
+| Departures, 8× CPU throttle | 3 | 1507 | 0 | 0 | 0 | 118 ms long task at 8093 ms (first run, after leaving; next frame fell outside the window) |
+| Visitor arrivals by air, cold | 4 | 1947 | 0 | 0 | 0 | — |
+| After the hop changes: departures from the right ×5, left half ×5 (tile 12,19: an NPC on the left landing tiles sent the mount in from the right), from the left ×5 (tile 13,13), visitor arrivals cold ×3, departures at 4× CPU ×3 | 23 | 10554 | 3 | 1 | 0 | every late frame after leaving, in the first run after a reload (8117–8140 ms) |
+
+Findings:
+
+- **No late frame during the flight itself** (0 to ~7870 ms, when the page leaves) in any of these
+  runs, including 8× CPU throttling. A CPU profile of a cold departure shows the page busy ~10% of
+  the time (≈1.3–2.3 ms per frame), flat across approach, hop, take-off and flight; first-use
+  sprite building (rider and walker canvases) ≈7 ms in total, spread across frames; GC ≈6 ms over
+  7.8 s. **TESTED; NO REPRODUCIBLE PERFORMANCE ISSUE FOUND** in the flight.
+- **Reproducible, but outside the flight:** ~250 ms after the page leaves the resort, on the first
+  visit to the main menu after a page load, one frame runs to 33 ms (50 ms / a 62 ms long task with
+  4× throttling). The profile puts it in the main menu mounting its large trainer portrait:
+  `CharacterSprite` encoding layers with `canvas.toDataURL` (12 ms in one frame, 8–10 ms in the
+  next few). Later visits (cached) don't show it. This is the likeliest source of the earlier
+  33 / 50 ms observations, whose recorders kept logging after the page had left. Not changed here
+  (it's the menu, not the flight; one frame on first visit); an optional follow-up.
+- One late frame on the frame YES was pressed (1 of ~40 departures, production, first run):
+  not reproduced, treated as noise.
+- The earlier recorder's full-canvas copies did not cause late frames in the flight.
+

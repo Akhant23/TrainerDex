@@ -3,7 +3,8 @@
  * full size on touchdown), the curve is smooth, and sky flyers stay smaller than the ground.
  */
 import { describe, expect, it } from 'vitest'
-import { airScale, CRUISE_ALT, skyScale, tripPosition, type Trip } from './ambient'
+import { airScale, CRUISE_ALT, skyScale, stepScale, tripFlight, type Trip } from './ambient'
+import { ARRIVAL_MS, arrivalAt } from './departure'
 import { signature as DEFAULT_AVATAR } from '../content/aaryan'
 
 describe('flying scale', () => {
@@ -13,10 +14,10 @@ describe('flying scale', () => {
   })
 
   it('grows smoothly and steadily as a traveller comes in to land', () => {
-    const trip: Trip = { id: 't', mode: 'air', species: 'megaphawk', look: DEFAULT_AVATAR, tx: 10, ty: 10, t0: 0, dur: 2600, leaving: false, seaY: 28, fromX: -3 }
+    const d = { t0: 0, x: 168, y: 174, mount: 'megaphawk' as const, fromLeft: true }
     let last = 0
-    for (let ms = 0; ms <= 2600; ms += 50) {
-      const sc = airScale(tripPosition(trip, ms).alt)
+    for (let ms = 0; ms <= ARRIVAL_MS.approach; ms += 50) {
+      const sc = airScale(arrivalAt(d, ms).alt)
       expect(sc).toBeGreaterThanOrEqual(last - 1e-9)
       // no visible jumps: under 3% between 50 ms frames
       if (ms > 0) expect(sc - last).toBeLessThan(0.03)
@@ -25,9 +26,23 @@ describe('flying scale', () => {
     expect(last).toBe(1)
   })
 
-  it('takes off along the same curve in reverse', () => {
-    const base = { id: 't', mode: 'air' as const, species: 'megaphawk' as const, look: DEFAULT_AVATAR, tx: 10, ty: 10, t0: 0, dur: 2600, seaY: 28, fromX: -3 }
-    for (const ms of [0, 650, 1300, 1950, 2600]) expect(tripPosition({ ...base, leaving: true }, ms).alt).toBeCloseTo(tripPosition({ ...base, leaving: false }, 2600 - ms).alt, 6)
+  it('shrinks in small steps, exactly full size on the ground', () => {
+    expect(stepScale(1)).toBe(1)
+    let last = 1
+    for (let r = 1; r >= 0.2; r -= 0.005) {
+      const q = stepScale(r)
+      expect(q).toBeLessThanOrEqual(last + 1e-12)
+      // within one step of the true size, and steps under 3%
+      expect(Math.abs(Math.log2(q / r))).toBeLessThanOrEqual(1 / 48 + 1e-9)
+      if (q < last) expect(last / q).toBeLessThan(1.03)
+      last = q
+    }
+  })
+
+  it('draws a trip by air from its landing spot and side', () => {
+    const t: Trip = { id: 't', mode: 'air', species: 'megaphawk', look: DEFAULT_AVATAR, tx: 10, ty: 10, t0: 5, dur: 0, leaving: false, seaY: 28, fromX: 41 }
+    expect(tripFlight(t)).toEqual({ t0: 5, x: 168, y: 174, mount: 'megaphawk', fromLeft: false })
+    expect(tripFlight({ ...t, fromX: -3 }).fromLeft).toBe(true)
   })
 
   it('sky flyers are always smaller than a traveller just landing', () => {

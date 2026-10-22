@@ -49,6 +49,11 @@ The mounts work the same way: each flyer has its own right-facing frames (`frame
 mirrored and then shaded, so the light stays upper-left and a held item (Hootour's flag) stays on
 the near wing. Capture: `docs/qa/mounts-left-flipped-native.png`.
 
+The riding sprite is the walking profile with the legs bent over the mount: same canvas
+(48×64), same head and body rows, hips on the same pixel (`RIDER_HIP`, y 46). That's what lets
+the hop onto or off a mount change pose mid-air without the head or body moving (GEN5-AUDIT.md,
+sixth pass).
+
 ## Identity kept at this size (Aaryan)
 
 Mullet with the wavy top, bold rectangular glasses, white jersey with red sleeve stripes, side

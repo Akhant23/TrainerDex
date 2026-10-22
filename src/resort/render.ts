@@ -188,6 +188,22 @@ export interface WorldItem {
   draw: (ctx: CanvasRenderingContext2D) => void
 }
 
+/** Where the world draws a walker's feet: one world pixel below their spot. */
+export const FEET_DY = 1
+/** A walker's shadow, world px across. */
+export const WALKER_SHADOW = 7
+
+/**
+ * A soft contact shadow on the ground at canvas point (x, y), `r` world px across at scale `s`
+ * (the projected scale). The same one under every walker and prop.
+ */
+export function groundShadow(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, s: number, alpha = 0.28) {
+  ctx.fillStyle = `rgba(20,24,40,${alpha})`
+  ctx.beginPath()
+  ctx.ellipse(x, y, r * s * RES, r * 0.42 * s * C * RES, 0, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Camera, actors: Actor[], now: number, creatures: CreatureActor[] = [], vh = VIEW_H, extras: WorldExtras = {}) {
   const Y0 = vh * FOCUS
   const outdoor = !!m.outdoor
@@ -251,10 +267,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   const shadow = (bx: number, by: number, rx: number) => {
     const p = project(cam, bx, by, vh)
     if (!inView(p, vh)) return
-    ctx.fillStyle = 'rgba(20,24,40,0.28)'
-    ctx.beginPath()
-    ctx.ellipse(p.x * RES, p.y * RES, rx * p.s * RES, rx * 0.42 * p.s * C * RES, 0, 0, Math.PI * 2)
-    ctx.fill()
+    groundShadow(ctx, p.x * RES, p.y * RES, rx, p.s)
   }
 
   const lamps: Array<[number, number]> = []
@@ -303,7 +316,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   for (const a of actors) {
     if (!onMap(a.x, a.y)) continue
     const img = characterFrames(a.look)[a.facing][a.frame]
-    items.push({ depth: a.y, draw: () => (shadow(a.x, a.y, 7), sprite(img, a.x, a.y + 1, OW_W / 2, OW_WORLD)) })
+    items.push({ depth: a.y, draw: () => (shadow(a.x, a.y, WALKER_SHADOW), sprite(img, a.x, a.y + FEET_DY, OW_W / 2, OW_WORLD)) })
   }
   for (const c of creatures) {
     if (!creatureArtHi[c.id] || !onMap(c.x, c.y)) continue

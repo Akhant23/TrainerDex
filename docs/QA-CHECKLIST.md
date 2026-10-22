@@ -19,7 +19,8 @@ What the tests guard (behaviour, not pixels, so correct art changes don't break 
 | Trainer gestures | `src/sprites/gestures.test.ts` | start/end on idle, valid at 1× and 2× |
 | Flying scale | `src/resort/ambient.test.ts` | airScale endpoints, smooth growth, take-off mirrors landing |
 | NPC persistence | `src/resort/resort.test.ts` | visitors keep their tiles across arrivals, departures and player movement |
-| Departure | `src/resort/departure.test.ts` | phase order, smooth per-frame movement, lands beside (not on) the player, rider aboard only after boarding, both directions mirror, mount choice |
+| Departure + arrival | `src/resort/departure.test.ts` | phase order, smooth per-frame movement, lands beside (not on) the trainer, rider aboard exactly from the pose change, take-off without a stall, fades out exactly at the end, visitors hand over when their feet touch down, landing side avoids blocked tiles, both directions mirror, mount choice |
+| Distance scaling | `src/resort/ambient.test.ts` | arrival grows smoothly to full size; stepped shrinking is exact on the ground, within one step of true size, steps under 3% |
 | Mount direction | `src/sprites/creatures.test.ts` | every flyer has valid right-facing frames that aren't just the left ones mirrored |
 
 ## Previews
@@ -35,10 +36,17 @@ What the tests guard (behaviour, not pixels, so correct art changes don't break 
 - `window.__aaryanGesture('wave')`: play a trainer gesture on the main menu.
 - `window.__resortAmbient.nextGuest = 0`: bring a travelling trainer in now.
 - `window.__resortChars()`: everyone on the current map and where they stand.
-- `window.__resortMe()`: the player's tile, facing and whether a departure is running.
+- `window.__resortMe()`: the player's tile, facing and the running departure (start time, spot, mount, side).
+- `window.__resortGuestsLeave()`: send every travelling trainer home now (to watch them board).
 
 A hidden browser tab throttles animation frames and timers, so timing checks must run with the
-page visible.
+page visible. A locked Mac screen hides every Chromium page, including the in-app browser pane;
+headless Chrome (`--headless=new` with a scratch `--user-data-dir`, driven over the DevTools
+protocol) keeps the page visible at 60 fps. If headless Chrome brings `chrome://settings/help` to
+the front, close that tab or the game tab stops animating. Frame timing: log every
+`requestAnimationFrame` interval and long task across the event, several runs each cold (reload)
+and warm, and count frames over 20 / 33 / 50 ms and where they fall (GEN5-TIMING.md has the
+baseline). A single late frame isn't a defect until it repeats at the same point.
 
 ## Manual pass
 
@@ -72,7 +80,13 @@ Use a 1280×800 desktop window and a 375×812 phone viewport.
 16. **Reduced motion**: Settings → reduced motion. No camera moves, short effect timings, no
     gestures or idles.
 17. **Leaving the resort**: in the plaza press BACK (or EXIT in the menu). The prompt appears;
-    keys don't move you. NO: the box closes and you can walk. YES: a flyer lands beside you, you
-    hop on, it lifts off and flies away, then the main menu. Repeat from the left and the right
-    half of the plaza (the mount faces the way it flies; Hootour's flag is on the near wing).
-    Indoors or with reduced motion it fades straight out.
+    keys don't move you. NO: the box closes and you can walk. YES: the follower flashes back into
+    its ball, a flyer lands beside you (not on anyone), you crouch, jump, turn at the top and
+    settle onto the saddle with no jump in your head or body; it lifts off, flies on and away
+    north, shrinking, and fades out; then the main menu. Repeat from the left and the right half
+    of the plaza (the mount faces the way it flies; Hootour's flag is on the near wing). Keys,
+    BACK and EXIT during it do nothing. Indoors or with reduced motion it fades straight out.
+18. **Visitors by air**: `__resortAmbient.nextGuest = 0` until one flies in: the mount lands
+    beside their spot, they hop off onto it and stay; the mount flies away empty. Then
+    `__resortGuestsLeave()`: they turn, their mount lands, they hop on and fly off. No visitor
+    flickers or vanishes at the hand-overs; `__resortChars()` shows no one else moved.
