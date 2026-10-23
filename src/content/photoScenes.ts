@@ -11,6 +11,7 @@
  */
 import type { Appearance, PoseFrame } from '../sprites/character'
 import { HANDS_BEHIND_HEAD } from '../sprites/gestures'
+import type { Outfit } from '../sprites/shirtPrints'
 import { signature } from './aaryan'
 
 export type SceneBackdrop = 'windows' | 'hall' | 'bags' | 'camp' | 'studio' | 'party' | 'lounge' | 'cinema' | 'cafe' | 'street' | 'store' | 'forest' | 'concert' | 'shelter'
@@ -29,6 +30,8 @@ export interface CastMember {
   z?: number
   /** this is Aaryan (for the accessible description) */
   me?: boolean
+  /** a printed shirt, long undersleeves or gloves from the photo (sprites/shirtPrints.ts) */
+  outfit?: Outfit
 }
 
 export interface PhotoScene {
@@ -57,7 +60,8 @@ const fingerGuns: PoseFrame = { back: { el: [21, 52], wr: [27, 47], hand: 'point
 const armUp: PoseFrame = { front: { el: [60, 32], wr: [62, 18], hand: 'pointOut' }, mouth: 'grin' }
 const armAround: PoseFrame = { front: { el: [64, 40], wr: [76, 36], hand: 'fist' } }
 const hold: PoseFrame = { front: { el: [61, 50], wr: [62, 45], hand: 'fist' }, mouth: 'smirk' }
-const phoneUp: PoseFrame = { back: { el: [22, 38], wr: [32, 26], hand: 'fist' }, front: { el: [58, 38], wr: [48, 26], hand: 'fist' }, eyes: 'down', mouth: 'calm' }
+// one arm raised high, holding the phone up beside his head to frame the view (his face stays clear)
+const phoneUp: PoseFrame = { front: { el: [59.5, 32], wr: [58, 22.5], hand: 'fist' }, mouth: 'calm' }
 const glovesUp: PoseFrame = { back: { el: [15, 34], wr: [17, 21], hand: 'open' }, front: { el: [65, 34], wr: [63, 21], hand: 'open' }, mouth: 'calm' }
 const peace: PoseFrame = { front: { el: [58, 51], wr: [50, 48], hand: 'open' }, mouth: 'smirk' }
 const armsCrossed: PoseFrame = { back: { el: [25, 53], wr: [47, 51], hand: 'hidden' }, front: { el: [55, 53], wr: [33, 51], hand: 'fist' }, mouth: 'calm' }
@@ -113,10 +117,10 @@ export const photoScenes: Record<string, PhotoScene> = {
   '07-kit-check': {
     backdrop: 'lounge',
     cast: [
-      { x: 70, look: friend({ skin: 'brown', hair: 'curly', top: 'jersey', topColour: 'red', accentColour: 'navy' }), pose: bothForward },
-      { me: true, x: 166, look: me({ top: 'jersey', topColour: 'white', accentColour: 'black', bottom: 'joggers' }), pose: fingerGuns, z: 1 },
+      { x: 70, look: friend({ skin: 'brown', hair: 'curly', top: 'tee', topColour: 'red' }), outfit: { print: 'webStripes', underSleeves: 'black' }, pose: bothForward },
+      { me: true, x: 166, look: me({ top: 'tee', topColour: 'white', bottom: 'joggers', accessories: ['chain'] }), outfit: { print: 'spiderJersey', underSleeves: 'black' }, pose: fingerGuns, z: 1 },
     ],
-    alt: 'Pixel Aaryan in a white spider-web jersey striking a pose next to a friend in a red and blue football kit.',
+    alt: 'Pixel Aaryan in a white jersey with a big navy spider, black sleeves underneath, striking a pose next to a friend in a red-and-navy striped kit.',
   },
   '08-player-two': {
     backdrop: 'cinema',
@@ -156,20 +160,20 @@ export const photoScenes: Record<string, PhotoScene> = {
   '13-hike': {
     backdrop: 'forest',
     cast: [{ me: true, x: 120, y: 12, look: me({ top: 'tee', topColour: 'white', accentColour: 'white', accessories: ['bag'] }), pose: phoneUp }],
-    props: [{ id: 'phone', x: 120, y: 62, front: true }],
-    alt: 'Pixel Aaryan in a white tee with a crossbody bag, holding his phone up to snap a rainforest waterfall.',
+    props: [{ id: 'phone', x: 154, y: 36, front: true }],
+    alt: 'Pixel Aaryan in a white tee with a crossbody bag, holding his phone up high beside his head to snap a rainforest waterfall.',
   },
   '14-front-row': {
     backdrop: 'concert',
     cast: [
-      { me: true, x: 82, look: me({ top: 'jersey', topColour: 'white', accentColour: 'black', accessories: ['bag'] }) },
-      { x: 162, look: friend({ skin: 'brown', hair: 'short', top: 'jersey', topColour: 'red', accentColour: 'black', accessories: ['bag', 'chain', 'bracelet'], face: 'smirk' }), pose: peace, z: 1 },
+      { me: true, x: 82, look: me({ top: 'tee', topColour: 'white', accessories: ['bag'] }), outfit: { print: 'webTee' } },
+      { x: 162, look: friend({ skin: 'brown', hair: 'short', top: 'tee', topColour: 'black', accessories: ['bag', 'chain', 'bracelet'], face: 'smirk' }), outfit: { print: 'redStripes' }, pose: peace, z: 1 },
     ],
-    alt: 'Pixel Aaryan in a white spider-web tee and a friend in a red jersey throwing up a peace sign in a crowd under stage lights.',
+    alt: 'Pixel Aaryan in a white tee printed all over with a black spider web, and a friend in a black jersey with red stripes throwing up a peace sign in a crowd under stage lights.',
   },
   '15-blonde-wig': {
     backdrop: 'shelter',
-    cast: [{ me: true, x: 120, look: me({ hair: 'long', hairColour: 'blonde', top: 'jersey', topColour: 'pink', accentColour: 'blue', accessories: ['chain'] }), pose: glovesUp }],
-    alt: 'Pixel Aaryan in a bright blonde wig and a pink anime jersey, both hands up, under a picnic shelter.',
+    cast: [{ me: true, x: 120, look: me({ hair: 'long', hairColour: 'blonde', top: 'tee', topColour: 'white', accessories: ['chain'] }), outfit: { print: 'animeJersey', gloves: 'white' }, pose: glovesUp }],
+    alt: 'Pixel Aaryan in a bright blonde wig, white gloves and a pastel anime jersey with pink sleeves, both hands up, under a picnic shelter.',
   },
 }

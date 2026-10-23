@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { atResolution, paletteFor, renderPose } from '../sprites/character'
 import { hexToRgba, type Palette, type Pixels } from '../sprites/pixels'
+import { PRINT_PALETTE, renderOutfit } from '../sprites/shirtPrints'
 import { flipX } from '../sprites/raster'
 import { photoScenes, type PhotoScene, type SceneBackdrop, type SceneProp } from '../content/photoScenes'
 import { crispScale } from './CharacterSprite'
@@ -238,11 +239,13 @@ export function drawScene(ctx: Ctx, scene: PhotoScene) {
   BACKDROPS[scene.backdrop](ctx)
   for (const p of scene.props ?? []) if (!p.front) PROPS[p.id](ctx, p.x / 2, p.y / 2, !!p.flip)
   for (const m of [...scene.cast].sort((a, b) => (a.z ?? 0) - (b.z ?? 0))) {
-    const key = JSON.stringify([m.look, m.pose ?? {}, !!m.flip])
+    const key = JSON.stringify([m.look, m.pose ?? {}, !!m.flip, m.outfit ?? null])
     let c = charCanvas.get(key)
     if (!c) {
-      const px = atResolution(2, () => renderPose(m.look, m.pose ?? {}))
-      c = pixelsCanvas(key, m.flip ? flipX(px) : px, paletteFor(m.look))
+      // a printed shirt (or undersleeves, gloves) from the photo is painted over the plain render
+      const outfit = m.outfit
+      const px = atResolution(2, () => (outfit ? renderOutfit(m.look, m.pose ?? {}, outfit) : renderPose(m.look, m.pose ?? {})))
+      c = pixelsCanvas(key, m.flip ? flipX(px) : px, outfit ? { ...paletteFor(m.look), ...PRINT_PALETTE } : paletteFor(m.look))
     }
     ctx.drawImage(c, Math.round(m.x - c.width / 2), Math.round(m.y ?? 8))
   }

@@ -602,7 +602,7 @@ function hand(g: Raster, cx: number, cy: number, mirror: boolean) {
 }
 
 /** The fixed arm poses (idle, VS point, victory fist), as articulated specs. */
-const ARM_POSES: Record<ArmPose, { back: ArmSpec; front: ArmSpec }> = {
+export const ARM_POSES: Record<ArmPose, { back: ArmSpec; front: ArmSpec }> = {
   // the far arm hangs relaxed close to the body with a soft bend; the near hand hooks a thumb in the pocket
   idle: { back: { el: [25.4, 54], wr: [25.8, 65.5], hand: 'relaxed' }, front: { el: [56.4, 53], wr: [51.6, 64], hand: 'hooked' } },
   // VS screen: arm thrust out to the side, finger pointing at the challenger
@@ -617,7 +617,7 @@ function arm(a: Appearance, side: 'back' | 'front', pose: ArmPose): Pixels {
 
 const lerpPt = (p: Pt, q: Pt, k: number): Pt => [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k]
 /** How far down the upper arm a short sleeve reaches. */
-const SLEEVE_END = 0.55
+export const SLEEVE_END = 0.55
 
 /**
  * One arm, shoulder → elbow → wrist, built the same way in every pose and view so it never
