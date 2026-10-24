@@ -41,17 +41,23 @@ async function sha256(text: string): Promise<string> {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+/**
+ * Ask Cloudflare whether the Turnstile token is good. Returns Cloudflare's error codes when it isn't
+ * (logged, never the secret): "invalid-input-secret" / "missing-input-secret" mean this server's
+ * TURNSTILE_SECRET_KEY is wrong or unset — a set-up problem, not the visitor's fault.
+ */
+async function verifyTurnstile(token: string, ip: string): Promise<{ ok: boolean; codes: string[] }> {
   const secret = env('TURNSTILE_SECRET_KEY')
-  if (!secret) return false
+  if (!secret) return { ok: false, codes: ['missing-input-secret'] }
   const form = new FormData()
   form.append('secret', secret)
   form.append('response', token)
   if (ip) form.append('remoteip', ip)
   const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form })
-  const data = (await res.json()) as { success?: boolean }
-  return data.success === true
+  const data = (await res.json()) as { success?: boolean; 'error-codes'?: string[] }
+  return { ok: data.success === true, codes: data['error-codes'] ?? [] }
 }
+const SETUP_CODES = ['invalid-input-secret', 'missing-input-secret']
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('Origin')
@@ -74,7 +80,10 @@ Deno.serve(async (req) => {
   }
 
   const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim()
-  if (!(await verifyTurnstile(String(body.turnstileToken ?? ''), ip))) {
+  const human = await verifyTurnstile(String(body.turnstileToken ?? ''), ip)
+  if (!human.ok) {
+    console.warn('turnstile rejected:', human.codes.join(',') || 'no codes')
+    if (human.codes.some((c) => SETUP_CODES.includes(c))) return json({ error: 'The human check isn’t set up correctly on the server yet. Please try again later.' }, 503, origin)
     return json({ error: 'Couldn’t verify you’re human. Please try the check again.' }, 400, origin)
   }
 
