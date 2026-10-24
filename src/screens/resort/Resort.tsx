@@ -7,19 +7,19 @@ import { species, type SpeciesId } from '../../battle/data'
 import { challengeSetup, floors, floorSetup, unlockedSpecies } from '../../battle/tower'
 import { regulars } from '../../resort/regulars'
 import { formatRecord, type BattleRecord } from '../../../supabase/functions/_shared/trainer'
-import { maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, PLAZA_X, type MapId, type ResortMap, type VisitorSpot, type Warp } from '../../resort/maps'
+import { ARENA_SPOT, maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, PLAZA_X, type ArenaId, type MapId, type ResortMap, type VisitorSpot, type Warp } from '../../resort/maps'
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { skyAt, skyLabel } from '../../resort/sky'
 import { ambientItems, departureItems, drawSkyFlyers, MOUNTS, newAmbient, recallItem, SURFERS, tickFlyers, tripEnds, type AmbientState } from '../../resort/ambient'
 import { staff } from '../../resort/npcs'
 import { ARRIVAL_HANDOFF, DEPARTURE_BOARD_AT, departureAt, HANDOVER_MS, departureMount, landingSide, type Departure } from '../../resort/departure'
-import { WALK_CYCLE, type Facing } from '../../sprites/overworld'
+import { strideFrame, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
 import { audio } from '../../systems/audio'
 import { useSettings } from '../../systems/settings'
 import { progress } from '../../systems/progress'
-import { recordResult, resortSave, useResortSave } from '../../systems/resortSave'
+import { playerLook, recordResult, resortSave, useResortSave } from '../../systems/resortSave'
 import { setReturnTo } from '../../systems/returnTo'
 import { fetchTrainers, saveTrainer, syncTrainer, trainersOnline, type OnlineTrainer } from '../../systems/trainers'
 import { ChoiceMenu } from '../../ui/ChoiceMenu'
@@ -200,7 +200,7 @@ export default function Resort() {
         title={`FLOOR ${fight.floor} · ${stage.title}`}
         opponent={{ look: stage.look, name: 'AARYAN', tag: `FLOOR ${fight.floor} · ${stage.title}`, winLines: [`AARYAN: ${line(`tower.${stage.id}.defeat`)}`], loseLines: [`AARYAN: ${line('tower.lose')}`] }}
         mode="tower"
-        arena={{ map: `floor${fight.floor}` as MapId, x: FLOOR_BOSS.x, y: FLOOR_BOSS.y + 3 }}
+        arena={{ map: `arena${fight.floor}` as ArenaId, ...ARENA_SPOT }}
         recordWin={fight.floor === 5 ? 'champion' : null}
         onExit={(_to, won) => {
           if (won) {
@@ -304,7 +304,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
     return () => ro.disconnect()
   }, [])
   const tagRefs = useRef(new Map<string, HTMLDivElement>())
-  const me = useRef({ ...world.get(), moving: null as null | { tx: number; ty: number; t0: number; dur: number }, turnAt: 0, bumpAt: 0 })
+  const me = useRef({ ...world.get(), moving: null as null | { tx: number; ty: number; t0: number; dur: number }, turnAt: 0, bumpAt: 0, steps: 0 })
   // your lead creature follows one step behind
   const pet = useRef({ ...(() => { const w = world.get(); return petSpot(w.map, w.x, w.y, w.facing) })(), moving: null as null | { fx: number; fy: number; tx: number; ty: number; t0: number; dur: number } })
   const held = useRef<Facing[]>([])
@@ -609,6 +609,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
             } else {
               const dur = run.current ? RUN_MS : WALK_MS
               m.moving = { tx: t.x, ty: t.y, t0: now, dur }
+              m.steps++
               // the creature steps into the tile you just left
               const pt = pet.current
               // finish its previous step first, or it snaps back a tile when you keep walking
@@ -633,7 +634,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
 
       // camera follows the player's feet; the world is drawn in 2.5D
       const cam = cameraFor(mp, px + 8, py + 14)
-      const walkFrame = WALK_CYCLE[Math.floor(now / 140) % 4]
+      const walkFrame = strideFrame(k, m.steps)
       const actors: Actor[] = charsRef.current.map((c) => ({ look: c.look, facing: c.facing, frame: 0, x: c.x * TILE + 8, y: c.y * TILE + 14 }))
       const dep = departure.current
       const depFrame = dep ? departureAt(dep, now) : null
@@ -644,7 +645,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         m.turnAt = now
       }
       // once they hop on, the player is drawn by the departure (on the hop, then as the rider)
-      if (!depFrame || depFrame.standing) actors.push({ look: resortSave.get().avatar ?? DEFAULT_AVATAR, facing: m.facing, frame: m.moving ? walkFrame : 0, x: px + 8, y: py + 14 })
+      if (!depFrame || depFrame.standing) actors.push({ look: playerLook(), facing: m.facing, frame: m.moving ? walkFrame : 0, x: px + 8, y: py + 14 })
       if (dep && depFrame?.phase === 'complete' && !dep.done) {
         // gone over the horizon: fade out and leave the way the exit always has
         dep.done = true
@@ -677,7 +678,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         skyLayer: mp.id === 'plaza' ? (c, horizonY) => drawSkyFlyers(c, amb, now, horizonY) : undefined,
         items: (proj) => [
           ...(mp.id === 'plaza' ? ambientItems(amb, now, proj, viewH.current, (id) => charsRef.current.some((c) => c.id === id)) : []),
-          ...(dep ? departureItems(dep, now, proj, viewH.current, resortSave.get().avatar ?? DEFAULT_AVATAR) : []),
+          ...(dep ? departureItems(dep, now, proj, viewH.current, playerLook()) : []),
           ...(lead && recall > 0 && recall < 1 ? recallItem(petX, petY, recall, proj, viewH.current) : []),
         ],
       })
@@ -1053,7 +1054,7 @@ function PartyPC({ onDone }: { onDone: (party: SpeciesId[]) => void }) {
         <p className="font-display m-0 text-[15px] text-dex-red">BOX: YOUR CREATURES</p>
         <ul className="m-0 mt-1 list-none space-y-1 p-0 text-[14px]">
           <li>▸ Pick up to 3 for your party, in battle order.</li>
-          <li>▸ Clear tower floors to unlock more of Aaryan’s creatures.</li>
+          <li>▸ Clear tower floors to unlock more of my creatures.</li>
         </ul>
       </PixelBox>
       <div className="grid grid-cols-3 gap-2">

@@ -88,7 +88,7 @@ export const badges: Badge[] = [
     org: 'UNSW Law Society · Arc – UNSW Student Life',
     dates: 'Dec 2024 – Jun 2026',
     description:
-      'As UNSW Law Society Marketing Coordinator he trained and led six Marketing Directors and wrote the portfolio’s guidelines. As Arc’s O-Week Tours Coordinator he designed routes, rosters and volunteer training for tours for 3,500 first-year students — the most since COVID.',
+      'As UNSW Law Society Marketing Coordinator I trained and led six Marketing Directors and wrote the portfolio’s guidelines. As Arc’s O-Week Tours Coordinator I designed routes, rosters and volunteer training for tours for 3,500 first-year students — the most since COVID.',
     skills: ['Team leadership', 'Training design', 'Event logistics'],
     evidence: ['lawsoc-marketing-coordinator', 'arc-tours-coordinator', 'arc-squad-leader'],
     sources: ['resume', 'linkedinVolunteering', 'aaryan'],

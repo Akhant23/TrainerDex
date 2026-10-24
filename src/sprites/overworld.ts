@@ -636,3 +636,12 @@ export function riderQuarterFor(a: Appearance, h: -1 | 1): Pixels {
 
 /** Walk cycle order: stand, step A, stand, step B. */
 export const WALK_CYCLE = [0, 1, 0, 2] as const
+/**
+ * The walk frame for a step `k` (0–1) of the way across a tile, BW-style: a stride for the first
+ * half of the step and the standing frame for the second, the stride alternating feet tile by tile
+ * (`step` counts tiles walked). Tied to the step rather than a clock, so a walk always starts on a
+ * stride and every tile looks the same, at any speed.
+ */
+export function strideFrame(k: number, step: number): 0 | 1 | 2 {
+  return k < 0.55 ? (step % 2 ? 1 : 2) : 0
+}

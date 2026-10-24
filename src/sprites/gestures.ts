@@ -79,17 +79,22 @@ function lerpHeld(a: Held | undefined, b: Held | undefined, k: number): Held | u
   return Object.keys(out).length ? out : undefined
 }
 
+/** In-between frames per key's `tween`, and how long each shows (a tween step was 70ms; now two of 35ms). */
+const TWEEN_DENSITY = 2
+export const TWEEN_MS = 35
+
 /** Expand keyframes into frames: tweened arms (and anything they hold) in between, face and hair changes on arrival. */
 function build(keys: Key[]): GestureFrame[] {
   const out: GestureFrame[] = []
   let prev: PoseFrame = {}
   for (const key of keys) {
-    const n = key.tween ?? 2
+    // twice the in-betweens each key asks for, each half as long: the same timing, smoother motion
+    const n = (key.tween ?? 2) * TWEEN_DENSITY
     for (let i = 1; i <= n; i++) {
       const k = i / (n + 1)
       out.push({
         frame: { ...prev, back: lerpArm('back', prev.back, key.frame.back, k, key.swing), front: lerpArm('front', prev.front, key.frame.front, k, key.swing), held: lerpHeld(prev.held, key.frame.held, k) },
-        ms: 70,
+        ms: TWEEN_MS,
       })
     }
     out.push({ frame: key.frame, ms: key.hold })

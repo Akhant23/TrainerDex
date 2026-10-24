@@ -47,6 +47,17 @@
   /* motion: game UI moves in steps, never smooth tweens */
   --gv-fast: 90ms;
   --gv-pulse: 1.1s;
+
+  /*
+   * Motion. One convention for everything that *moves* (slides, entrances, attacks, camera): a
+   * continuous eased curve with enough keyframes for the in-between poses, never a handful of
+   * steps, which read as a sprite teleporting. Things that *change frame* (blinks, hit flashes,
+   * sprite-sheet frames, the one-pixel breathing bob) stay stepped, as BW's sprites do.
+   */
+  --ease-move: cubic-bezier(0.2, 0.75, 0.25, 1); /* decelerate into place: entrances, slides */
+  --ease-swing: cubic-bezier(0.45, 0, 0.3, 1); /* out and back: attacks, hops, dodges */
+  --ease-drop: cubic-bezier(0.55, 0, 0.8, 0.3); /* accelerate away: faints, exits */
+  --ease-pop: cubic-bezier(0.3, 1.35, 0.5, 1); /* overshoot and settle: the VS mark, entrances */
 }
 @media (min-width: 768px) {
   :root {
@@ -578,11 +589,14 @@ body {
   transform: scaleX(0);
 }
 .wipe--cover > span {
-  animation: wipe-in 220ms steps(6) forwards;
+  animation: wipe-in 200ms var(--ease-swing) forwards;
 }
 .wipe--reveal > span {
   transform: scaleX(1);
-  animation: wipe-out 220ms steps(6) forwards;
+  animation: wipe-out 200ms var(--ease-swing) forwards;
+}
+.wipe > span:nth-child(even) {
+  animation-delay: 20ms;
 }
 .wipe > span:nth-child(odd) {
   transform-origin: left;
@@ -620,14 +634,24 @@ body {
   }
 }
 .hop {
-  animation: hop 380ms steps(5);
+  animation: hop 440ms var(--ease-swing);
+  transform-origin: 50% 100%;
 }
 @keyframes hop {
-  40% {
-    transform: translateY(-14%);
+  15% {
+    transform: translateY(-7%);
   }
-  70% {
-    transform: translateY(-4%);
+  35% {
+    transform: translateY(-15%);
+  }
+  55% {
+    transform: translateY(-11%);
+  }
+  78% {
+    transform: translateY(-2%);
+  }
+  88% {
+    transform: translateY(0) scale(1.04, 0.96);
   }
 }
 .shine {
@@ -652,7 +676,7 @@ body {
   }
 }
 .sparkle {
-  animation: sparkle 1.4s steps(4) infinite;
+  animation: sparkle 1.4s ease-in-out infinite;
 }
 @keyframes sparkle {
   0%,
@@ -768,6 +792,28 @@ body {
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
 }
+/* a battler's contact shadow, centred on the point its feet stand on (Fight.tsx BattleShadow) */
+.battle-shadow {
+  position: absolute;
+  transform: translate(-50%, -55%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgb(20 22 40 / 0.42) 0 45%, rgb(20 22 40 / 0.22) 62%, transparent 72%);
+  pointer-events: none;
+  transition: opacity 420ms var(--ease-drop);
+}
+/* a flyer holds itself a little above its platform, rising and settling slowly */
+.battle-hover {
+  translate: 0 -14%;
+  animation: battle-hover 2.4s ease-in-out infinite;
+}
+@keyframes battle-hover {
+  50% {
+    translate: 0 -19%;
+  }
+}
+[data-motion='reduced'] .battle-hover {
+  animation: none;
+}
 .flip {
   transform: scaleX(-1);
 }
@@ -806,26 +852,81 @@ body {
   animation-duration: calc(900ms * var(--tempo, 1));
 }
 .anim-enter {
-  animation: b-enter 420ms steps(6);
+  animation: b-enter 520ms var(--ease-pop);
 }
 @keyframes b-enter {
   from {
-    transform: scale(0.1);
+    scale: 0.1;
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+}
+/* the foe trainer walks on from the right edge of the field and stops on their platform; you slide
+   in from the left (your back to the camera), then step out of shot as your creature goes in */
+.anim-trainer-in {
+  animation: b-trainer-in 640ms var(--ease-move);
+}
+@keyframes b-trainer-in {
+  from {
+    translate: 70% 0;
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+}
+.anim-trainer-out {
+  animation: b-trainer-out 360ms var(--ease-drop) forwards;
+}
+@keyframes b-trainer-out {
+  to {
+    translate: 60% 0;
     opacity: 0;
   }
 }
-.anim-lunge-right {
-  animation: b-lunge-r 360ms steps(6);
+.anim-me-in {
+  animation: b-me-in 640ms var(--ease-move);
 }
+@keyframes b-me-in {
+  from {
+    translate: -70% 0;
+  }
+}
+.anim-me-out {
+  animation: b-me-out 380ms var(--ease-drop) forwards;
+}
+@keyframes b-me-out {
+  to {
+    translate: -80% 0;
+  }
+}
+.anim-lunge-right {
+  animation: b-lunge-r 360ms var(--ease-swing);
+}
+/* a wind-up back, the strike, a short recoil, then home */
 @keyframes b-lunge-r {
+  18% {
+    translate: -3% 1%;
+  }
   45% {
     translate: 14% -6%;
   }
+  65% {
+    translate: 6% -2%;
+  }
 }
 .anim-lunge-left {
-  animation: b-lunge-l 360ms steps(6);
+  animation: b-lunge-l 360ms var(--ease-swing);
 }
 @keyframes b-lunge-l {
+  18% {
+    translate: 3% -1%;
+  }
+  65% {
+    translate: -6% 2%;
+  }
   45% {
     translate: -14% 6%;
   }
@@ -848,7 +949,7 @@ body {
   }
 }
 .anim-faint {
-  animation: b-faint 520ms steps(6) forwards;
+  animation: b-faint 620ms var(--ease-drop) forwards;
 }
 /* BW faint: the creature sinks straight down through its platform */
 @keyframes b-faint {
@@ -859,37 +960,68 @@ body {
 }
 /* attacker motions (each move's recipe picks one) */
 .anim-cast {
-  animation: b-cast 360ms steps(6);
+  animation: b-cast 360ms var(--ease-swing);
 }
 @keyframes b-cast {
   35% {
     translate: 0 -6%;
   }
+  60% {
+    translate: 0 -3%;
+  }
 }
 .anim-jump-right {
-  animation: b-jump-r 640ms steps(10);
+  animation: b-jump-r 640ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-jump-r {
+  10% {
+    translate: -2% 2%;
+    scale: 1.04 0.95;
+  }
+  22% {
+    translate: 12% -30%;
+    scale: 1;
+  }
   35% {
     translate: 28% -45%;
+  }
+  50% {
+    translate: 40% -36%;
   }
   65% {
     translate: 48% -18%;
   }
+  80% {
+    translate: 24% -6%;
+  }
 }
 .anim-jump-left {
-  animation: b-jump-l 640ms steps(10);
+  animation: b-jump-l 640ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-jump-l {
+  10% {
+    translate: 2% -2%;
+    scale: 1.04 0.95;
+  }
+  22% {
+    translate: -10% -28%;
+    scale: 1;
+  }
   35% {
     translate: -20% -40%;
+  }
+  50% {
+    translate: -32% -20%;
   }
   65% {
     translate: -42% 14%;
   }
+  80% {
+    translate: -20% 6%;
+  }
 }
 .anim-dive-right {
-  animation: b-dive-r 900ms steps(14);
+  animation: b-dive-r 900ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-dive-r {
   30%,
@@ -904,7 +1036,7 @@ body {
   }
 }
 .anim-dive-left {
-  animation: b-dive-l 900ms steps(14);
+  animation: b-dive-l 900ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-dive-l {
   30%,
@@ -919,7 +1051,7 @@ body {
   }
 }
 .anim-dodge-left {
-  animation: b-dodge-l 320ms steps(5);
+  animation: b-dodge-l 320ms var(--ease-swing);
 }
 @keyframes b-dodge-l {
   40% {
@@ -927,7 +1059,7 @@ body {
   }
 }
 .anim-dodge-right {
-  animation: b-dodge-r 320ms steps(5);
+  animation: b-dodge-r 320ms var(--ease-swing);
 }
 @keyframes b-dodge-r {
   40% {
@@ -935,7 +1067,7 @@ body {
   }
 }
 .anim-statUp {
-  animation: b-up 600ms steps(6);
+  animation: b-up 600ms ease-in-out;
 }
 @keyframes b-up {
   0%,
@@ -947,7 +1079,7 @@ body {
   }
 }
 .anim-statDown {
-  animation: b-down 600ms steps(6);
+  animation: b-down 600ms ease-in-out;
 }
 @keyframes b-down {
   0%,
@@ -959,7 +1091,7 @@ body {
   }
 }
 .anim-heal {
-  animation: b-heal 700ms steps(7);
+  animation: b-heal 700ms ease-in-out;
 }
 @keyframes b-heal {
   50% {
@@ -967,7 +1099,7 @@ body {
   }
 }
 .anim-slide-out {
-  animation: b-slide-out 420ms steps(6) forwards;
+  animation: b-slide-out 420ms var(--ease-drop) forwards;
 }
 @keyframes b-slide-out {
   to {
@@ -976,7 +1108,7 @@ body {
   }
 }
 .screen-shake {
-  animation: b-shake 360ms steps(6);
+  animation: b-shake 360ms linear;
 }
 @keyframes b-shake {
   20% {
@@ -997,25 +1129,29 @@ body {
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  animation: encounter 1100ms steps(1) forwards;
+  /* three hard flashes (frames, so stepped), then the black closes smoothly to a line */
+  animation:
+    encounter 920ms steps(1) forwards,
+    encounter-close 220ms 900ms var(--ease-drop) forwards;
 }
 @keyframes encounter {
   0%,
-  30%,
-  60% {
+  33%,
+  66% {
     background: #ffffff;
   }
-  15%,
-  45%,
-  75% {
-    background: #000000;
-  }
-  90% {
-    background: #000000;
-    clip-path: inset(0 0 0 0);
-  }
+  17%,
+  50%,
+  83%,
   100% {
     background: #000000;
+  }
+}
+@keyframes encounter-close {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
     clip-path: inset(50% 0 50% 0);
   }
 }
@@ -1047,7 +1183,7 @@ body {
 }
 
 .medal-toast {
-  animation: medal-in 3200ms steps(8) forwards;
+  animation: medal-in 3200ms var(--ease-move) forwards;
 }
 @keyframes medal-in {
   0% {
@@ -1140,22 +1276,28 @@ body {
 
 /* ---------- VS screen before a trainer battle ---------- */
 .vs-in-right {
-  animation: vs-in-right 360ms steps(6) both;
+  animation: vs-in-right 460ms var(--ease-move) both;
 }
 .vs-in-left {
-  animation: vs-in-left 360ms steps(6) both;
+  animation: vs-in-left 460ms 60ms var(--ease-move) both;
 }
 .vs-mark {
-  animation: vs-mark 320ms 320ms steps(4) both;
+  animation: vs-mark 380ms 380ms var(--ease-pop) both;
 }
 @keyframes vs-in-right {
   from {
     transform: translateX(110%);
   }
+  70% {
+    transform: translateX(-2%);
+  }
 }
 @keyframes vs-in-left {
   from {
     transform: translateX(-110%);
+  }
+  70% {
+    transform: translateX(2%);
   }
 }
 @keyframes vs-mark {
@@ -1165,7 +1307,7 @@ body {
   }
 }
 .vs-impact {
-  animation: vs-impact 260ms 560ms steps(4) both;
+  animation: vs-impact 300ms 640ms linear both;
 }
 @keyframes vs-impact {
   25% {
@@ -1180,7 +1322,7 @@ body {
 }
 .vs-flash {
   opacity: 0;
-  animation: vs-flash 300ms 560ms ease-out both;
+  animation: vs-flash 320ms 640ms ease-out both;
 }
 @keyframes vs-flash {
   30% {
@@ -1189,6 +1331,76 @@ body {
   to {
     opacity: 0;
   }
+}
+.vs-in-right .vs-sprite {
+  animation: vs-sprite-r 560ms 70ms var(--ease-move) both;
+}
+.vs-in-left .vs-sprite {
+  animation: vs-sprite-l 560ms 130ms var(--ease-move) both;
+}
+@keyframes vs-sprite-r {
+  from {
+    translate: 45% 0;
+    opacity: 0;
+  }
+}
+@keyframes vs-sprite-l {
+  from {
+    translate: -45% 0;
+    opacity: 0;
+  }
+}
+.vs-name {
+  animation: vs-name 380ms 300ms var(--ease-move) both;
+}
+@keyframes vs-name {
+  from {
+    translate: 0 30%;
+    opacity: 0;
+  }
+}
+/* leaving: the bands sweep back off the way they came, the mark shrinks away */
+.vs-out .vs-in-right {
+  animation: vs-out-r 260ms var(--ease-drop) forwards;
+}
+.vs-out .vs-in-left {
+  animation: vs-out-l 260ms var(--ease-drop) forwards;
+}
+.vs-out .vs-mark {
+  animation: vs-mark-out 200ms var(--ease-drop) forwards;
+}
+.vs-out {
+  animation: vs-fade 260ms ease-in forwards;
+}
+@keyframes vs-out-r {
+  to {
+    transform: translateX(110%);
+  }
+}
+@keyframes vs-out-l {
+  to {
+    transform: translateX(-110%);
+  }
+}
+@keyframes vs-mark-out {
+  to {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+@keyframes vs-fade {
+  70% {
+    background-color: rgb(16 16 24 / 0.6);
+  }
+  to {
+    background-color: rgb(16 16 24 / 0);
+  }
+}
+[data-motion='reduced'] .vs-sprite,
+[data-motion='reduced'] .vs-name,
+[data-motion='reduced'] .vs-out,
+[data-motion='reduced'] .vs-out * {
+  animation: none !important;
 }
 [data-motion='reduced'] .vs-impact,
 [data-motion='reduced'] .vs-flash,
@@ -1425,11 +1637,12 @@ body {
     0 1px 0 rgb(255 255 255 / 0.12);
 }
 
-/* Main menu backdrop: the skyline bands pan a tile at a time, one art pixel per step; clouds drift
+/* Main menu backdrop: the skyline bands pan continuously, a tile per loop (seamless: the band tiles); clouds drift
    across the top; stars twinkle at night (MenuSky.tsx) */
 .skyline-pan {
   animation-name: skyline-pan;
   animation-iteration-count: infinite;
+  will-change: transform;
 }
 @keyframes skyline-pan {
   to {
@@ -1476,7 +1689,8 @@ body::before {
   background-image: var(--page-pattern, none);
   background-size: var(--page-pattern-size, 128px) var(--page-pattern-size, 128px);
   image-rendering: pixelated;
-  animation: page-pattern-drift 64s steps(128) infinite;
+  animation: page-pattern-drift 22s linear infinite;
+  will-change: transform;
 }
 body::after {
   content: '';
@@ -1516,4 +1730,46 @@ body::after {
     position: static;
     margin: -8px -16px 14px;
   }
+}
+
+/* The badge trophy's polish (ui/Trophy.tsx): a band of light sweeps across the metal, cut to the
+   trophy's silhouette; four-point sparkles pop on the metal and fade */
+.trophy-sweep {
+  background: linear-gradient(105deg, transparent 45%, rgb(255 248 210 / 0.35) 47.5%, rgb(255 255 255 / 0.6) 50%, rgb(255 248 210 / 0.35) 52.5%, transparent 55%);
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  animation: trophy-sweep 620ms var(--ease-move) forwards;
+}
+@keyframes trophy-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+.trophy-sparkle {
+  translate: -50% -50%;
+  background: #fffbe6;
+  box-shadow: 0 0 6px 2px rgb(255 240 170 / 0.8);
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  animation: trophy-sparkle 620ms var(--ease-swing) forwards;
+}
+@keyframes trophy-sparkle {
+  from {
+    scale: 0;
+    rotate: 0deg;
+  }
+  40% {
+    scale: 1.25;
+  }
+  to {
+    scale: 0;
+    rotate: 90deg;
+  }
+}
+[data-motion='reduced'] .trophy-sweep,
+[data-motion='reduced'] .trophy-sparkle {
+  display: none;
 }

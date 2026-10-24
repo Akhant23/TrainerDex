@@ -117,7 +117,7 @@ function PhotoViewer({ index, onClose }: { index: number; onClose: () => void })
       >
         {/* the frame wraps the photo itself: the box takes the photo's own shape (width/height auto
             keep its aspect while max-width/height fit it in), so there's no letterboxing to fill */}
-        <div key={index} className="flex min-h-0 flex-1 items-center justify-center p-[14px]" style={{ animation: 'photo-in 260ms steps(5)', ['--dx' as string]: `${dir * 24}px` }}>
+        <div key={index} className="flex min-h-0 flex-1 items-center justify-center p-[14px]" style={{ animation: 'photo-in 300ms var(--ease-move)', ['--dx' as string]: `${dir * 24}px` }}>
           <img src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} className="gv-photo h-auto max-h-full w-auto max-w-full" />
         </div>
         <div className="flex shrink-0 flex-col gap-3 lg:w-[340px] lg:self-start">

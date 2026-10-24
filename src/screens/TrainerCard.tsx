@@ -13,6 +13,7 @@ import { TrainerSprite } from '../ui/TrainerSprite'
 import { Bullets, Heading, Sources, Tags } from '../ui/bits'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
+import { Trophy } from '../ui/Trophy'
 
 const entry = menu.find((m) => m.id === 'card')!
 const COLS = 4
@@ -105,7 +106,7 @@ function FlipCard({ flipped, onFlip }: { flipped: boolean; onFlip: () => void })
     >
       <div
         className="absolute inset-0 [transform-style:preserve-3d]"
-        style={{ transform: flipped ? 'rotateY(180deg)' : 'none', transition: reducedMotion ? 'none' : 'transform 520ms steps(10)' }}
+        style={{ transform: flipped ? 'rotateY(180deg)' : 'none', transition: reducedMotion ? 'none' : 'transform 560ms var(--ease-swing)' }}
       >
         {/* front */}
         <div className={face} style={{ background: goldBg }}>
@@ -239,14 +240,13 @@ function BadgeDetail({ badge }: { badge: Badge }) {
       scrollKey={badge.id}
       compactTop={false}
       top={
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-[4%]" style={{ background: 'radial-gradient(circle at 50% 45%, #6a2c44, #1a0810)' }}>
-          <span className="hidden sm:inline-flex">
-            <PolishableBadge badge={badge} scale={10} />
-          </span>
-          <span className="sm:hidden">
-            <PolishableBadge badge={badge} scale={7} />
-          </span>
-          <p className="font-display m-0 text-[clamp(11px,2.8cqi,15px)] text-paper/80">
+        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at 50% 42%, #7a3450, #2a0e1a 62%, #14060c)' }}>
+          {/* a soft spotlight on the floor under the trophy */}
+          <div aria-hidden className="pointer-events-none absolute bottom-[10%] left-1/2 h-[9%] w-[56%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgb(255_220_160/0.22),transparent_70%)]" />
+          <div className="relative flex min-h-0 w-full flex-1 items-center justify-center pt-[4%]">
+            <Trophy badge={badge} fill={0.92} />
+          </div>
+          <p className="font-display m-0 pb-[4%] text-[clamp(10px,2.4cqi,13px)] tracking-wide text-paper/70">
             {(shine[badge.id] ?? 0) >= 100 ? '✦ SPARKLING!' : 'RUB TO POLISH'} · {badge.category.toUpperCase()}
           </p>
         </div>

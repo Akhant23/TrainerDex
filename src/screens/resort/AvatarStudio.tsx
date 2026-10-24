@@ -20,25 +20,10 @@ import { readPhoto, suggestColours, type PixelData } from '../../systems/photoCo
 import { useSettings } from '../../systems/settings'
 import { CharacterSprite, type CharacterPose } from '../../ui/CharacterSprite'
 import { OverworldSprite } from '../../ui/OverworldSprite'
+import { DEFAULT_AVATAR } from '../../systems/resortSave'
 
-export const DEFAULT_AVATAR: Appearance = {
-  skin: 'light',
-  hair: 'short',
-  hairColour: 'brown',
-  eyes: 'round',
-  eyeColour: 'brown',
-  face: 'smile',
-  top: 'tee',
-  topColour: 'blue',
-  accentColour: 'white',
-  hat: 'cap',
-  hatColour: 'red',
-  bottom: 'shorts',
-  bottomColour: 'navy',
-  shoes: 'sneakers',
-  shoeColour: 'red',
-  accessories: [],
-}
+export { DEFAULT_AVATAR }
+
 
 const EYE_SWATCHES = Object.fromEntries(Object.entries(EYE_COLOURS).map(([k, v]) => [k, [v]])) as unknown as Record<keyof typeof EYE_COLOURS, readonly string[]>
 

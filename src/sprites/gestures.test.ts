@@ -3,7 +3,7 @@
  * cleanly), every frame renders, and timings stay in a sensible range.
  */
 import { describe, expect, it } from 'vitest'
-import { GESTURES, GESTURE_WEIGHTS, gestureLength, type GestureId } from './gestures'
+import { GESTURES, GESTURE_WEIGHTS, gestureLength, TWEEN_MS, type GestureId } from './gestures'
 import { atResolution, CHAR_H, CHAR_W, paletteFor, renderPose } from './character'
 import { validate } from './pixels'
 import { signature } from '../content/aaryan'
@@ -40,7 +40,9 @@ describe('idle gestures', () => {
       const ms = gestureLength(id)
       expect(ms, id).toBeGreaterThan(1200)
       expect(ms, id).toBeLessThan(4500)
-      for (const f of GESTURES[id]) expect(f.ms, id).toBeGreaterThanOrEqual(60)
+      // in-betweens are quick (they're motion); every held pose shows long enough to read
+      for (const f of GESTURES[id]) expect(f.ms, id).toBeGreaterThanOrEqual(TWEEN_MS)
+      expect(GESTURES[id].filter((f) => f.ms > TWEEN_MS).every((f) => f.ms >= 60), id).toBe(true)
     }
   })
 })

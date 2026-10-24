@@ -138,19 +138,62 @@ function studio(): Pixels {
   return g.toPixels()
 }
 
-/** A round fountain on a 2×2 footprint: stone basin, water and a jet. */
-function fountain(): Pixels {
-  const g = new Grid(32, 40)
-  g.ellipse(15.5, 30, 15.5, 9, 'Z', 'z', 'x')
-  g.ellipse(15.5, 29, 12.5, 6.5, 'i', 'I')
-  g.ellipse(15.5, 27, 4, 2, 'Z', 'z')
-  g.rect(14, 12, 17, 27, 'W').rect(16, 12, 17, 27, 'b')
-  g.ellipse(15.5, 9, 6, 4, 'W', 'b', 'h')
-  for (const [x, y] of [[8, 14], [23, 14], [5, 20], [26, 20]]) g.set(x, y, 'W')
-  g.set(11, 28, 'h').set(12, 28, 'h').set(20, 31, 'h')
+/**
+ * The plaza's fountain, 4×4 tiles: a round stone basin (its rim lit along the top, its front wall in
+ * shade), a pool with ripples spreading out, and a two-tier column — a spout at the top, water
+ * spilling from the top bowl into the middle one and from there in a curtain into the pool. `frame`
+ * (0–3) moves the water: the spout's height, the falling drops and the ripples.
+ */
+export const FOUNTAIN_FRAMES = 4
+function fountain(frame = 0): Pixels {
+  const W = 64
+  const g = new Grid(W, 64)
+  const cx = 31.5
+  // the basin: the front wall, then the rim, then the water inside it
+  g.rect(1, 48, W - 2, 55, 'z')
+  g.ellipse(cx, 55, 30.5, 7.5, 'z', '9')
+  g.ellipse(cx, 48, 30.5, 10, 'Z', 'z', 'x')
+  g.ellipse(cx, 48, 26, 7.4, 'i', 'I', 'b')
+  // the column: a foot in the pool, a fluted stem, the middle bowl, a slimmer stem, the top bowl
+  g.ellipse(cx, 49, 7, 2.6, 'X', '8')
+  g.rect(28, 25, 35, 48, 'X').rect(33, 25, 35, 48, '8').rect(28, 25, 28, 48, 'x')
+  g.ellipse(cx, 26.5, 13.5, 4.6, 'Z', 'z', 'x')
+  g.ellipse(cx, 26, 10.5, 3, 'i', 'I', 'b')
+  g.rect(30, 13, 33, 26, 'X').rect(33, 13, 33, 26, '8')
+  g.ellipse(cx, 13.5, 6.5, 2.4, 'Z', 'z', 'x')
+  g.ellipse(cx, 13.2, 4.5, 1.4, 'i', 'I')
   g.outline()
+  // ripples spreading across the pool (rings growing frame by frame), drawn after the outline
+  for (const k of [0, 1, 2]) {
+    const r = 0.32 + (((frame + k * 1.35) % FOUNTAIN_FRAMES) / FOUNTAIN_FRAMES) * 0.62
+    for (let t = 0; t < Math.PI * 2; t += 0.07) {
+      const x = cx + Math.cos(t) * 26 * r
+      const y = 48.4 + Math.sin(t) * 7.2 * r
+      if (Math.abs(x - cx) < 8 && y < 50) continue // behind the column
+      if (g.get(Math.round(x), Math.round(y)) === 'i' || g.get(Math.round(x), Math.round(y)) === 'I') g.set(Math.round(x), Math.round(y), 'b')
+    }
+  }
+  // the spout, rising and falling a little, with a spray at the top
+  const top = 3 + (frame % 2)
+  g.line(cx, 12, cx, top, 'W', 2).line(cx, 12, cx, top + 2, 'h', 1)
+  for (const [dx, dy] of [[-2, 0], [2, 0], [-1, -1], [1, -1]]) g.set(Math.round(cx + dx), top + dy + (frame === 2 ? 1 : 0), 'h')
+  // water falling: from the top bowl's lip into the middle bowl, and from the middle bowl into the pool
+  const fall = (x0: number, y0: number, x1: number, y1: number, drops: number) => {
+    for (let i = 0; i < drops; i++) {
+      const t = (i + frame / FOUNTAIN_FRAMES) / drops
+      const x = x0 + (x1 - x0) * t
+      const y = y0 + (y1 - y0) * t * t
+      g.set(Math.round(x), Math.round(y), i % 2 ? 'W' : 'b')
+    }
+  }
+  for (const side of [-1, 1]) {
+    fall(cx + side * 6, 13, cx + side * 10, 25, 5)
+    fall(cx + side * 13.5, 27, cx + side * 17, 46, 8)
+    fall(cx + side * 11, 28, cx + side * 13.5, 46, 7)
+  }
   return g.toPixels()
 }
+export const fountainFrames: Pixels[] = Array.from({ length: FOUNTAIN_FRAMES }, (_, i) => fountain(i))
 
 /* ---------------- BW-style houses: a big sloped roof, a sign and a door ---------------- */
 
@@ -234,7 +277,7 @@ function banner(w: number, bg: [string, string], label: string, ink: string, dec
 export const structureArt = {
   tower: tower(),
   studio: studio(),
-  fountain: fountain(),
+  fountain: fountainFrames[0],
   home: house({ tiles: 6, roof: ['H', 'J', 'L'], wall: ['c', 'C'], door: 3, label: 'HOME', chimney: true }),
   lab: house({ tiles: 6, roof: ['V', 'U', 'F'], wall: ['x', 'X'], door: 2, label: 'DEX LAB' }),
   pc: house({ tiles: 5, roof: ['r', 'R', '4'], wall: ['x', 'X'], door: 2, label: 'PC CENTRE' }),

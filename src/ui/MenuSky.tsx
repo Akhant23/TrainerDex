@@ -91,7 +91,7 @@ function Band({ art, color, lit, scale, width, period, below, ground }: { art: S
       ref={ref}
       aria-hidden
       className="skyline-pan pixelated absolute bottom-0 left-0"
-      style={{ width: tiles * tile, height: rows * scale, animationDuration: `${period}ms`, animationDelay: `${delay}ms`, animationTimingFunction: `steps(${art.w})`, ['--pan' as string]: `-${tile}px` }}
+      style={{ width: tiles * tile, height: rows * scale, animationDuration: `${period}ms`, animationDelay: `${delay}ms`, animationTimingFunction: 'linear', ['--pan' as string]: `-${tile}px` }}
     />
   )
 }
@@ -178,7 +178,7 @@ export function MenuSky({ sky, scale, width, height }: { sky: SkyState; scale: n
               transform: reducedMotion ? `translateX(${Math.round(((i + 0.5) / cloudCount) * width)}px)` : undefined,
               animationDuration: `${period}ms`,
               animationDelay: `-${Math.round((t0 + i * period * 0.37) % period)}ms`,
-              animationTimingFunction: `steps(${Math.round((width + cloudW) / scale)})`,
+              animationTimingFunction: 'linear',
               ['--from' as string]: `-${cloudW}px`,
               ['--to' as string]: `${width}px`,
             }}

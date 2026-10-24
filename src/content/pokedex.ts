@@ -39,7 +39,7 @@ export const pokedex: DexEntry[] = [
     types: ['NORMAL'],
     art: { kind: 'icon', name: 'profile' },
     habitat: 'harbour',
-    entry: 'Born in Australia, of Bangladeshi descent. Fluent in both English and Bengali, and switches between them without warning.',
+    entry: 'I was born in Australia, of Bangladeshi descent. I’m fluent in both English and Bengali, and switch between them without warning.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -49,7 +49,7 @@ export const pokedex: DexEntry[] = [
     types: ['LAW'],
     art: { kind: 'badge', id: 'verdict' },
     habitat: 'courtroom',
-    entry: 'Has entered mooting, witness examination, negotiation and mediation competitions in every year of his law degree. Drawn to intellectual property, competition law, dispute resolution and pro bono.',
+    entry: 'I’ve entered mooting, witness examination, negotiation and mediation competitions in every year of my law degree. I’m drawn to intellectual property, competition law, dispute resolution and pro bono.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -59,7 +59,7 @@ export const pokedex: DexEntry[] = [
     types: ['LAW', 'TECH'],
     art: { kind: 'icon', name: 'pc' },
     habitat: 'review',
-    entry: 'Found in Clayton Utz’s Data Intelligence & Risk Advisory team. Performs First Line Review in Relativity, making judgment calls on nuanced facts at high volume.',
+    entry: 'You’ll find me in Clayton Utz’s Data Intelligence & Risk Advisory team, doing First Line Review in Relativity and making judgment calls on nuanced facts at high volume.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -69,7 +69,7 @@ export const pokedex: DexEntry[] = [
     types: ['SCIENCE'],
     art: { kind: 'icon', name: 'flask' },
     habitat: 'lab',
-    entry: 'The other half of the double degree: a Bachelor of Science majoring in Biotechnology at UNSW.',
+    entry: 'The other half of my double degree: a Bachelor of Science majoring in Biotechnology at UNSW.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -79,7 +79,7 @@ export const pokedex: DexEntry[] = [
     types: ['CREATIVE', 'LEADER'],
     art: { kind: 'badge', id: 'prism' },
     habitat: 'stall',
-    entry: 'Has run marketing for the UNSW Law Society, UNSOC, Beyond The Bounds and the Student Legal Education Group. Its Law Society merch sold out two years running — the Dean was spotted wearing it.',
+    entry: 'I’ve run marketing for the UNSW Law Society, UNSOC, Beyond The Bounds and the Student Legal Education Group. My Law Society merch sold out two years running — the Dean was spotted wearing it.',
     sources: ['resume', 'linkedinVolunteering', 'aaryan'],
   },
   {
@@ -89,7 +89,7 @@ export const pokedex: DexEntry[] = [
     types: ['LEADER'],
     art: { kind: 'badge', id: 'beacon' },
     habitat: 'campus',
-    entry: 'Led O-Week campus tours for 3,500 first-years — the most since COVID — and has been a Student Ambassador since 2023. Knows where every lecture theatre is.',
+    entry: 'I led O-Week campus tours for 3,500 first-years — the most since COVID — and have been a Student Ambassador since 2023. I know where every lecture theatre is.',
     sources: ['resume', 'linkedinVolunteering', 'aaryan'],
   },
   {
@@ -99,7 +99,7 @@ export const pokedex: DexEntry[] = [
     types: ['SPORT'],
     art: { kind: 'badge', id: 'pitch' },
     habitat: 'pitch',
-    entry: 'Played GPS Football from 2017 to 2022 and captained the side in 2017. Often sighted in a number 7 jersey.',
+    entry: 'I played GPS Football from 2017 to 2022 and captained the side in 2017. You’ll often spot me in a number 7 jersey.',
     sources: ['linkedin'],
   },
   {
@@ -109,7 +109,7 @@ export const pokedex: DexEntry[] = [
     types: ['SPORT', 'LEADER'],
     art: { kind: 'icon', name: 'cricket' },
     habitat: 'oval',
-    entry: 'Played GPS Cricket for six seasons, then returned to Sydney Boys High to coach — building training plans for 11 players.',
+    entry: 'I played GPS Cricket for six seasons, then went back to Sydney Boys High to coach — building training plans for 11 players.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -119,7 +119,7 @@ export const pokedex: DexEntry[] = [
     types: ['MUSIC'],
     art: { kind: 'icon', name: 'headphones' },
     habitat: 'club',
-    entry: 'DJing tops the hobbies list on his resume. Becomes noticeably more active after dark.',
+    entry: 'DJing tops the hobbies list on my resume. I get noticeably more active after dark.',
     sources: ['resume'],
   },
   {
@@ -129,7 +129,7 @@ export const pokedex: DexEntry[] = [
     types: ['MUSIC'],
     art: { kind: 'icon', name: 'guitar' },
     habitat: 'bedroom',
-    entry: 'Plays guitar. Keeps the case within arm’s reach at all times.',
+    entry: 'I play guitar, and keep the case within arm’s reach at all times.',
     sources: ['aaryan'],
   },
   {
@@ -139,7 +139,7 @@ export const pokedex: DexEntry[] = [
     types: ['CREATIVE'],
     art: { kind: 'icon', name: 'camera' },
     habitat: 'street',
-    entry: 'Into photography — the same eye behind his event graphics and campaign shoots.',
+    entry: 'I’m into photography — the same eye behind my event graphics and campaign shoots.',
     sources: ['aaryan'],
   },
   {
@@ -149,7 +149,7 @@ export const pokedex: DexEntry[] = [
     types: ['NORMAL'],
     art: { kind: 'icon', name: 'book' },
     habitat: 'library',
-    entry: 'Reads for fun, which law students are not supposed to have time for.',
+    entry: 'I read for fun, which law students are not supposed to have time for.',
     sources: ['resume'],
   },
   {
@@ -159,7 +159,7 @@ export const pokedex: DexEntry[] = [
     types: ['TECH'],
     art: { kind: 'icon', name: 'gamepad' },
     habitat: 'den',
-    entry: 'Into technology and gaming. Probably the reason this website exists.',
+    entry: 'I’m into technology and gaming. Probably the reason this website exists.',
     sources: ['aaryan'],
   },
   {
@@ -169,7 +169,7 @@ export const pokedex: DexEntry[] = [
     types: ['TECH'],
     art: { kind: 'icon', name: 'resume' },
     habitat: 'chambers',
-    entry: 'Types at 120 words per minute with 99% accuracy. Briefs to counsel fear it.',
+    entry: 'I type at 120 words per minute with 99% accuracy. Briefs to counsel fear me.',
     sources: ['resume'],
   },
   {
@@ -179,7 +179,7 @@ export const pokedex: DexEntry[] = [
     types: ['LEADER', 'NORMAL'],
     art: { kind: 'icon', name: 'card' },
     habitat: 'hall',
-    entry: 'Has logged 21 volunteer roles across UNSW societies since 2023 — from road trips for 100 people to careers panels.',
+    entry: 'I’ve logged 21 volunteer roles across UNSW societies since 2023 — from road trips for 100 people to careers panels.',
     sources: ['linkedinVolunteering'],
   },
 ]

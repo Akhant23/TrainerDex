@@ -5,13 +5,10 @@ import { fetchApproved, pagerConfigured, submitMessage, TURNSTILE_SITE_KEY, type
 import { useSettings } from '../systems/settings'
 import { useVisitor } from '../systems/visitor'
 import { progress } from '../systems/progress'
-import { paletteFor } from '../sprites/character'
-import { crop } from '../sprites/pixels'
-import { signature } from '../content/aaryan'
-import { portraitPixels } from '../ui/CharacterSprite'
-import { resortSave } from '../systems/resortSave'
-import { trainersOnline } from '../systems/trainers'
-import { PixelArt } from '../ui/PixelArt'
+import type { Appearance } from '../sprites/character'
+import { TrainerHead } from '../ui/TrainerHead'
+import { DEFAULT_AVATAR, playerLook, resortSave, usePlayerLook } from '../systems/resortSave'
+import { fetchTrainers, trainersOnline } from '../systems/trainers'
 import { PixelBox } from '../ui/PixelBox'
 import { Turnstile } from '../ui/Turnstile'
 import { useGridNav } from '../ui/useGridNav'
@@ -21,12 +18,23 @@ import type { SpeciesId } from '../battle/data'
 
 const entry = menu.find((m) => m.id === 'pager')!
 
-let head: ReturnType<typeof crop> | null = null
-const trainerHead = () => (head ??= crop(portraitPixels(signature), 6, 2, 28, 30))
-
-export function AvatarIcon({ avatar, scale = 1 }: { avatar: Avatar; scale?: number }) {
-  if (avatar === 'trainer') return <PixelArt pixels={trainerHead()} palette={paletteFor(signature)} scale={scale} />
+/**
+ * A message's avatar: a creature, or for 'trainer' a resort trainer's head: `look` (the sender's
+ * linked resort avatar, or yours on your own messages), else the default trainer. Never a stand-in
+ * for Aaryan. `scale` 2 is the large size (80px creatures, 56px heads), crisp at whole pixels.
+ */
+export function AvatarIcon({ avatar, look, scale = 1 }: { avatar: Avatar; look?: Appearance; scale?: number }) {
+  if (avatar === 'trainer') {
+    return <TrainerHead look={look ?? DEFAULT_AVATAR} scale={scale} />
+  }
   return <CreatureSprite id={avatar as SpeciesId} scale={scale} />
+}
+
+/** The look to show for a message's 'trainer' avatar: yours on your own messages, the sender's linked resort avatar otherwise. */
+function lookOf(m: PublicMessage, looks: ReadonlyMap<string, Appearance>): Appearance | undefined {
+  if (m.avatar !== 'trainer' || !m.trainer_id) return undefined
+  if (m.trainer_id === resortSave.get().trainerId) return playerLook()
+  return looks.get(m.trainer_id)
 }
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -40,6 +48,8 @@ export default function PokePager({ path = '/pager' }: { path?: string }) {
   const [view, setView] = useState<View>(path === '/pager/compose' ? 'compose' : 'inbox')
   const [load, setLoad] = useState<Load>(pagerConfigured ? { state: 'loading' } : { state: 'ready', messages: [] })
   const [focus, setFocus] = useState(0)
+  // resort trainers' looks, for messages sent with the 'trainer' avatar and linked to one
+  const [looks, setLooks] = useState<ReadonlyMap<string, Appearance>>(new Map())
 
   const refresh = useCallback(async () => {
     if (!pagerConfigured) return
@@ -48,6 +58,10 @@ export default function PokePager({ path = '/pager' }: { path?: string }) {
       const messages = await fetchApproved()
       setLoad({ state: 'ready', messages })
       if (messages.length) sfx('blip')
+      if (trainersOnline && messages.some((m) => m.avatar === 'trainer' && m.trainer_id))
+        void fetchTrainers(200)
+          .then((ts) => setLooks(new Map(ts.map((t) => [t.id, t.appearance]))))
+          .catch(() => undefined)
     } catch (e) {
       setLoad({ state: 'error', message: (e as Error).message })
     }
@@ -75,7 +89,7 @@ export default function PokePager({ path = '/pager' }: { path?: string }) {
       }
       compactTop={false}
       scrollKey={view}
-      top={<Display selected={view === 'inbox' ? selected : undefined} view={view} count={messages.length} />}
+      top={<Display selected={view === 'inbox' ? selected : undefined} looks={looks} view={view} count={messages.length} />}
     >
       <div className="flex min-h-full flex-col gap-3 bg-[#1f5e58] p-[3%]">
         {!pagerConfigured && (
@@ -102,7 +116,7 @@ export default function PokePager({ path = '/pager' }: { path?: string }) {
                 ↻ REFRESH
               </button>
             </div>
-            <Inbox load={load} focus={focus} setFocus={setFocus} />
+            <Inbox load={load} looks={looks} focus={focus} setFocus={setFocus} />
           </>
         )}
         {view === 'compose' && pagerConfigured && (
@@ -116,7 +130,7 @@ export default function PokePager({ path = '/pager' }: { path?: string }) {
         {view === 'sent' && (
           <PixelBox className="px-4 py-4">
             <p className="font-display m-0 text-[15px] text-dex-red">MESSAGE SENT!</p>
-            <p className="m-0 mt-2 text-[16px]">Thanks! Aaryan reviews every message, so yours will appear in the inbox once it’s approved.</p>
+            <p className="m-0 mt-2 text-[16px]">Thanks! I read every message, so yours will appear in the inbox once I’ve approved it.</p>
             <button type="button" autoFocus className="pixel-btn mt-3 !text-[14px]" onClick={() => setView('inbox')}>
               BACK TO INBOX
             </button>
@@ -129,7 +143,7 @@ export default function PokePager({ path = '/pager' }: { path?: string }) {
 
 /* ---------- top screen: the device display ---------- */
 
-function Display({ selected, view, count }: { selected?: PublicMessage; view: View; count: number }) {
+function Display({ selected, looks, view, count }: { selected?: PublicMessage; looks: ReadonlyMap<string, Appearance>; view: View; count: number }) {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 15000)
@@ -157,8 +171,8 @@ function Display({ selected, view, count }: { selected?: PublicMessage; view: Vi
         ) : selected ? (
           <div className="relative flex min-h-0 flex-1 flex-col gap-[3%]">
             <div className="flex items-center gap-3">
-              <span className="flex h-[clamp(36px,12cqi,64px)] w-[clamp(36px,12cqi,64px)] items-center justify-center rounded-full bg-paper/70">
-                <AvatarIcon avatar={selected.avatar} scale={1} />
+              <span className="flex h-[clamp(64px,18cqi,104px)] w-[clamp(64px,18cqi,104px)] shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/70">
+                <AvatarIcon avatar={selected.avatar} look={lookOf(selected, looks)} scale={2} />
               </span>
               <span>
                 <span className="font-display block text-[clamp(13px,3.6cqi,20px)]">{selected.name}</span>
@@ -187,7 +201,7 @@ function Display({ selected, view, count }: { selected?: PublicMessage; view: Vi
 
 /* ---------- inbox ---------- */
 
-function Inbox({ load, focus, setFocus }: { load: Load; focus: number; setFocus: (i: number) => void }) {
+function Inbox({ load, looks, focus, setFocus }: { load: Load; looks: ReadonlyMap<string, Appearance>; focus: number; setFocus: (i: number) => void }) {
   const messages = load.state === 'ready' ? load.messages : []
   const nav = useGridNav(messages.length, 1, { onMove: setFocus, initial: focus })
   if (load.state === 'loading') return <p className="font-display blink m-0 p-3 text-[14px] text-paper">RECEIVING…</p>
@@ -213,8 +227,8 @@ function Inbox({ load, focus, setFocus }: { load: Load; focus: number; setFocus:
               i === focus ? 'shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'shadow-[0_0_0_2px_#123]'
             }`}
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper/70">
-              <AvatarIcon avatar={m.avatar} scale={1} />
+            <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/70">
+              <AvatarIcon avatar={m.avatar} look={lookOf(m, looks)} scale={2} />
             </span>
             <span className="min-w-0">
               <span className="font-display block truncate text-[14px]">
@@ -317,7 +331,7 @@ function Compose({ onSent }: { onSent: () => void }) {
 
       {TURNSTILE_SITE_KEY ? <Turnstile siteKey={TURNSTILE_SITE_KEY} onToken={setToken} resetKey={resetKey} /> : <p className="m-0 text-[13px] text-paper/80">(Human check not configured.)</p>}
 
-      <p className="m-0 text-[13px] text-paper/80">Messages are public once Aaryan approves them. No links, please.</p>
+      <p className="m-0 text-[13px] text-paper/80">Messages are public once I approve them. No links, please.</p>
       {status.kind === 'error' && (
         <p role="alert" className="m-0 bg-ember/90 px-3 py-2 text-[15px] text-paper">
           {status.text}
@@ -340,6 +354,8 @@ function Compose({ onSent }: { onSent: () => void }) {
 
 function AvatarPicker({ value, onChange }: { value: Avatar; onChange: (a: Avatar) => void }) {
   const nav = useGridNav(AVATARS.length, 5, { initial: AVATARS.indexOf(value), onMove: (i) => onChange(AVATARS[i]) })
+  // 'trainer' is you: your Battle Resort avatar (or the default look until you make one)
+  const me = usePlayerLook()
   return (
     <div role="radiogroup" aria-label="Avatar" className="grid grid-cols-5 gap-2">
       {AVATARS.map((a, i) => (
@@ -348,15 +364,18 @@ function AvatarPicker({ value, onChange }: { value: Avatar; onChange: (a: Avatar
           type="button"
           role="radio"
           aria-checked={value === a}
-          aria-label={a === 'trainer' ? 'Trainer' : a}
+          aria-label={a === 'trainer' ? 'My trainer' : a}
           {...nav.itemProps(i)}
           onClick={() => {
             nav.setFocus(i)
             onChange(a)
           }}
-          className={`flex aspect-square cursor-pointer items-center justify-center rounded-full border-0 outline-none ${value === a ? 'bg-paper shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'bg-paper/60'}`}
+          className={`relative flex aspect-square cursor-pointer items-center justify-center overflow-visible rounded-full border-0 outline-none ${value === a ? 'bg-paper shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'bg-paper/60'}`}
         >
-          <AvatarIcon avatar={a} scale={1} />
+          <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
+            <AvatarIcon avatar={a} look={a === 'trainer' ? me : undefined} scale={2} />
+          </span>
+          {a === 'trainer' && <span className="font-display absolute -bottom-1 left-1/2 -translate-x-1/2 bg-dex-red px-1 text-[10px] leading-tight text-paper shadow-[0_0_0_2px_var(--gv-ink)]">YOU</span>}
         </button>
       ))}
     </div>

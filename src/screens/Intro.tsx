@@ -79,7 +79,7 @@ export default function Intro({ onDone }: { onDone: () => void }) {
                 PRESS START
               </button>
               <p className="m-0 max-w-[36ch] text-center text-[13px] text-muted">
-                The interactive story of Aaryan. A fan-inspired personal site — not affiliated with Nintendo or The Pokémon Company.
+                My story, told as a game. A fan-inspired personal site — not affiliated with Nintendo or The Pokémon Company.
               </p>
             </motion.div>
           )}

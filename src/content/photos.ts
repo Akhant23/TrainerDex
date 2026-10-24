@@ -31,16 +31,16 @@ export const photos: Photo[] = [
     caption: 'The professional profile photo — white shirt, big smile.',
     category: 'Portrait',
     dexEntry: 'Its LinkedIn form. Evolves into its casual form after 5 pm.',
-    alt: 'Aaryan smiling in a crisp white button-up shirt, standing in front of tall windows in a bright modern building.',
+    alt: 'Me smiling in a crisp white button-up shirt, standing in front of tall windows in a bright modern building.',
   },
   {
     ...p('02-law-ball', 1202, 1600),
     title: 'Law Ball Night',
-    caption: 'UNSW Law Ball 2024, “Tale As Old As Time”, at Sydney Town Hall — the same night as the “See you tonight” story in his portfolio.',
+    caption: 'UNSW Law Ball 2024, “Tale As Old As Time”, at Sydney Town Hall — the same night as the “See you tonight” story in my portfolio.',
     category: 'Law & Society',
     date: '20 September 2024',
     dexEntry: 'Celebrates a successful campaign with a high five. Very effective.',
-    alt: 'Aaryan in a black shirt and tie high-fiving a friend beside a “Tale as Old as Time — UNSW Law Ball — 20 Sep 24” welcome sign in an ornate hall.',
+    alt: 'Me in a black shirt and tie high-fiving a friend beside a “Tale as Old as Time — UNSW Law Ball — 20 Sep 24” welcome sign in an ornate hall.',
   },
   {
     ...p('03-tour-bags', 1200, 1600),
@@ -48,7 +48,7 @@ export const photos: Photo[] = [
     caption: 'In a Yellow Shirts tee, lying on a mountain of O-Week tour bags.',
     category: 'Leadership',
     dexEntry: 'Tour bags for 3,500 first-years have to go somewhere. It chose to nap on them.',
-    alt: 'Aaryan smiling, lying back on a huge pile of cream O-Week drawstring bags, wearing a yellow “Need help? Yellow Shirts” T-shirt.',
+    alt: 'Me smiling, lying back on a huge pile of cream O-Week drawstring bags, wearing a yellow “Need help? Yellow Shirts” T-shirt.',
   },
   {
     ...p('04-law-camp', 1200, 1600),
@@ -57,7 +57,7 @@ export const photos: Photo[] = [
     category: 'Community',
     date: '2026',
     dexEntry: 'Returns to First Year Camp every year. Leis optional, palm trees inflatable.',
-    alt: 'Aaryan in white linen with three friends in front of a “Law Camp 2026” sign decorated with pineapples, fairy lights and inflatable palm trees.',
+    alt: 'Me in white linen with three friends in front of a “Law Camp 2026” sign decorated with pineapples, fairy lights and inflatable palm trees.',
   },
   {
     ...p('05-merch-shoot', 1066, 1600),
@@ -65,15 +65,15 @@ export const photos: Photo[] = [
     caption: 'In front of the lens at a studio shoot.',
     category: 'Creative',
     dexEntry: 'Comfortable on both sides of the camera.',
-    alt: 'Aaryan posing in a lavender hoodie against a plain white studio backdrop.',
+    alt: 'Me posing in a lavender hoodie against a plain white studio backdrop.',
   },
   {
     ...p('06-twenty-first', 1600, 1066),
     title: 'The Big 2-1',
-    caption: 'Aaryan’s 21st, with the boys in traditional dress.',
+    caption: 'My 21st, with the boys in traditional dress.',
     category: 'Milestone',
     dexEntry: 'Evolved at level 21.',
-    alt: 'Aaryan in a cream sherwani at the centre of a group of friends in kurtas, arms around each other, in front of a floral arch and a “Happy 21st” sign.',
+    alt: 'Me in a cream sherwani at the centre of a group of friends in kurtas, arms around each other, in front of a floral arch and a “Happy 21st” sign.',
   },
   {
     ...p('07-kit-check', 1600, 1200),
@@ -81,7 +81,7 @@ export const photos: Photo[] = [
     caption: 'Matching energy, different kits.',
     category: 'Football',
     dexEntry: 'Team kit equipped. Ready for kick-off.',
-    alt: 'Aaryan in a white Spider-Man style jersey posing with a friend in a red-and-blue football jersey in a living room.',
+    alt: 'Me in a white Spider-Man style jersey posing with a friend in a red-and-blue football jersey in a living room.',
   },
   {
     ...p('08-player-two', 1200, 1600),
@@ -89,7 +89,7 @@ export const photos: Photo[] = [
     caption: 'Diamond sword in hand, football game on the big screen.',
     category: 'Gaming',
     dexEntry: 'Equipped: one (1) diamond sword. Attack rose sharply!',
-    alt: 'Aaryan in glasses holding a large pixelated diamond sword prop in front of a projector screen showing a football video game.',
+    alt: 'Me in glasses holding a large pixelated diamond sword prop in front of a projector screen showing a football video game.',
   },
   {
     ...p('09-disco', 1200, 1600),
@@ -97,7 +97,7 @@ export const photos: Photo[] = [
     caption: 'White shirts, sunglasses indoors, one disco ball.',
     category: 'Friends',
     dexEntry: 'Gains a speed boost whenever a disco ball is present.',
-    alt: 'Aaryan in sunglasses, white shirt and tie, carrying a friend on his shoulders under a disco-ball balloon and green party lights.',
+    alt: 'Me in sunglasses, white shirt and tie, carrying a friend on my shoulders under a disco-ball balloon and green party lights.',
   },
   {
     ...p('10-side-quest', 1200, 1600),
@@ -105,7 +105,7 @@ export const photos: Photo[] = [
     caption: 'A very tall stack of pancakes, documented properly.',
     category: 'Food',
     dexEntry: 'Side quest accepted. Reward: dessert.',
-    alt: 'Aaryan in glasses smiling and holding up a plate with a tall stack of fluffy pancakes topped with fruit.',
+    alt: 'Me in glasses smiling and holding up a plate with a tall stack of fluffy pancakes topped with fruit.',
   },
   {
     ...p('11-with-rehan', 1600, 1200),
@@ -114,7 +114,7 @@ export const photos: Photo[] = [
     category: 'Friends',
     date: '15 August 2026',
     dexEntry: 'Travels in pairs after dark. Puffer jackets increase DEFENCE against the cold.',
-    alt: 'Aaryan and his friend Rehan in black jackets posing together outside a lit-up venue at night.',
+    alt: 'Me and my friend Rehan in black jackets posing together outside a lit-up venue at night.',
   },
   {
     ...p('12-gummy-bear', 1600, 1200),
@@ -123,7 +123,7 @@ export const photos: Photo[] = [
     category: 'Friends',
     date: '16 August 2026',
     dexEntry: 'Recovers HP after midnight by consuming one (1) gummy bear.',
-    alt: 'Aaryan in a black hoodie sitting on a ledge outside a convenience store at night, holding a large gummy bear in a packet, an ice-cream freezer behind him.',
+    alt: 'Me in a black hoodie sitting on a ledge outside a convenience store at night, holding a large gummy bear in a packet, an ice-cream freezer behind me.',
   },
   {
     ...p('13-hike', 1200, 1600),
@@ -132,7 +132,7 @@ export const photos: Photo[] = [
     category: 'Outdoors',
     date: '26 September 2026',
     dexEntry: 'Can’t pass a good view without catching it on camera first.',
-    alt: 'Aaryan in a white T-shirt with a crossbody bag, raising his phone to take a photo in a shaded rainforest gully with sunlight and falling water.',
+    alt: 'Me in a white T-shirt with a crossbody bag, raising my phone to take a photo in a shaded rainforest gully with sunlight and falling water.',
   },
   {
     ...p('14-front-row', 1600, 1200),
@@ -150,6 +150,6 @@ export const photos: Photo[] = [
     category: 'Just for Fun',
     date: 'October 2024',
     dexEntry: 'Changes form for special occasions. This one was a big swing.',
-    alt: 'Aaryan in a bright blonde wig, white gloves and a pink-and-white anime jersey, posing under a picnic shelter.',
+    alt: 'Me in a bright blonde wig, white gloves and a pink-and-white anime jersey, posing under a picnic shelter.',
   },
 ]
