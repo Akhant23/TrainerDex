@@ -106,7 +106,9 @@ function SignIn({ db }: { db: SupabaseClient }) {
         setError('')
         const { error } = await db.auth.signInWithPassword({ email, password })
         setBusy(false)
-        if (error) setError('Sign-in failed. Check the email and password.')
+        // a wrong email or password stays vague; anything else (email sign-in switched off, an
+        // unconfirmed account, rate limiting) says what Supabase said, so it can be fixed
+        if (error) setError(error.code === 'invalid_credentials' ? 'Sign-in failed. Check the email and password.' : `Sign-in failed: ${error.message}`)
       }}
     >
       <label className="flex flex-col gap-1">
