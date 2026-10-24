@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, type ComponentType, type LazyExoticComponent } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { SettingsProvider, useSettings } from '../systems/settings'
 import { VisitorProvider, useVisitor } from '../systems/visitor'
 import { menuEntryForRoute } from '../content/menu'
@@ -57,6 +58,7 @@ export default function App() {
     <SettingsProvider>
       <VisitorProvider>
         <Game />
+        <Analytics />
       </VisitorProvider>
     </SettingsProvider>
   )
