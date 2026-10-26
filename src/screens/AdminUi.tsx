@@ -164,7 +164,10 @@ export function When({ iso }: { iso: string }) {
   if (Number.isNaN(d.getTime())) return <span className="adm-time">unknown date</span>
   const full = d.toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })
   const mins = Math.round((now - d.getTime()) / 60000)
-  const short = mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 24 * 60 ? `${Math.round(mins / 60)} h ago` : full
+  const sameYear = d.getFullYear() === new Date(now).getFullYear()
+  const day = d.toLocaleDateString('en-AU', sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' })
+  // the full date and time is in the tooltip
+  const short = mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 24 * 60 ? `${Math.round(mins / 60)} h ago` : day
   return (
     <time className="adm-time" dateTime={d.toISOString()} title={full}>
       {short}

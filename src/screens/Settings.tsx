@@ -26,6 +26,7 @@ type Row =
   | ChoiceRow<'sfx'>
   | ChoiceRow<'music'>
   | ChoiceRow<'motion'>
+  | ChoiceRow<'visitStats'>
   | { kind: 'volume'; label: string; help: string }
   | { kind: 'action'; id: 'medals' | 'replay' | 'reset' | 'save'; label: string; help: string }
 
@@ -73,9 +74,19 @@ const rows: Row[] = [
       { label: 'FULL', value: 'full' as MotionPref },
     ],
   },
+  {
+    kind: 'choice',
+    key: 'visitStats',
+    label: 'VISIT STATS',
+    help: 'Lets Aaryan see roughly who visits: your network and city (looked up from your IP), browser, where you came from, which sections you open and for how long. Kept 180 days. Never counted with Do Not Track or Global Privacy Control on.',
+    options: [
+      { label: 'COUNT ME', value: true },
+      { label: 'OFF', value: false },
+    ],
+  },
   { kind: 'action', id: 'medals', label: 'MEDAL BOX', help: 'See the medals you’ve earned exploring the TrainerDex.' },
   { kind: 'action', id: 'replay', label: 'REPLAY INTRO', help: 'Watch the opening again from the start.' },
-  { kind: 'action', id: 'reset', label: 'RESET SAVE DATA', help: 'Start again: clears your name, play time, settings, medals, tower progress and avatar on this device — and removes your resort avatar and any Poké Pager messages or suggestions you sent from the server.' },
+  { kind: 'action', id: 'reset', label: 'RESET SAVE DATA', help: 'Start again: clears your name, play time, settings, medals, tower progress and avatar on this device — and removes your resort avatar, any Poké Pager messages or suggestions you sent, and your visit stats from the server.' },
   { kind: 'action', id: 'save', label: 'SAVE & EXIT', help: 'Save these options and return to the menu.' },
 ]
 

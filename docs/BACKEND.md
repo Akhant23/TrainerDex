@@ -192,3 +192,42 @@ then open the site on the computer at the printed `Network:` address (e.g.
 `http://192.168.0.67:5173`) before pairing, with both devices on the same Wi-Fi (no client
 isolation). Plain-http LAN pages have no Web Crypto `subtle`, which is why the signing uses a small
 built-in SHA-256 (`src/systems/sha256.ts`).
+
+## Visit metrics (admin → METRICS)
+
+The METRICS tab shows who visits: visitors, LinkedIn traffic, organisations, returning visits, time
+on site, sections opened, visitors per day, a visitor table with each one's timeline, breakdowns
+(sources, organisations, places, countries, referrers, devices, browsers, systems, utm / `?ref=`
+tags) and personal links.
+
+**Set up (once):**
+
+```bash
+supabase db push
+```
+
+```bash
+supabase functions deploy track-visit forget-me
+```
+
+The migration (`20261027000000_visit_metrics.sql`) adds `visits`, `ip_lookups`, `visit_daily` and
+`personal_links`, all behind RLS (admins read; nothing for visitors). `track-visit` uses the same
+`ALLOWED_ORIGINS` secret as the other functions.
+
+**How it works:** the site (`src/systems/analytics.ts`) reports a visit's start (referrer, tags, a
+personal-link code), each menu section opened, and the seconds the page was visible. The function
+works out browser, system and device from the User-Agent, and network and place from the IP via
+ip-api.com (free, non-commercial; cached a week). Bots and link previews are ignored; 60 visits an
+hour per IP at most.
+
+**Privacy:**
+
+- [x] Visitors can switch it off in Settings → VISIT STATS. Browsers with Do Not Track or Global
+      Privacy Control on are never counted. Local dev servers don't report unless the
+      `tdx:v1:metrics-dev` localStorage flag is set.
+- [x] Visits, IP addresses and network lookups are kept 180 days, then folded into daily totals
+      (`purge_old_visits()`, run now and then by `track-visit`).
+- [x] Settings → Reset save data deletes this browser's visits too (`forget-me`, by the random
+      visitor id).
+- [x] Personal links: `/?p=<code>` labels every later visit from that browser (the code is kept in
+      its localStorage).

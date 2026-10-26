@@ -2431,6 +2431,8 @@ body::after {
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 .adm-window {
+  /* native controls (checkboxes, dropdown menus) in their light look */
+  color-scheme: light;
   position: relative;
   isolation: isolate;
   width: 100%;
@@ -3470,6 +3472,350 @@ body::after {
 .adm-notes p,
 .adm-notes-inline {
   margin: 4px 0 0;
+}
+
+/* ---------- Admin: METRICS ---------- */
+.adm-root {
+  /* visitors: LinkedIn darker, everyone else lighter (the chart, sources, referrers) */
+  --cat-linkedin: #1d4f9e;
+  --cat-visitor: #6aa9e4;
+}
+@media (max-width: 639px) {
+  /* five tabs: the last one spans the row */
+  .adm-tab:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+.adm-panel {
+  padding: 16px 18px;
+}
+.adm-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 24px;
+  margin-bottom: 12px;
+}
+.adm-panel-empty {
+  margin: 4px 0 0;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--adm-muted);
+}
+.adm-sub-line {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--adm-muted);
+  overflow-wrap: anywhere;
+}
+.adm-source {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  color: var(--adm-navy);
+  background: #e6edf8;
+  box-shadow: inset 0 0 0 1px #b9c8e3;
+}
+.adm-source--linkedin {
+  color: #fff;
+  background: var(--cat-linkedin);
+  box-shadow: none;
+}
+
+/* the visitors table: names open a timeline under the row */
+.adm-table--visitors td {
+  font-size: 14.5px;
+}
+/* short facts stay on one line; who, network and sections wrap */
+.adm-table--visitors td[data-label='Place'],
+.adm-table--visitors td[data-label='Source'],
+.adm-table--visitors td[data-label='Visits'],
+.adm-table--visitors td[data-label='Time'],
+.adm-table--visitors td[data-label='Last seen'] {
+  white-space: nowrap;
+}
+.adm-table--visitors td[data-label='Who'] {
+  min-width: 160px;
+}
+.adm-table--visitors td[data-label='Device'] {
+  min-width: 150px;
+  max-width: 190px;
+}
+.adm-table--visitors th,
+.adm-table--visitors td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.adm-table--visitors th {
+  white-space: normal;
+}
+.adm-table--visitors td[data-label='Sections'] {
+  min-width: 140px;
+}
+.adm-panel-head > .adm-toolbar {
+  flex: 0 1 600px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+@media (max-width: 767px) {
+  .adm-panel-head > .adm-toolbar {
+    flex-wrap: wrap;
+  }
+  .adm-table--visitors td[data-label] {
+    white-space: normal;
+  }
+}
+.adm-who-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--adm-navy);
+}
+.adm-who-btn:hover span:last-child {
+  text-decoration: underline;
+}
+.adm-who-btn:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
+}
+.adm-caret {
+  font-size: 10px;
+  color: var(--adm-blue);
+}
+.adm-who-label {
+  color: var(--adm-blue);
+}
+.adm-row--open td {
+  background: #f1f5fc;
+}
+.adm-timeline-row td {
+  background: #f7f9fd;
+  padding-top: 4px;
+}
+.adm-timeline {
+  margin: 0;
+  padding: 0 0 0 22px;
+  list-style: none;
+  border-left: 3px solid var(--adm-line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.adm-timeline li {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+.adm-timeline li::before {
+  content: '';
+  position: absolute;
+  left: -29px;
+  top: 6px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 2px var(--adm-blue),
+    0 0 0 4px #f7f9fd;
+}
+.adm-timeline-when {
+  min-width: 15ch;
+  font-variant-numeric: tabular-nums;
+  color: var(--adm-navy);
+  font-weight: 600;
+}
+.adm-timeline-body {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  .adm-table--visitors tr {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .adm-table--visitors td,
+  .adm-table--visitors td[data-label] {
+    grid-column: auto !important;
+  }
+  .adm-table--visitors td[data-label='Who'] {
+    grid-column: 1 / -1 !important;
+  }
+  .adm-table.adm-table--visitors td[data-label='Who']::before {
+    display: none;
+  }
+  .adm-table--visitors .adm-row--open {
+    background: #f1f5fc;
+  }
+  .adm-table--visitors .adm-row--open td {
+    background: transparent;
+  }
+  .adm-timeline li {
+    flex-direction: column;
+  }
+  .adm-table--visitors .adm-timeline-row td {
+    display: block;
+    width: auto;
+    padding: 0;
+    background: transparent;
+  }
+  .adm-table--visitors .adm-num {
+    text-align: left;
+  }
+  .adm-table--visitors .adm-timeline-row {
+    display: block !important;
+    padding: 0 14px 12px;
+  }
+}
+
+/* breakdowns: a card per question, a short bar per answer */
+.adm-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 14px;
+}
+.adm-bars-card {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.adm-bars-note {
+  margin-left: 8px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--adm-muted);
+}
+.adm-bar-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.adm-bar-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(36px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--adm-ink);
+}
+.adm-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #eef2f8;
+  overflow: hidden;
+}
+.adm-bar-track span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 4px;
+}
+.adm-bar-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.adm-bar-people {
+  margin-left: 6px;
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--adm-muted);
+}
+.adm-link-btn {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--adm-blue);
+}
+.adm-link-btn:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* personal links */
+.adm-link-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+.adm-link-form .adm-find {
+  flex: 1 1 260px;
+}
+.adm-links {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.adm-links li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 10px 0;
+  border-top: 1px solid #e3e8f1;
+}
+.adm-code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+  color: var(--adm-navy);
+  user-select: all;
+}
+.adm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--adm-ink);
+  cursor: pointer;
+}
+.adm-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--adm-blue);
+}
+.adm-check input:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
 }
 
 /* The badge trophy's polish (ui/Trophy.tsx): a band of light sweeps across the metal, cut to the
