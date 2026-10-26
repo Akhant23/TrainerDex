@@ -156,6 +156,8 @@ interface Props {
   gestures?: boolean
   /** Ask for a specific gesture now (e.g. wave when tapped); change `key` to ask again. */
   gestureTrigger?: { id: GestureId; key: number }
+  /** Hold this pose (the VS screen's wind-ups and strikes): the standing sprite's arms and face posed by a PoseFrame. */
+  frame?: PoseFrame
   className?: string
   style?: CSSProperties
   alt: string
@@ -167,7 +169,7 @@ interface Props {
  */
 const SLOT_FOR: Partial<Record<CharacterPose, AssetSlot>> = { idle: 'aaryan.front', point: 'aaryan.vs', victory: 'aaryan.victory', portrait: 'aaryan.portrait' }
 
-export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill, still = false, nod = false, gestures = false, gestureTrigger, className = '', style, alt }: Props) {
+export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill, still = false, nod = false, gestures = false, gestureTrigger, frame: heldFrame, className = '', style, alt }: Props) {
   const { reducedMotion } = useSettings()
   useAssetLoads()
   const slot = SLOT_FOR[pose]
@@ -214,8 +216,9 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
   const portraitUrl = useMemo(() => (isPortrait ? pixelsToDataUrl(portraitPixels(appearance, hi), palette) : ''), [isPortrait, appearance, palette, hi])
 
   // idle gestures: only for the standing pose, never with reduced motion
-  const gesturing = gestures && animate && pose === 'idle' && !handDrawn
-  const frame = useGestures(gesturing, gestureTrigger)
+  const gesturing = gestures && animate && pose === 'idle' && !handDrawn && !heldFrame
+  const gestureNow = useGestures(gesturing, gestureTrigger)
+  const frame = pose === 'idle' && heldFrame ? heldFrame : gestureNow
   // warm the cache with every gesture frame in idle time, so the first gesture plays smoothly
   useEffect(() => {
     if (!gesturing) return

@@ -1327,15 +1327,16 @@ body {
   }
 }
 
-/* ---------- VS screen before a trainer battle ---------- */
-.vs-in-right {
+/* ---------- VS screen before a trainer battle ----------
+ * Timeline (ms from the card going up): bands slice in 0–460 · names 300 · the bands meet at
+ * 640 (flash, shake, seam, VS slam, ring, strike poses: VS_IMPACT_MS in Fight.tsx) · held until
+ * the battle starts · leaving 260. Everything after the slam loops gently (sunburst, speed lines).
+ */
+.vs-band--foe {
   animation: vs-in-right 460ms var(--ease-move) both;
 }
-.vs-in-left {
+.vs-band--me {
   animation: vs-in-left 460ms 60ms var(--ease-move) both;
-}
-.vs-mark {
-  animation: vs-mark 380ms 380ms var(--ease-pop) both;
 }
 @keyframes vs-in-right {
   from {
@@ -1353,43 +1354,59 @@ body {
     transform: translateX(2%);
   }
 }
-@keyframes vs-mark {
+/* the sunburst behind everything: two tones of rays turning slowly */
+.vs-burst {
+  translate: -50% -50%;
+  background: repeating-conic-gradient(from 0deg, rgb(255 255 255 / 0.07) 0 9deg, transparent 9deg 18deg);
+  animation: vs-spin 24s linear infinite;
+}
+.vs-root--champion .vs-burst {
+  background: repeating-conic-gradient(from 0deg, rgb(255 215 90 / 0.12) 0 9deg, transparent 9deg 18deg);
+}
+@keyframes vs-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+/* speed lines: dashes on thin rows (the mask), streaming sideways; the near layer is brighter and faster */
+.vs-streaks {
+  background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.16) 0 46px, transparent 46px 150px, rgb(255 255 255 / 0.1) 150px 172px, transparent 172px 260px);
+  mask-image: repeating-linear-gradient(180deg, #000 0 2px, transparent 2px 13px);
+  animation: vs-stream 900ms linear infinite;
+}
+.vs-streaks--near {
+  background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.28) 0 90px, transparent 90px 330px);
+  mask-image: repeating-linear-gradient(180deg, transparent 0 7px, #000 7px 10px, transparent 10px 29px);
+  animation-duration: 520ms;
+}
+.vs-band--me .vs-streaks {
+  animation-direction: reverse;
+}
+@keyframes vs-stream {
   from {
-    transform: scale(2.4);
-    opacity: 0;
-  }
-}
-.vs-impact {
-  animation: vs-impact 300ms 640ms linear both;
-}
-@keyframes vs-impact {
-  25% {
-    transform: translate(-1.5%, 1%);
-  }
-  50% {
-    transform: translate(1.5%, -1%);
-  }
-  75% {
-    transform: translate(-0.8%, 0.5%);
-  }
-}
-.vs-flash {
-  opacity: 0;
-  animation: vs-flash 320ms 640ms ease-out both;
-}
-@keyframes vs-flash {
-  30% {
-    opacity: 0.45;
+    background-position-x: 0;
   }
   to {
-    opacity: 0;
+    background-position-x: -260px;
   }
 }
-.vs-in-right .vs-sprite {
+.vs-streaks--near {
+  animation-name: vs-stream-near;
+}
+@keyframes vs-stream-near {
+  to {
+    background-position-x: -330px;
+  }
+}
+/* the trainers: slide in a beat behind their band, lit round the edge in the band's light colour */
+.vs-band--foe .vs-sprite {
   animation: vs-sprite-r 560ms 70ms var(--ease-move) both;
 }
-.vs-in-left .vs-sprite {
+.vs-band--me .vs-sprite {
   animation: vs-sprite-l 560ms 130ms var(--ease-move) both;
+}
+.vs-sprite {
+  filter: drop-shadow(2px 0 0 var(--glow)) drop-shadow(-2px 0 0 var(--glow)) drop-shadow(0 -2px 0 var(--glow));
 }
 @keyframes vs-sprite-r {
   from {
@@ -1412,32 +1429,147 @@ body {
     opacity: 0;
   }
 }
-/* leaving: the bands sweep back off the way they came, the mark shrinks away */
-.vs-out .vs-in-right {
+.vs-underline {
+  transform-origin: left;
+  animation: vs-underline 300ms 640ms var(--ease-move) both;
+}
+.vs-band--foe .vs-underline {
+  transform-origin: left;
+}
+.vs-band--me .vs-underline {
+  transform-origin: right;
+}
+@keyframes vs-underline {
+  from {
+    scale: 0 1;
+  }
+}
+/* the impact: a shake, a flash, the seam's lightning drawn across, a shockwave ring */
+.vs-impact {
+  animation: vs-impact 300ms 640ms linear both;
+}
+@keyframes vs-impact {
+  25% {
+    transform: translate(-1.5%, 1%);
+  }
+  50% {
+    transform: translate(1.5%, -1%);
+  }
+  75% {
+    transform: translate(-0.8%, 0.5%);
+  }
+}
+.vs-flash {
+  opacity: 0;
+  animation: vs-flash 320ms 640ms ease-out both;
+}
+@keyframes vs-flash {
+  30% {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.vs-seam polyline {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 3px #fff7c0);
+  animation: vs-seam 180ms 620ms ease-out forwards;
+}
+.vs-root--champion .vs-seam polyline {
+  stroke: #ffe27a;
+}
+@keyframes vs-seam {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.vs-ring {
+  translate: -50% -50%;
+  box-shadow:
+    0 0 0 4px #fff,
+    0 0 24px 6px rgb(255 240 180 / 0.6);
+  opacity: 0;
+  scale: 0.2;
+  animation: vs-ring 520ms 640ms var(--ease-move) both;
+}
+@keyframes vs-ring {
+  10% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 2.6;
+  }
+}
+/* the mark: the V drops in from the top left and the S from the bottom right, meeting on the flash, then a slow throb */
+.vs-mark {
+  animation: vs-throb 1400ms 1000ms ease-in-out infinite;
+}
+.vs-v {
+  animation: vs-v 300ms 360ms var(--ease-pop) both;
+}
+.vs-s {
+  animation: vs-s 300ms 400ms var(--ease-pop) both;
+}
+@keyframes vs-v {
+  from {
+    translate: -140% -120%;
+    rotate: -30deg;
+    scale: 2.2;
+    opacity: 0;
+  }
+}
+@keyframes vs-s {
+  from {
+    translate: 140% 120%;
+    rotate: 30deg;
+    scale: 2.2;
+    opacity: 0;
+  }
+}
+@keyframes vs-throb {
+  50% {
+    scale: 1.06;
+    filter: brightness(1.25);
+  }
+}
+/* leaving: the bands fly apart diagonally, the mark zooms through, and the backdrop fades */
+.vs-out .vs-band--foe {
   animation: vs-out-r 260ms var(--ease-drop) forwards;
 }
-.vs-out .vs-in-left {
+.vs-out .vs-band--me {
   animation: vs-out-l 260ms var(--ease-drop) forwards;
 }
 .vs-out .vs-mark {
-  animation: vs-mark-out 200ms var(--ease-drop) forwards;
+  animation: vs-mark-out 240ms var(--ease-drop) forwards;
+}
+.vs-out .vs-seam,
+.vs-out .vs-burst {
+  animation: vs-gone 160ms ease-in forwards;
 }
 .vs-out {
   animation: vs-fade 260ms ease-in forwards;
 }
 @keyframes vs-out-r {
   to {
-    transform: translateX(110%);
+    transform: translate(110%, -20%);
   }
 }
 @keyframes vs-out-l {
   to {
-    transform: translateX(-110%);
+    transform: translate(-110%, 20%);
   }
 }
 @keyframes vs-mark-out {
   to {
-    scale: 0.4;
+    scale: 3;
+    opacity: 0;
+  }
+}
+@keyframes vs-gone {
+  to {
     opacity: 0;
   }
 }
@@ -1449,17 +1581,17 @@ body {
     background-color: rgb(16 16 24 / 0);
   }
 }
-[data-motion='reduced'] .vs-sprite,
-[data-motion='reduced'] .vs-name,
-[data-motion='reduced'] .vs-out,
-[data-motion='reduced'] .vs-out * {
+[data-motion='reduced'] .vs-root *,
+[data-motion='reduced'] .vs-out {
   animation: none !important;
 }
-[data-motion='reduced'] .vs-impact,
-[data-motion='reduced'] .vs-flash,
-[data-motion='reduced'] .vs-in-right,
-[data-motion='reduced'] .vs-in-left,
-[data-motion='reduced'] .vs-mark,
+[data-motion='reduced'] .vs-seam polyline {
+  stroke-dashoffset: 0;
+}
+[data-motion='reduced'] .vs-ring,
+[data-motion='reduced'] .vs-flash {
+  opacity: 0;
+}
 [data-motion='reduced'] .bw-nod {
   animation: none;
 }

@@ -23,6 +23,7 @@ import { useGridNav } from '../../ui/useGridNav'
 import { SectionScreen } from '../SectionScreen'
 import { CreatureSprite, HpBar, useHeightScale, type CreaturePose } from './BattleBits'
 import { poseTimeline } from '../../battle/poses'
+import { vsPosesFor, type VsPose } from '../../battle/vsPoses'
 import { Backdrop } from './Backdrop'
 import { arenaMapOf, RECEPTION_ARENA, type Arena } from '../../resort/arena'
 import { useBattleFx } from './BattleFx'
@@ -359,6 +360,8 @@ export default function Fight({
 
   /* ---------- opening ---------- */
 
+  const vsPoses = vsPosesFor(opponent.tag ?? title, recordWin === 'champion')
+
   useEffect(() => {
     alivePlayback.current = true
     progress.startBattle()
@@ -445,8 +448,9 @@ export default function Fight({
           {vs && (
             <VsScreen
               leaving={vs === 'out'}
-              me={{ look: playerLook(), name: (resortSave.get().name || name).toUpperCase(), tag: 'CHALLENGER' }}
-              foe={{ look: opponent.look ?? signature, name: opponent.name ?? 'AARYAN', tag: opponent.tag ?? title }}
+              me={{ look: playerLook(), name: (resortSave.get().name || name).toUpperCase(), tag: 'CHALLENGER', pose: vsPoses.me }}
+              foe={{ look: opponent.look ?? signature, name: opponent.name ?? 'AARYAN', tag: opponent.tag ?? title, pose: vsPoses.foe }}
+              champion={recordWin === 'champion'}
               onSkip={() => skipRef.current?.()}
             />
           )}
@@ -924,36 +928,78 @@ interface VsSide {
   look: Appearance
   name: string
   tag: string
+  pose: VsPose
 }
 
-/** Two diagonal bands slide in — the opponent from the right, you from the left — then both nod. */
-function VsScreen({ me, foe, leaving, onSkip }: { me: VsSide; foe: VsSide; leaving: boolean; onSkip: () => void }) {
-  const band = (side: VsSide, top: boolean) => (
-    <div
-      className={`absolute inset-x-0 flex h-[46%] items-stretch overflow-hidden ${top ? 'vs-in-right top-[2%] flex-row-reverse' : 'vs-in-left bottom-[2%]'}`}
-      style={{
-        background: top ? 'linear-gradient(90deg,#3a0d16,#c8283c 60%,#ff6a50)' : 'linear-gradient(90deg,#1c66d8,#2a3c9a 45%,#101a4a)',
-        clipPath: top ? 'polygon(8% 0,100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,92% 100%,0 100%)',
-      }}
-    >
-      <div className="relative h-full w-[46%] shrink-0">
-        <div className={`vs-sprite absolute inset-x-0 top-[8%] flex h-full justify-center ${top ? 'flip' : ''}`}>
-          <CharacterSprite appearance={side.look} pose="point" fill={2.7} nod alt={`${side.name}`} />
+/** When the bands meet: the flash, the shake, the VS slam and both trainers snapping into their strike poses. */
+const VS_IMPACT_MS = 640
+/** The bands' colours: [dark end, body, light end, the glow round the trainer]. */
+const VS_THEME = {
+  foe: ['#3a0d16', '#c8283c', '#ff6a50', '#ffb0a0'],
+  champion: ['#241404', '#b07812', '#ffd75a', '#fff0b0'],
+  me: ['#101a4a', '#2a3c9a', '#1c66d8', '#a8d0ff'],
+} as const
+
+/**
+ * The VS card before a trainer battle, after Black and White's: over a slowly turning sunburst,
+ * the opponent's band slices in from the right and yours from the left, speed lines streaming
+ * through both; each trainer holds a wind-up pose until the bands meet, then on the flash a
+ * lightning seam splits the screen, the V and the S slam together and both trainers snap into
+ * their strike pose. Leaving, the bands fly apart and the mark zooms through to the battle.
+ * The Champion's band is gold.
+ */
+function VsScreen({ me, foe, champion, leaving, onSkip }: { me: VsSide; foe: VsSide; champion: boolean; leaving: boolean; onSkip: () => void }) {
+  const { reducedMotion } = useSettings()
+  const [struck, setStruck] = useState(reducedMotion)
+  useEffect(() => {
+    if (reducedMotion) return
+    const t = window.setTimeout(() => setStruck(true), VS_IMPACT_MS)
+    return () => window.clearTimeout(t)
+  }, [reducedMotion])
+  const band = (side: VsSide, top: boolean) => {
+    const [b1, b2, b3, glow] = top ? (champion ? VS_THEME.champion : VS_THEME.foe) : VS_THEME.me
+    return (
+      <div
+        className={`vs-band absolute inset-x-0 flex h-[46%] items-stretch overflow-hidden ${top ? 'vs-band--foe top-[2%] flex-row-reverse' : 'vs-band--me bottom-[2%]'}`}
+        style={{
+          background: top ? `linear-gradient(90deg,${b1},${b2} 60%,${b3})` : `linear-gradient(90deg,${b3},${b2} 45%,${b1})`,
+          clipPath: top ? 'polygon(8% 0,100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,92% 100%,0 100%)',
+          ['--glow' as string]: glow,
+        }}
+      >
+        {/* two layers of speed lines at different speeds, streaming the way the band came in */}
+        <div aria-hidden className="vs-streaks absolute inset-0" />
+        <div aria-hidden className="vs-streaks vs-streaks--near absolute inset-0" />
+        <div className="relative h-full w-[46%] shrink-0">
+          <div className={`vs-sprite absolute inset-x-0 top-[8%] flex h-full justify-center ${top ? 'flip' : ''}`}>
+            <CharacterSprite appearance={side.look} frame={struck ? side.pose.strike : side.pose.windup} fill={2.3} alt={side.name} />
+          </div>
+        </div>
+        <div className={`vs-name relative flex min-w-0 flex-1 flex-col justify-center gap-1 ${top ? 'items-start pl-[12%]' : 'items-end pr-[12%] text-right'}`}>
+          <span className="font-display text-[clamp(10px,2.8cqi,16px)] text-paper/80">{side.tag}</span>
+          <span className="font-display text-[clamp(18px,6cqi,36px)] leading-none text-paper [text-shadow:2px_2px_0_#1c1a24]">{side.name}</span>
+          <span aria-hidden className="vs-underline block h-[max(3px,0.6cqi)] w-[70%]" style={{ background: glow }} />
         </div>
       </div>
-      <div className={`vs-name flex min-w-0 flex-1 flex-col justify-center gap-1 ${top ? 'items-start pl-[12%]' : 'items-end pr-[12%] text-right'}`}>
-        <span className="font-display text-[clamp(10px,2.8cqi,16px)] text-paper/80">{side.tag}</span>
-        <span className="font-display text-[clamp(18px,6cqi,36px)] leading-none text-paper [text-shadow:2px_2px_0_#1c1a24]">{side.name}</span>
-      </div>
-    </div>
-  )
+    )
+  }
   return (
-    <div className={`absolute inset-0 z-10 cursor-pointer overflow-hidden bg-[#101018] [container-type:inline-size] ${leaving ? 'vs-out' : ''}`} onClick={onSkip} role="img" aria-label={`${me.name} versus ${foe.name}`}>
-      <div className="absolute inset-0 opacity-30" style={{ background: 'repeating-linear-gradient(115deg,#fff 0 2px,transparent 2px 14px)' }} />
+    <div
+      className={`vs-root absolute inset-0 z-10 cursor-pointer overflow-hidden bg-[#101018] [container-type:inline-size] ${leaving ? 'vs-out' : ''} ${champion ? 'vs-root--champion' : ''}`}
+      onClick={onSkip}
+      role="img"
+      aria-label={`${me.name} versus ${foe.name}`}
+    >
+      <div aria-hidden className="vs-burst absolute top-1/2 left-1/2 aspect-square w-[180%]" />
       <div className="vs-impact absolute inset-0">
         {band(foe, true)}
         {band(me, false)}
       </div>
+      {/* the seam between the bands cracks open as a bolt of lightning on impact */}
+      <svg aria-hidden className="vs-seam pointer-events-none absolute inset-x-0 top-[46%] h-[8%] w-full" viewBox="0 0 100 10" preserveAspectRatio="none">
+        <polyline points="0,6 14,3.5 22,7 37,2.5 46,6.5 54,3 63,7.5 76,3 85,6 100,3.5" fill="none" stroke="#fff" strokeWidth="1.6" vectorEffect="non-scaling-stroke" strokeLinejoin="bevel" pathLength={1} />
+      </svg>
+      <div aria-hidden className="vs-ring pointer-events-none absolute top-1/2 left-1/2 aspect-square w-[34%] rounded-full" />
       <div aria-hidden className="vs-flash pointer-events-none absolute inset-0 bg-white" />
       <button
         type="button"
@@ -965,7 +1011,10 @@ function VsScreen({ me, foe, leaving, onSkip }: { me: VsSide; foe: VsSide; leavi
       >
         SKIP ▸▸
       </button>
-      <span className="vs-mark font-logo absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[clamp(28px,10cqi,64px)] text-gold [text-shadow:3px_3px_0_#1c1a24,-2px_-2px_0_#1c1a24]">VS</span>
+      <span className="vs-mark font-logo pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 text-[clamp(32px,12cqi,76px)] leading-none text-gold [text-shadow:3px_3px_0_#1c1a24,-2px_-2px_0_#1c1a24,0_0_18px_rgb(255_215_90/0.6)]">
+        <span className="vs-v inline-block">V</span>
+        <span className="vs-s inline-block">S</span>
+      </span>
     </div>
   )
 }

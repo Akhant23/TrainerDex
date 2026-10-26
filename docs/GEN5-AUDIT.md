@@ -358,3 +358,40 @@ Captures: `dex-entry-objection.png`, `dex-entry-selecta.png`, `dex-list-unseen.p
 `glasses-clean-browser.png`, `glasses-clean-frames.png` (all but the two sprite sheets are the real
 site in a browser).
 
+
+## Tenth pass: the VS card, album layout, city backdrops
+
+**VS card (`VsScreen`, Fight.tsx; `src/battle/vsPoses.ts`).** IMPLEMENTED AND VISUALLY CHECKED
+(desktop 1400×900, phone 390×844, Champion). The BW principle is that the card is a moment
+rather than a still: in Black and White each trainer strikes their own pose as the card hits,
+and the backdrop keeps moving behind them. This is the site's own version:
+- **Layers, back to front:** a slowly turning sunburst; the two bands, each with two layers of
+  speed lines streaming at different speeds (the near layer brighter); the trainers, outlined in
+  the band's light colour; name plates whose underline draws in on impact; the seam between the
+  bands; a shockwave ring; the VS mark; the flash.
+- **Poses:** each side holds a wind-up while its band slides in and snaps to a strike on the
+  impact flash. The poses are `callOut` (fist up → a finger levelled), `unbothered` (arms folded
+  → a hand raised in a beckon), `fired` (guard up → fist thrown high) and `coolHand` (hands behind
+  the head → one finger to the sky). They're PoseFrames of the layered sprite, so every look and
+  outfit wears them without new art (`CharacterSprite`'s new `frame` prop). The opponent's pose
+  is a stable pick from their tag, and the two sides never share one. The Champion always folds
+  his arms and beckons, while the challenger comes in fired up.
+- **The impact (640 ms):** a shake and a flash. A lightning bolt draws across the seam, the V and
+  the S slam in from opposite corners to meet, and a ring expands from the middle. After that,
+  only the sunburst, the speed lines and a slow throb on the mark keep moving.
+- **Leaving:** the bands fly apart diagonally, the mark zooms through and the backdrop fades
+  onto the battle. The flow's timings (Fight.tsx's opening) are unchanged.
+- **Champion:** the band, sunburst and seam turn gold (tower floor 5, and the quick battle's
+  Champion difficulty).
+- **Reduced motion:** everything holds still on the finished card (strike poses, mark, seam).
+
+Captures: `vs-card-desktop.png`, `vs-card-phone.png`, `vs-card-champion.png`, `vs-poses.png`
+(wind-up/strike pairs, sprite sheet).
+
+**Photo Album.** On phones and tablets the viewer scrolls, so a portrait photo can take up to two
+thirds of the screen's height. Grid slots are 3:4 prints when the screens are stacked, and
+thumbnails crop around where the faces are. The focused print lifts slightly, and the top
+screen's print fades in.
+
+**City backdrops.** The home screen's panning skyline (`SceneBackdrop`) now sits behind the
+album's top screen and the Trainer Card.
