@@ -1,25 +1,31 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import type { SupabaseClient, Session } from '@supabase/supabase-js'
-import type { MenuEntry } from '../content/menu'
 import { adminClient, pagerConfigured } from '../systems/pager'
 import type { Avatar } from '../../supabase/functions/_shared/validate'
-import { PixelBox } from '../ui/PixelBox'
-import { PageTabs } from '../ui/PageTabs'
 import { AvatarIcon } from './PokePager'
 import { CharacterSprite } from '../ui/CharacterSprite'
+import { PixelIcon } from '../ui/PixelIcon'
 import { parseAppearance } from '../../supabase/functions/_shared/appearance'
-import { SectionScreen } from './SectionScreen'
 import { AdminActivity } from './AdminActivity'
+import { AdminPage, ConfirmBar, Notice, RefreshButton, Segmented, StatusBadge, When } from './AdminUi'
+import { SystemBar } from '../app/SystemBar'
+import { Wipe } from '../app/DSShell'
+import { navigate } from '../app/router'
+import { useSettings } from '../systems/settings'
+import { isTypingTarget, useGameKeys } from '../systems/input'
+import { takeReturnTo } from '../systems/returnTo'
 
 /**
  * Hidden moderation dashboard (#/admin). Authentication is Supabase Auth; authorisation is the
  * `admins` table enforced by Row Level Security — this page holds no secrets and grants nothing
  * by itself. A signed-in non-admin sees nothing.
+ *
+ * It isn't a DS section: admin work needs one wide window rather than two half screens, so it has
+ * its own frame (the system bar, then a single Gen V window with the section's teal title bar).
  */
-const entry: MenuEntry = { id: 'admin', label: 'PAGER ADMIN', route: '/admin', icon: 'pager', color: ['#2a9a90', '#105048'], blurb: '', phase: 5, planned: [] }
 
 type Status = 'pending' | 'approved' | 'rejected' | 'spam'
-const TABS: Status[] = ['pending', 'approved', 'rejected', 'spam']
+const STATUSES: Status[] = ['pending', 'approved', 'rejected', 'spam']
 
 interface Row {
   id: string
@@ -53,42 +59,145 @@ export default function Admin() {
     void db.rpc('is_admin').then(({ data, error }) => setIsAdmin(!error && data === true))
   }, [db, session])
 
+  const email = session?.user.email ?? ''
+  const signOut = db && session ? () => void db.auth.signOut() : undefined
+
   return (
-    <SectionScreen
-      entry={entry}
-      title="MODERATION"
-      compactTop
-      top={
-        <div className="absolute inset-0 flex items-center justify-center bg-[#105048] p-[4%]">
-          <p className="font-display m-0 text-center text-[clamp(14px,4.2cqi,22px)] text-paper">
-            POKé PAGER
-            <br />
-            ADMIN
-          </p>
+    <AdminFrame email={isAdmin ? email : undefined} onSignOut={isAdmin ? signOut : undefined}>
+      {!pagerConfigured ? (
+        <Notice kind="error" title="Supabase isn’t configured">
+          The site has no Supabase URL or key, so there’s nothing to moderate. See docs/BACKEND.md.
+        </Notice>
+      ) : !db ? (
+        <Notice kind="loading" title="Connecting" />
+      ) : !session ? (
+        <SignIn db={db} />
+      ) : isAdmin === null ? (
+        <Notice kind="loading" title="Checking access" />
+      ) : !isAdmin ? (
+        <div className="adm-narrow">
+          <Notice
+            kind="info"
+            title="This account isn’t an admin"
+            action={
+              <button type="button" className="pixel-btn adm-btn" onClick={() => void db.auth.signOut()}>
+                SIGN OUT
+              </button>
+            }
+          >
+            You’re signed in as {email}, but it isn’t on the admin list, so there’s nothing to show.
+          </Notice>
         </div>
-      }
-    >
-      <div className="p-[3%]">
-        {!pagerConfigured ? (
-          <PixelBox className="px-4 py-3">Supabase isn’t configured (see docs/BACKEND.md).</PixelBox>
-        ) : !db ? (
-          <p className="font-display blink m-0 text-[14px]">CONNECTING…</p>
-        ) : !session ? (
-          <SignIn db={db} />
-        ) : isAdmin === null ? (
-          <p className="font-display blink m-0 text-[14px]">CHECKING ACCESS…</p>
-        ) : !isAdmin ? (
-          <PixelBox className="space-y-3 px-4 py-3">
-            <p className="m-0">This account isn’t an admin.</p>
-            <button type="button" className="pixel-btn !text-[14px]" onClick={() => void db.auth.signOut()}>
-              SIGN OUT
-            </button>
-          </PixelBox>
+      ) : (
+        <AdminConsole db={db} />
+      )}
+    </AdminFrame>
+  )
+}
+
+/** The admin's window: title bar (back, name, who's signed in) over the page. */
+export function AdminFrame({ email, onSignOut, children }: { email?: string; onSignOut?: () => void; children: ReactNode }) {
+  const { sfx } = useSettings()
+  const back = () => {
+    sfx('back')
+    navigate(takeReturnTo() ?? '/')
+  }
+  // B / Esc goes back, as everywhere on the site, but never out of a text field or a confirmation
+  useGameKeys((k, e) => {
+    if (k !== 'b' || isTypingTarget(e.target) || document.querySelector('.adm-confirm')) return
+    e.preventDefault()
+    back()
+  })
+  return (
+    <div className="ds-page adm-root">
+      <SystemBar />
+      <main className="adm-window" aria-label="Pager admin">
+        <header className="adm-titlebar gv-titlebar">
+          <button type="button" onClick={back} className="pixel-btn adm-btn" aria-label="Back to main menu">
+            ◀ BACK
+          </button>
+          <span className="gv-chip hidden p-1 sm:inline-flex" aria-hidden>
+            <PixelIcon name="pager" scale={2} />
+          </span>
+          <h1 className="gv-label adm-h1">PAGER ADMIN</h1>
+          {email && (
+            <span className="adm-who">
+              <span className="adm-who-email" title={email}>
+                {email}
+              </span>
+              <button type="button" className="pixel-btn adm-btn" onClick={onSignOut}>
+                SIGN OUT
+              </button>
+            </span>
+          )}
+        </header>
+        {children}
+        <Wipe />
+      </main>
+    </div>
+  )
+}
+
+type View = 'messages' | 'suggestions' | 'trainers' | 'activity'
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'messages', label: 'PAGER MESSAGES' },
+  { id: 'suggestions', label: 'SUGGESTIONS' },
+  { id: 'trainers', label: 'RESORT AVATARS' },
+  { id: 'activity', label: 'ACTIVITY' },
+]
+
+/** Signed in as an admin: the section tabs and the chosen page. */
+export function AdminConsole({ db }: { db: SupabaseClient }) {
+  const { sfx } = useSettings()
+  const [view, setView] = useState<View>('messages')
+  const refs = useRef<Array<HTMLButtonElement | null>>([])
+  const pick = (v: View) => {
+    if (v !== view) sfx('cursor')
+    setView(v)
+  }
+  // a proper tab list: arrows / Home / End move between tabs
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const i = VIEWS.findIndex((v) => v.id === view)
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+    if (!d && e.key !== 'Home' && e.key !== 'End') return
+    e.preventDefault()
+    e.stopPropagation()
+    const n = e.key === 'Home' ? 0 : e.key === 'End' ? VIEWS.length - 1 : (i + d + VIEWS.length) % VIEWS.length
+    pick(VIEWS[n].id)
+    refs.current[n]?.focus()
+  }
+  return (
+    <>
+      <div className="adm-tabs gv-header" role="tablist" aria-label="Admin sections" onKeyDown={onKey}>
+        {VIEWS.map((v, i) => (
+          <button
+            key={v.id}
+            ref={(el) => {
+              refs.current[i] = el
+            }}
+            id={`adm-tab-${v.id}`}
+            type="button"
+            role="tab"
+            aria-selected={view === v.id}
+            aria-controls="adm-panel"
+            tabIndex={view === v.id ? 0 : -1}
+            className={`adm-tab ${view === v.id ? 'adm-tab--on' : ''}`}
+            onClick={() => pick(v.id)}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+      <div id="adm-panel" role="tabpanel" aria-labelledby={`adm-tab-${view}`} className="adm-body">
+        {view === 'activity' ? (
+          <AdminActivity db={db} />
+        ) : view === 'trainers' ? (
+          <Trainers db={db} />
         ) : (
-          <AdminTabs db={db} email={session.user.email ?? ''} />
+          <Dashboard key={view} db={db} kind={view === 'suggestions' ? 'suggestion' : 'message'} />
         )}
       </div>
-    </SectionScreen>
+    </>
   )
 }
 
@@ -97,59 +206,43 @@ function SignIn({ db }: { db: SupabaseClient }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const field = 'w-full border-0 bg-paper px-3 py-2 text-[16px] shadow-[inset_0_0_0_var(--u)_var(--color-frame)] outline-none focus:shadow-[inset_0_0_0_var(--u)_var(--color-gold)]'
   return (
-    <form
-      className="flex max-w-[420px] flex-col gap-3"
-      onSubmit={async (e) => {
-        e.preventDefault()
-        setBusy(true)
-        setError('')
-        const { error } = await db.auth.signInWithPassword({ email, password })
-        setBusy(false)
-        // a wrong email or password stays vague; anything else (email sign-in switched off, an
-        // unconfirmed account, rate limiting) says what Supabase said, so it can be fixed
-        if (error) setError(error.code === 'invalid_credentials' ? 'Sign-in failed. Check the email and password.' : `Sign-in failed: ${error.message}`)
-      }}
-    >
-      <label className="flex flex-col gap-1">
-        <span className="font-display text-[13px]">EMAIL</span>
-        <input className={field} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="font-display text-[13px]">PASSWORD</span>
-        <input className={field} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-      </label>
-      {error && (
-        <p role="alert" className="m-0 text-[15px] text-ember">
-          {error}
-        </p>
-      )}
-      <button type="submit" className="pixel-btn pixel-btn--primary self-start !text-[14px]" disabled={busy}>
-        {busy ? 'SIGNING IN…' : 'SIGN IN'}
-      </button>
-    </form>
-  )
-}
-
-function AdminTabs({ db, email }: { db: SupabaseClient; email: string }) {
-  const [view, setView] = useState<'messages' | 'suggestions' | 'trainers' | 'activity'>('messages')
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-1" role="tablist" aria-label="Moderate">
-        {(['messages', 'suggestions', 'trainers', 'activity'] as const).map((v) => (
-          <button key={v} type="button" role="tab" aria-selected={view === v} className={`pixel-btn !text-[13px] ${view === v ? 'pixel-btn--primary' : ''}`} onClick={() => setView(v)}>
-            {v === 'messages' ? 'PAGER MESSAGES' : v === 'suggestions' ? 'SUGGESTIONS' : v === 'trainers' ? 'RESORT AVATARS' : 'ACTIVITY'}
-          </button>
-        ))}
-      </div>
-      {view === 'activity' ? (
-        <AdminActivity db={db} />
-      ) : view === 'trainers' ? (
-        <Trainers db={db} />
-      ) : (
-        <Dashboard key={view} db={db} email={email} kind={view === 'suggestions' ? 'suggestion' : 'message'} />
-      )}
+    <div className="adm-body">
+      <form
+        className="adm-card adm-signin"
+        aria-labelledby="adm-signin-title"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          setBusy(true)
+          setError('')
+          const { error } = await db.auth.signInWithPassword({ email, password })
+          setBusy(false)
+          // a wrong email or password stays vague; anything else (email sign-in switched off, an
+          // unconfirmed account, rate limiting) says what Supabase said, so it can be fixed
+          if (error) setError(error.code === 'invalid_credentials' ? 'Sign-in failed. Check the email and password.' : `Sign-in failed: ${error.message}`)
+        }}
+      >
+        <h2 id="adm-signin-title" className="adm-h2">
+          Admin sign-in
+        </h2>
+        <p className="adm-lede">For moderating the Poké Pager and the Battle Resort. Visitors don’t need an account.</p>
+        <label className="adm-field">
+          <span className="adm-field-label">EMAIL</span>
+          <input className="adm-input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </label>
+        <label className="adm-field">
+          <span className="adm-field-label">PASSWORD</span>
+          <input className="adm-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </label>
+        {error && (
+          <p role="alert" className="adm-error">
+            {error}
+          </p>
+        )}
+        <button type="submit" className="pixel-btn pixel-btn--primary adm-btn self-start" disabled={busy}>
+          {busy ? 'SIGNING IN…' : 'SIGN IN'}
+        </button>
+      </form>
     </div>
   )
 }
@@ -170,10 +263,13 @@ function Trainers({ db }: { db: SupabaseClient }) {
   const [rows, setRows] = useState<TrainerRow[] | null>(null)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
     setError('')
+    setBusy(true)
     const { data, error } = await db.from('trainers').select('id,name,greeting,appearance,party,hidden,created_at,updated_at').order('updated_at', { ascending: false }).limit(300)
+    setBusy(false)
     if (error) return setError(error.message)
     setRows(data as TrainerRow[])
   }, [db])
@@ -194,78 +290,133 @@ function Trainers({ db }: { db: SupabaseClient }) {
     void load()
   }
 
+  const hiddenCount = rows?.filter((r) => r.hidden).length ?? 0
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 text-[14px]">
-        <span>{rows ? `${rows.length} avatars · ${rows.filter((r) => r.hidden).length} hidden` : ''}</span>
-        <button type="button" className="pixel-btn !text-[13px]" onClick={() => void load()}>
-          ↻ REFRESH
-        </button>
-      </div>
+    <AdminPage
+      title="Resort avatars"
+      description="Avatars appear in the Battle Resort as soon as they’re saved. Hide one to take it out of the resort, or delete it for good."
+      actions={<RefreshButton busy={busy} onClick={() => void load()} />}
+    >
       {error && (
-        <p role="alert" className="m-0 bg-ember px-3 py-2 text-paper">
+        <Notice
+          kind="error"
+          title={rows === null ? 'Couldn’t load the avatars' : 'That change didn’t go through'}
+          action={
+            rows === null && (
+              <button type="button" className="pixel-btn adm-btn" onClick={() => void load()}>
+                TRY AGAIN
+              </button>
+            )
+          }
+        >
           {error}
-        </p>
+        </Notice>
       )}
       {rows === null ? (
-        <p className="font-display blink m-0 text-[14px]">LOADING…</p>
+        !error && <Notice kind="loading" title="Loading avatars" />
       ) : rows.length === 0 ? (
-        <p className="m-0">No avatars yet.</p>
+        <Notice kind="empty" icon="battle" title="No avatars yet">
+          When a visitor makes an avatar in the Battle Resort, it shows up here.
+        </Notice>
       ) : (
-        <ul className="m-0 list-none space-y-2 p-0">
-          {rows.map((r) => {
-            const look = parseAppearance(r.appearance)
-            return (
-              <li key={r.id} className={`flex items-center gap-3 bg-paper px-3 py-2 gv-card ${r.hidden ? 'opacity-60' : ''}`}>
-                <span className="shrink-0">{look ? <CharacterSprite appearance={look} pose="portrait" scale={1} still alt={`${r.name}’s avatar`} /> : '?'}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="font-display block text-[14px]">
-                    {r.name} {r.hidden && <span className="text-ember">(HIDDEN)</span>}
-                  </span>
-                  <span className="block text-[14px] break-words">“{r.greeting}”</span>
-                  <span className="text-[13px] text-muted">
-                    {r.party.join(', ')} · updated {new Date(r.updated_at).toLocaleString('en-AU')}
-                  </span>
-                </span>
-                <span className="flex flex-col gap-1">
-                  <button type="button" className="pixel-btn !text-[13px]" onClick={() => void setHidden(r.id, !r.hidden)}>
-                    {r.hidden ? 'UNHIDE' : 'HIDE'}
-                  </button>
-                  {confirmDelete === r.id ? (
-                    <>
-                      <button type="button" className="pixel-btn !text-[13px] !text-ember" onClick={() => void remove(r.id)}>
-                        CONFIRM
-                      </button>
-                      <button type="button" className="pixel-btn !text-[13px]" onClick={() => setConfirmDelete(null)}>
-                        CANCEL
-                      </button>
-                    </>
-                  ) : (
-                    <button type="button" className="pixel-btn !text-[13px]" onClick={() => setConfirmDelete(r.id)}>
-                      DELETE
-                    </button>
-                  )}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+        <>
+          <p className="adm-summary">
+            <strong>{rows.length}</strong> {rows.length === 1 ? 'avatar' : 'avatars'} · <strong>{hiddenCount}</strong> hidden
+          </p>
+          <div className="adm-card adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th scope="col">Avatar</th>
+                  <th scope="col">Trainer</th>
+                  <th scope="col">Party</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const look = parseAppearance(r.appearance)
+                  return (
+                    <tr key={r.id} className={r.hidden ? 'adm-row--muted' : ''}>
+                      <td className="adm-cell-avatar">{look ? <CharacterSprite appearance={look} pose="portrait" scale={1} still alt={`${r.name}’s avatar`} /> : <span className="adm-time">no look</span>}</td>
+                      <td data-label="Trainer">
+                        <span className="adm-name">{r.name}</span>
+                        <span className="adm-quote">“{r.greeting}”</span>
+                      </td>
+                      <td data-label="Party" className="adm-party">
+                        {r.party.length ? r.party.join(', ') : '—'}
+                      </td>
+                      <td data-label="Updated">
+                        <When iso={r.updated_at} />
+                      </td>
+                      <td data-label="Status">
+                        <StatusBadge tone={r.hidden ? 'hidden' : 'visible'} />
+                      </td>
+                      <td className="adm-cell-actions">
+                        {confirmDelete === r.id ? (
+                          <ConfirmBar
+                            question={`Delete ${r.name}’s avatar?`}
+                            detail="It leaves the resort and can’t be brought back. The visitor can make a new one."
+                            confirmLabel="DELETE AVATAR"
+                            onConfirm={() => void remove(r.id)}
+                            onCancel={() => setConfirmDelete(null)}
+                          />
+                        ) : (
+                          <div className="adm-actions">
+                            <button type="button" className="pixel-btn adm-btn" onClick={() => void setHidden(r.id, !r.hidden)}>
+                              {r.hidden ? 'SHOW IN RESORT' : 'HIDE'}
+                            </button>
+                            <button type="button" className="pixel-btn adm-btn adm-btn--danger" onClick={() => setConfirmDelete(r.id)}>
+                              DELETE…
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
-    </div>
+    </AdminPage>
   )
 }
 
-function Dashboard({ db, email, kind }: { db: SupabaseClient; email: string; kind: 'message' | 'suggestion' }) {
-  const [tab, setTab] = useState(0)
+const STATUS_HELP: Record<'message' | 'suggestion', Record<Status, string>> = {
+  message: {
+    pending: 'Waiting for a decision. Nothing here is public yet.',
+    approved: 'Public on the Poké Pager.',
+    rejected: 'Turned down. Not public.',
+    spam: 'Marked as spam. Not public.',
+  },
+  // suggestions are never shown to visitors, whatever their status
+  suggestion: {
+    pending: 'Not looked at yet. Suggestions are only ever seen here.',
+    approved: 'Marked as a good idea. Still private.',
+    rejected: 'Not taking these up. Still private.',
+    spam: 'Marked as spam. Still private.',
+  },
+}
+
+function Dashboard({ db, kind }: { db: SupabaseClient; kind: 'message' | 'suggestion' }) {
+  const [status, setStatus] = useState<Status>('pending')
   const [rows, setRows] = useState<Row[] | null>(null)
-  const [counts, setCounts] = useState<Record<Status, number>>({ pending: 0, approved: 0, rejected: 0, spam: 0 })
+  const [counts, setCounts] = useState<Record<Status, number> | null>(null)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-  const status = TABS[tab]
+  const [busy, setBusy] = useState(false)
+  const noun = kind === 'suggestion' ? 'suggestion' : 'message'
 
   const load = useCallback(async () => {
     setError('')
     setRows(null)
+    setBusy(true)
     const { data, error } = await db
       .from('messages')
       .select('id,name,message,avatar,created_at,status,reviewed_at')
@@ -273,17 +424,21 @@ function Dashboard({ db, email, kind }: { db: SupabaseClient; email: string; kin
       .eq('kind', kind)
       .order('created_at', { ascending: status !== 'pending' ? false : true })
       .limit(200)
-    if (error) return setError(error.message)
+    if (error) {
+      setBusy(false)
+      return setError(error.message)
+    }
     setRows(data as Row[])
-    const c = await Promise.all(TABS.map((t) => db.from('messages').select('id', { count: 'exact', head: true }).eq('status', t).eq('kind', kind)))
-    setCounts(Object.fromEntries(TABS.map((t, i) => [t, c[i].count ?? 0])) as Record<Status, number>)
+    const c = await Promise.all(STATUSES.map((t) => db.from('messages').select('id', { count: 'exact', head: true }).eq('status', t).eq('kind', kind)))
+    setCounts(Object.fromEntries(STATUSES.map((t, i) => [t, c[i].count ?? 0])) as Record<Status, number>)
+    setBusy(false)
   }, [db, status, kind])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const setStatus = async (id: string, next: Status) => {
+  const moveTo = async (id: string, next: Status) => {
     const { error } = await db.from('messages').update({ status: next }).eq('id', id)
     if (error) return setError(error.message)
     void load()
@@ -296,77 +451,89 @@ function Dashboard({ db, email, kind }: { db: SupabaseClient; email: string; kin
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[14px]">
-        <span>Signed in as {email}</span>
-        <span className="flex gap-1">
-          <button type="button" className="pixel-btn !text-[13px]" onClick={() => void load()}>
-            ↻ REFRESH
-          </button>
-          <button type="button" className="pixel-btn !text-[13px]" onClick={() => void db.auth.signOut()}>
-            SIGN OUT
-          </button>
-        </span>
+    <AdminPage
+      title={kind === 'suggestion' ? 'Suggestions' : 'Pager messages'}
+      description={
+        kind === 'suggestion'
+          ? 'Ideas left in the Battle Resort’s suggestion box. They’re only ever seen here.'
+          : 'Guestbook messages. Approved ones appear on the Poké Pager; nothing goes public without approval.'
+      }
+      actions={<RefreshButton busy={busy} onClick={() => void load()} />}
+    >
+      <div className="adm-toolbar">
+        <Segmented label="STATUS" value={status} onChange={setStatus} options={STATUSES.map((s) => ({ value: s, label: s.toUpperCase(), count: counts?.[s] }))} />
       </div>
-      <PageTabs pages={TABS.map((t) => `${t.toUpperCase()} ${counts[t]}`)} current={tab} onChange={setTab} color="#105048" />
+      <p className="adm-hint">{STATUS_HELP[kind][status]}</p>
       {error && (
-        <p role="alert" className="m-0 bg-ember px-3 py-2 text-paper">
+        <Notice
+          kind="error"
+          title={rows === null ? `Couldn’t load the ${noun}s` : 'That change didn’t go through'}
+          action={
+            rows === null && (
+              <button type="button" className="pixel-btn adm-btn" onClick={() => void load()}>
+                TRY AGAIN
+              </button>
+            )
+          }
+        >
           {error}
-        </p>
+        </Notice>
       )}
       {rows === null ? (
-        <p className="font-display blink m-0 text-[14px]">LOADING…</p>
+        !error && <Notice kind="loading" title={`Loading ${noun}s`} />
       ) : rows.length === 0 ? (
-        <p className="m-0">Nothing here.</p>
+        <Notice kind="empty" icon={kind === 'suggestion' ? 'book' : 'pager'} title={`No ${status} ${noun}s`}>
+          {status === 'pending' ? `You’re all caught up: new ${noun}s will wait here for a decision.` : `Nothing has been marked ${status} yet.`}
+        </Notice>
       ) : (
-        <ul className="m-0 list-none space-y-2 p-0">
+        <ul className="adm-list">
           {rows.map((r) => (
-            <li key={r.id} className="bg-paper px-3 py-2 gv-card">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dfe6f0]">
+            <li key={r.id} className="adm-card adm-msg">
+              <div className="adm-msg-head">
+                <span className="adm-avatar" aria-hidden>
                   <AvatarIcon avatar={r.avatar} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="font-display block text-[14px]">{r.name}</span>
-                  <span className="text-[13px] text-muted">{new Date(r.created_at).toLocaleString('en-AU')}</span>
+                  <span className="adm-name">{r.name}</span>
+                  <When iso={r.created_at} />
                 </span>
+                <StatusBadge tone={r.status} />
               </div>
-              <p className="m-0 mt-2 text-[16px] break-words whitespace-pre-wrap">{r.message}</p>
-              <div className="mt-2 flex flex-wrap justify-end gap-1">
-                {status !== 'approved' && (
-                  <button type="button" className="pixel-btn pixel-btn--primary !text-[13px]" onClick={() => void setStatus(r.id, 'approved')}>
-                    APPROVE
-                  </button>
-                )}
-                {status !== 'rejected' && (
-                  <button type="button" className="pixel-btn !text-[13px]" onClick={() => void setStatus(r.id, 'rejected')}>
-                    REJECT
-                  </button>
-                )}
-                {status !== 'spam' && (
-                  <button type="button" className="pixel-btn !text-[13px]" onClick={() => void setStatus(r.id, 'spam')}>
-                    SPAM
-                  </button>
-                )}
-                {confirmDelete === r.id ? (
-                  <>
-                    <button type="button" className="pixel-btn !text-[13px] !text-ember" onClick={() => void remove(r.id)}>
-                      CONFIRM DELETE
+              <p className="adm-msg-text">{r.message}</p>
+              {confirmDelete === r.id ? (
+                <ConfirmBar
+                  question={`Delete this ${noun} from ${r.name}?`}
+                  detail="It’s removed for good. To just hide it, reject it instead."
+                  confirmLabel={`DELETE ${noun.toUpperCase()}`}
+                  onConfirm={() => void remove(r.id)}
+                  onCancel={() => setConfirmDelete(null)}
+                />
+              ) : (
+                <div className="adm-actions adm-msg-actions">
+                  {status !== 'approved' && (
+                    <button type="button" className="pixel-btn adm-btn adm-btn--go" onClick={() => void moveTo(r.id, 'approved')}>
+                      ✓ APPROVE
                     </button>
-                    <button type="button" className="pixel-btn !text-[13px]" onClick={() => setConfirmDelete(null)}>
-                      CANCEL
+                  )}
+                  {status !== 'rejected' && (
+                    <button type="button" className="pixel-btn adm-btn" onClick={() => void moveTo(r.id, 'rejected')}>
+                      REJECT
                     </button>
-                  </>
-                ) : (
-                  <button type="button" className="pixel-btn !text-[13px]" onClick={() => setConfirmDelete(r.id)}>
-                    DELETE
+                  )}
+                  {status !== 'spam' && (
+                    <button type="button" className="pixel-btn adm-btn" onClick={() => void moveTo(r.id, 'spam')}>
+                      MARK SPAM
+                    </button>
+                  )}
+                  <button type="button" className="pixel-btn adm-btn adm-btn--danger" onClick={() => setConfirmDelete(r.id)}>
+                    DELETE…
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </AdminPage>
   )
 }
