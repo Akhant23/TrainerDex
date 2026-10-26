@@ -1,8 +1,9 @@
 // Supabase Edge Function: forget-me
 //
-// POST { trainerId, secret }
-//   Deletes everything this browser sent: the resort avatar (if the secret matches) and every
-//   Poké Pager message or suggestion stamped with the same secret. Called from
+// POST { trainerId, secret, visitorId? }
+//   Deletes everything this browser sent: the resort avatar (if the secret matches), every
+//   Poké Pager message or suggestion stamped with the same secret, and the visit metrics recorded
+//   under this browser's random visitor id. Called from
 //   Settings → Reset save data. Nothing to prove beyond the secret, which only that browser holds.
 //
 // Secrets (set with `supabase secrets set`): ALLOWED_ORIGINS (comma-separated)
@@ -34,6 +35,7 @@ async function sha256(text: string): Promise<string> {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SECRET_RE = /^[0-9a-f]{32,128}$/i
+const VISITOR_RE = /^[a-z0-9]{16,40}$/
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('Origin')
@@ -50,15 +52,17 @@ Deno.serve(async (req) => {
   const id = String(body.trainerId ?? '')
   const secret = String(body.secret ?? '')
   if (!UUID_RE.test(id) || !SECRET_RE.test(secret)) return json({ error: 'Invalid request.' }, 400, origin)
+  const visitor = typeof body.visitorId === 'string' && VISITOR_RE.test(body.visitorId) ? body.visitorId : null
 
   const db = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } })
-  const [{ error: e1, count: messages }, { error: e2, count: trainers }] = await Promise.all([
+  const [{ error: e1, count: messages }, { error: e2, count: trainers }, { error: e3, count: visits }] = await Promise.all([
     db.from('messages').delete({ count: 'exact' }).eq('owner_hash', await sha256(`owner:${secret}`)),
     db.from('trainers').delete({ count: 'exact' }).eq('id', id.toLowerCase()).eq('secret_hash', await sha256(`trainer:${secret}`)),
+    visitor ? db.from('visits').delete({ count: 'exact' }).eq('visitor_id', visitor) : Promise.resolve({ error: null, count: 0 }),
   ])
-  if (e1 || e2) {
-    console.error('forget failed', e1?.message, e2?.message)
+  if (e1 || e2 || e3) {
+    console.error('forget failed', e1?.message, e2?.message, e3?.message)
     return json({ error: 'Couldn’t remove your data right now. Please try again.' }, 500, origin)
   }
-  return json({ ok: true, messages: messages ?? 0, trainers: trainers ?? 0 }, 200, origin)
+  return json({ ok: true, messages: messages ?? 0, trainers: trainers ?? 0, visits: visits ?? 0 }, 200, origin)
 })

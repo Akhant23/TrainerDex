@@ -2,13 +2,14 @@ import { lazy, Suspense, useCallback, useEffect, type ComponentType, type LazyEx
 import { SettingsProvider, useSettings } from '../systems/settings'
 import { VisitorProvider, useVisitor } from '../systems/visitor'
 import { menuEntryForRoute } from '../content/menu'
-import { navigate, useHashPath, useWipedPath } from './router'
+import { currentPath, navigate, useHashPath, useWipedPath } from './router'
 import { WipeContext } from './DSShell'
 import MainMenu from '../screens/MainMenu'
 import { progress } from '../systems/progress'
 import { MedalToast } from '../ui/Medals'
 import { useKonami } from '../systems/konami'
 import { secondScreenHost } from '../systems/secondScreen'
+import { startVisitStats } from '../systems/analytics'
 
 // Sections load on demand so the first visit only downloads the shell, intro and menu.
 const loaders = {
@@ -86,6 +87,10 @@ function Game() {
   useKonami()
   // a phone paired before this tab reloaded reconnects
   useEffect(() => secondScreenHost.resume(), [])
+  // visit stats for the admin's METRICS tab (off with VISIT STATS, Do Not Track or GPC)
+  useEffect(() => {
+    startVisitStats(currentPath(), (fn) => window.addEventListener('hashchange', () => fn(currentPath())))
+  }, [])
 
   // Unknown routes fall back to the menu.
   const entry = menuEntryForRoute(shown)

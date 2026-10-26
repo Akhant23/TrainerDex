@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { ACTIVITY_SOURCES, ACTIVITY_TZ, buildDays, dayLabel, niceScale, rangeStart, type ActivityDay, type ActivityItem, type ActivitySource } from '../systems/activity'
-import { AdminPage, Notice, RefreshButton, Segmented, SortSelect } from './AdminUi'
-import { DAY_SORTS, sortDays, type DaySort } from '../systems/adminSort'
-import { useSavedChoice } from '../ui/useSavedChoice'
-
-const isDaySort = (v: unknown): v is DaySort => DAY_SORTS.some((s) => s.value === v)
+import { ACTIVITY_SOURCES, ACTIVITY_TZ, buildDays, dayLabel, rangeStart, type ActivityDay, type ActivityItem, type ActivitySource } from '../systems/activity'
+import { AdminPage, Notice, RefreshButton, Segmented } from './AdminUi'
+import { DayChart } from './AdminChart'
 
 /**
  * The admin's ACTIVITY tab: what arrived each day (Pager messages, suggestions, resort avatars),
@@ -163,7 +160,6 @@ export function AdminActivity({ db }: { db: SupabaseClient }) {
 }
 
 const sum = (days: ActivityDay[], s: ActivitySource) => days.reduce((n, d) => n + d.counts[s], 0)
-const span = (days: ActivityDay[]) => `${dayLabel(days[0].key, { day: 'numeric', month: 'short' })} and ${dayLabel(days[days.length - 1].key, { day: 'numeric', month: 'short', year: 'numeric' })}`
 
 interface StatCard {
   label: string
@@ -219,178 +215,19 @@ function Stats({ days, shown, failed, range }: { days: ActivityDay[]; shown: Act
 }
 
 function Chart({ days, shown, failed, range }: { days: ActivityDay[]; shown: ActivitySource[]; failed: ActivitySource[]; range: number }) {
-  const [hover, setHover] = useState<number | null>(null)
-  const [daySort, setDaySort] = useSavedChoice<DaySort>('admin-sort-days', 'newest', isDaySort)
-  const totals = days.map((d) => shown.reduce((n, s) => n + d.counts[s], 0))
-  const peak = Math.max(0, ...totals)
-  const { max, step } = niceScale(peak)
-  const ticks = Array.from({ length: Math.floor(max / step) + 1 }, (_, i) => i * step)
-  const gap = range <= 30 ? 'gap-[3px]' : range <= 90 ? 'gap-[1px]' : 'gap-0'
-  // x labels: the first and last day, plus a few between on longer ranges
-  const every = range <= 7 ? 1 : range <= 30 ? 7 : range <= 90 ? 15 : 30
-  const xLabels = days.map((d, i) => (i === 0 || i === days.length - 1 || (i % every === 0 && days.length - 1 - i >= every / 2) ? d.key : null))
-  const subtitle = `Last ${range} days, ${dayLabel(days[0].key, { day: 'numeric', month: 'short' })} – ${dayLabel(days[days.length - 1].key, { day: 'numeric', month: 'short', year: 'numeric' })} · ${ACTIVITY_TZ} time`
-  const activeDays = days.filter((_, i) => totals[i] > 0)
-
-  const describe = (i: number) => {
-    const d = days[i]
-    const parts = shown.filter((s) => d.counts[s] > 0).map((s) => `${d.counts[s]} ${d.counts[s] === 1 ? NAMES[s].one : NAMES[s].many.toLowerCase()}`)
-    const waiting = shown.reduce((n, s) => n + d.pending[s], 0)
-    return `${dayLabel(d.key)}: ${totals[i] === 0 ? 'nothing new' : `${totals[i]} new (${parts.join(', ')})`}${waiting ? `, ${waiting} still waiting for review` : ''}`
-  }
-
-  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
-    e.preventDefault()
-    e.stopPropagation()
-    const cur = hover ?? days.length - 1
-    setHover(e.key === 'Home' ? 0 : e.key === 'End' ? days.length - 1 : Math.max(0, Math.min(days.length - 1, cur + (e.key === 'ArrowLeft' ? -1 : 1))))
-  }
-
-  const header = (
-    <header className="adm-chart-head">
-      <div className="min-w-0">
-        <h3 className="adm-h3">New submissions per day</h3>
-        <p className="adm-chart-sub">{subtitle}</p>
-      </div>
-      {shown.length > 0 && (
-        <ul className="adm-legend" aria-label="Legend">
-          {shown.map((s) => (
-            <li key={s}>
-              <span aria-hidden className="adm-swatch" style={{ background: SHADE[s] }} />
-              {NAMES[s].many} <strong>{sum(days, s)}</strong>
-            </li>
-          ))}
-        </ul>
-      )}
-    </header>
-  )
-
-  if (shown.length === 0)
-    return (
-      <section className="adm-card adm-chart" aria-label="New submissions per day">
-        {header}
-        <div className="adm-chart-empty">
-          <p className="adm-chart-empty-title">No data to chart</p>
-          <p>{failed.map((s) => NAMES[s].many).join(' and ')} couldn’t be loaded, so there’s nothing to show for this period. Try Refresh.</p>
-        </div>
-      </section>
-    )
-  if (peak === 0)
-    return (
-      <section className="adm-card adm-chart" aria-label="New submissions per day">
-        {header}
-        <div className="adm-chart-empty">
-          <p className="adm-chart-empty-title">No submissions between {span(days)}</p>
-          <p>When a visitor sends a Pager message or a suggestion, or makes a resort avatar, it’s counted here on the day it arrived.</p>
-        </div>
-      </section>
-    )
-
-  const at = hover == null ? 0 : (hover + 0.5) / days.length
   return (
-    <section className="adm-card adm-chart" aria-label="New submissions per day">
-      {header}
-      <div
-        className="adm-plot"
-        tabIndex={0}
-        role="group"
-        aria-label={`Bar chart of new submissions per day. ${subtitle}. Use the left and right arrow keys to read each day.`}
-        onKeyDown={onKey}
-        onBlur={() => setHover(null)}
-        onPointerLeave={() => setHover(null)}
-      >
-        <div className="adm-yaxis" aria-hidden>
-          {ticks.map((t) => (
-            <span key={t} style={{ bottom: `${(t / max) * 100}%` }}>
-              {t}
-            </span>
-          ))}
-        </div>
-        <div className="adm-area">
-          {ticks.map((t) => (
-            <span key={t} aria-hidden className={`adm-grid ${t === 0 ? 'adm-grid--base' : ''}`} style={{ bottom: `${(t / max) * 100}%` }} />
-          ))}
-          <div className={`adm-bars ${gap}`}>
-            {days.map((d, i) => (
-              <div key={d.key} className={`adm-col ${hover === i ? 'adm-col--on' : ''}`} onPointerEnter={() => setHover(i)} onPointerDown={() => setHover(i)}>
-                <div className="adm-stack" style={{ height: `${(totals[i] / max) * 100}%` }}>
-                  {shown.map((s) => (d.counts[s] > 0 ? <span key={s} style={{ flexGrow: d.counts[s], background: SHADE[s] }} /> : null))}
-                </div>
-              </div>
-            ))}
-          </div>
-          {hover != null && (
-            <div className="adm-tip" role="presentation" style={{ left: `${at * 100}%`, transform: `translateX(${at < 0.18 ? '-12%' : at > 0.82 ? '-88%' : '-50%'})` }}>
-              <strong className="block">{dayLabel(days[hover].key)}</strong>
-              {totals[hover] === 0 ? (
-                <span className="block">Nothing new</span>
-              ) : (
-                shown.map((s) =>
-                  days[hover].counts[s] > 0 ? (
-                    <span key={s} className="flex items-center gap-1.5">
-                      <span aria-hidden className="adm-swatch" style={{ background: SHADE[s] }} />
-                      {days[hover].counts[s]} {days[hover].counts[s] === 1 ? NAMES[s].one : NAMES[s].many.toLowerCase()}
-                    </span>
-                  ) : null,
-                )
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="adm-xaxis" aria-hidden>
-        {xLabels.map((k, i) =>
-          k ? (
-            <span key={k} style={{ left: `${((i + 0.5) / days.length) * 100}%` }} className={i === 0 ? 'adm-x--first' : i === days.length - 1 ? 'adm-x--last' : 'adm-x--mid'}>
-              {dayLabel(k, { day: 'numeric', month: 'short' })}
-            </span>
-          ) : null,
-        )}
-      </div>
-      <p className="adm-readout" aria-live="polite">
-        {hover == null ? 'Point at a bar, or focus the chart and use the arrow keys, for that day’s numbers.' : describe(hover)}
-      </p>
-      <details className="adm-details">
-        <summary>Show the days as a table</summary>
-        <div className="adm-toolbar mt-3">
-          <SortSelect value={daySort} options={DAY_SORTS} onChange={setDaySort} />
-        </div>
-        <div className="adm-table-scroll">
-          <table className="adm-table adm-table--compact">
-            <caption className="sr-only">New submissions on each day with any activity. {subtitle}</caption>
-            <thead>
-              <tr>
-                <th scope="col">Day</th>
-                {shown.map((s) => (
-                  <th key={s} scope="col" className="adm-num">
-                    {NAMES[s].short}
-                  </th>
-                ))}
-                <th scope="col" className="adm-num">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortDays(activeDays, daySort, (d) => shown.reduce((n, s) => n + d.counts[s], 0)).map((d) => (
-                <tr key={d.key}>
-                  <th scope="row">{dayLabel(d.key)}</th>
-                  {shown.map((s) => (
-                    <td key={s} className="adm-num" data-label={NAMES[s].many}>
-                      {d.counts[s]}
-                    </td>
-                  ))}
-                  <td className="adm-num" data-label="Total">
-                    <strong>{shown.reduce((n, s) => n + d.counts[s], 0)}</strong>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="adm-notes-inline">Days not listed had no submissions.</p>
-      </details>
-    </section>
+    <DayChart
+      days={days}
+      range={range}
+      title="New submissions per day"
+      series={shown.map((s) => ({ id: s, label: NAMES[s].many, short: NAMES[s].short, one: NAMES[s].one, many: NAMES[s].many.toLowerCase(), color: SHADE[s] }))}
+      totalWord={(n) => `${n} new`}
+      extra={(i) => {
+        const waiting = shown.reduce((n, s) => n + days[i].pending[s], 0)
+        return waiting ? `, ${waiting} still waiting for review` : ''
+      }}
+      empty={{ title: 'No submissions', text: 'When a visitor sends a Pager message or a suggestion, or makes a resort avatar, it’s counted here on the day it arrived.' }}
+      unavailable={shown.length === 0 ? `${failed.map((s) => NAMES[s].many).join(' and ')} couldn’t be loaded, so there’s nothing to show for this period. Try Refresh.` : undefined}
+    />
   )
 }

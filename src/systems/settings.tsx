@@ -12,6 +12,8 @@ export interface Settings {
   /** 0–100 */
   volume: number
   motion: MotionPref
+  /** Count this browser's visits in the site's visit stats (systems/analytics.ts). */
+  visitStats: boolean
 }
 
 export const defaultSettings: Settings = {
@@ -20,6 +22,7 @@ export const defaultSettings: Settings = {
   music: false,
   volume: 60,
   motion: 'system',
+  visitStats: true,
 }
 
 /** Milliseconds per character for the typewriter. */
