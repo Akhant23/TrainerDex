@@ -2,8 +2,13 @@ import { useSettings } from '../systems/settings'
 import { navigate } from './router'
 import { Logo } from '../ui/Logo'
 import { PixelIcon } from '../ui/PixelIcon'
+import { Jukebox } from '../ui/Jukebox'
+import { SecondScreenButton } from '../ui/SecondScreen'
 
-/** Always-visible bar: home, sound + music quick toggles, and the resume shortcut. */
+/**
+ * Always-visible bar: home, sound + music quick toggles, the jukebox, the phone controller
+ * (desktop) and the resume shortcut.
+ */
 export function SystemBar() {
   const { saved, saveSettings, sfx } = useSettings()
 
@@ -15,7 +20,7 @@ export function SystemBar() {
 
   return (
     <div className="system-band">
-      <header className="flex w-full max-w-[1500px] items-center justify-between gap-2 px-3 pt-2 pb-3 sm:px-5">
+      <header className="sysbar-inner flex w-full items-center justify-between gap-2 px-3 pt-2 pb-3 sm:px-5">
         <a
           href="#/"
           onClick={() => sfx('back')}
@@ -24,10 +29,11 @@ export function SystemBar() {
         >
           <Logo size="sm" />
         </a>
-        <nav aria-label="Quick settings" className="flex items-center gap-1">
+        <nav aria-label="Quick settings" className="flex items-center gap-0 min-[420px]:gap-1">
+          <SecondScreenButton />
           <button
             type="button"
-            className="pixel-btn pixel-btn--ghost !p-1"
+            className="pixel-btn pixel-btn--ghost sysbar-icon !p-1"
             aria-pressed={saved.sfx}
             aria-label={saved.sfx ? 'Sound effects on' : 'Sound effects off'}
             title={saved.sfx ? 'Sound effects: ON' : 'Sound effects: OFF'}
@@ -39,7 +45,7 @@ export function SystemBar() {
           </button>
           <button
             type="button"
-            className="pixel-btn pixel-btn--ghost !p-1"
+            className="pixel-btn pixel-btn--ghost sysbar-icon !p-1"
             aria-pressed={saved.music}
             aria-label={saved.music ? 'Music on' : 'Music off'}
             title={saved.music ? 'Music: ON' : 'Music: OFF'}
@@ -50,16 +56,18 @@ export function SystemBar() {
               {!saved.music && <span aria-hidden className="absolute top-1/2 left-0 h-[3px] w-full -rotate-45 bg-dex-red" />}
             </span>
           </button>
+          <Jukebox />
           <button
             type="button"
-            className="pixel-btn pixel-btn--primary ml-1 inline-flex items-center gap-2 !text-[14px]"
+            className="pixel-btn pixel-btn--primary ml-1 inline-flex items-center gap-2 !text-[14px] max-[419px]:!px-2"
             onClick={() => {
               sfx('open')
               navigate('/pc/resume')
             }}
           >
             <PixelIcon name="resume" scale={1} className="bg-paper" />
-            RESUME
+            {/* narrow phones keep the icon and lose the word visually (screen readers keep it) */}
+            <span className="max-[409px]:sr-only">RESUME</span>
           </button>
         </nav>
       </header>

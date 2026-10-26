@@ -148,3 +148,39 @@ Restart `npm run dev`. The Poké Pager's "NO SIGNAL" notice disappears.
 - [x] Suggestions are stored as `kind = 'suggestion'` and RLS never returns them to visitors.
 - [x] "Forget me": every message carries a SHA-256 of a random secret held only by the sender's browser (never readable by visitors); `forget-me` deletes those messages and the matching avatar.
 - [x] "Match my photo" runs entirely in the browser — the photo is never uploaded or stored.
+
+## Phone as a controller (Supabase Realtime)
+
+The desktop's phone icon (wide screens only) pairs a phone as a second-screen controller. It needs no
+new tables, functions or secrets: it uses Realtime **broadcast** and **presence** on public channels
+with the same anon key the site already ships. Realtime must allow public channels (Supabase's
+default; if *Realtime → Settings → Allow public access* is turned off, pairing fails with
+"Couldn't reach the pairing service").
+
+- **Pairing:** the desktop makes a random 8-character code (31-symbol alphabet, ≈40 bits) shown as
+  text and in a QR code linking to `<current origin>/#/controller?c=CODE`. The code never goes over
+  the network. The channel name and the signing key are two separate SHA-256 hashes of it, so
+  knowing a channel (or a session id) is not enough to send anything.
+- **Every message is signed** (HMAC-SHA256 with the key, direction-tagged). Phone messages also carry
+  a per-pairing session nonce from the desktop and a rising sequence number, so replays are
+  ignored. The desktop parses every message strictly (exact fields, known buttons only) and
+  rate-limits input.
+- **What a phone can do:** press D-pad / A / B / START, or pick one of the options the desktop is
+  showing. These are replayed as the same keys the keyboard uses (`src/systems/commands.ts`). The
+  admin page (`#/admin`) refuses remote input entirely.
+- **One phone per desktop:** a second phone gets "already connected".
+- **Lifetimes:** an unused code expires after 5 minutes; a phone that drops off has 45 s to come
+  back; 30 minutes without input ends the pairing. Either side can disconnect. Refreshing either
+  device reconnects without pairing again (the session lives in that tab's sessionStorage).
+
+**Testing on a local network.** The phone must be able to open the desktop's address, so
+`localhost` won't do (the panel warns about this). Run the dev server on the network:
+
+```bash
+npm run dev -- --host
+```
+
+then open the site on the computer at the printed `Network:` address (e.g.
+`http://192.168.0.67:5173`) before pairing, with both devices on the same Wi-Fi (no client
+isolation). Plain-http LAN pages have no Web Crypto `subtle`, which is why the signing uses a small
+built-in SHA-256 (`src/systems/sha256.ts`).

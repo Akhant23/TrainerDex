@@ -438,6 +438,10 @@ body {
  * Frame: dark line · light band · dark line, rounded like Gen V windows, with a hard drop.
  */
 
+/* the bar's contents line up with the game windows below (wider on big screens, see .ds-shell) */
+.sysbar-inner {
+  max-width: 1500px;
+}
 .ds-page {
   min-height: 100dvh;
   display: flex;
@@ -509,12 +513,33 @@ body {
     padding: 9px;
     gap: 26px;
   }
-  /* use the full height of the window: screens grow from 4:3 up to square */
+  /*
+   * Use the whole window: each screen is as wide as half the window allows and as tall as the
+   * window allows (4:3 up to square), so a big monitor gets big screens rather than a small pair
+   * in a sea of pattern. The art inside always redraws at whole-number scales, and an ultrawide
+   * window letterboxes at the sides instead of stretching anything.
+   */
   .ds-screen--top,
   .ds-screen--bottom {
-    width: min(46vw, 840px);
-    height: min(calc(100dvh - 118px), calc(min(46vw, 840px) * 1.02));
+    width: var(--ds-screen-w);
+    height: min(calc(100dvh - 118px), calc(var(--ds-screen-w) * 1.02));
     aspect-ratio: auto;
+  }
+  :root .sysbar-inner {
+    max-width: calc(var(--ds-screen-w) * 2 + 62px);
+  }
+}
+@media (min-width: 1024px) and (min-aspect-ratio: 5/4) {
+  :root {
+    /* short laptop windows: as before, the footer may sit just below the fold */
+    --ds-screen-w: min(46vw, 840px);
+  }
+}
+@media (min-width: 1024px) and (min-aspect-ratio: 5/4) and (min-height: 800px) {
+  :root {
+    /* half the window, short enough that the bar, both screens and the footer fit without
+       scrolling (190px is the bar, the frame and the footer), capped where text stops gaining */
+    --ds-screen-w: min(46vw, calc((100dvh - 190px) / 1.02), 1280px);
   }
 }
 
@@ -1516,4 +1541,531 @@ body::after {
     position: static;
     margin: -8px -16px 14px;
   }
+}
+
+/* ---------- System bar icons, the jukebox ---------- */
+
+/* a small lit LED on a system bar icon: music playing, phone connected */
+.sysbar-led {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 7px;
+  height: 7px;
+  background: var(--color-leaf);
+  box-shadow: 0 0 0 2px var(--gv-ink);
+}
+.sysbar-led--amber {
+  background: var(--color-amber);
+}
+.sysbar-icon:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 1px;
+}
+.sysbar-icon[aria-expanded='true'] > span {
+  background: var(--color-gold);
+}
+
+.jukebox-panel {
+  box-shadow:
+    inset 0 0 0 var(--u) var(--box-inner),
+    0 calc(-1 * var(--u)) 0 0 var(--box-border),
+    0 var(--u) 0 0 var(--box-border),
+    calc(-1 * var(--u)) 0 0 0 var(--box-border),
+    var(--u) 0 0 0 var(--box-border),
+    0 calc(var(--u) * 3) 0 0 rgb(4 6 16 / 0.5);
+  overflow: hidden;
+}
+.jukebox-deck {
+  width: 92px;
+  height: 84px;
+  background: linear-gradient(180deg, #8a5a3c 0 50%, #6e4c3a 50% 100%);
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.18),
+    inset 0 -3px 0 #3a281e,
+    0 0 0 2px var(--gv-ink);
+}
+/* quarter turns only, so the pixels stay crisp */
+.jukebox-disc--spin {
+  animation: jukebox-spin 0.72s steps(4) infinite;
+}
+@keyframes jukebox-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.jukebox-list {
+  max-height: min(46dvh, 300px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-frame) transparent;
+}
+.jukebox-row:hover,
+.jukebox-row:focus-visible {
+  background: rgb(255 255 255 / 0.1);
+}
+.jukebox-row--on {
+  color: var(--color-gold);
+}
+.jukebox-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+.jukebox-eq > span {
+  width: 3px;
+  height: 6px;
+  background: var(--color-leaf);
+}
+.jukebox-eq > span:nth-child(2) {
+  height: 10px;
+}
+.jukebox-eq--live > span {
+  animation: jukebox-eq 0.6s steps(3) infinite alternate;
+}
+.jukebox-eq--live > span:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.jukebox-eq--live > span:nth-child(3) {
+  animation-delay: -0.15s;
+}
+@keyframes jukebox-eq {
+  from {
+    height: 3px;
+  }
+  to {
+    height: 12px;
+  }
+}
+[data-motion='reduced'] .jukebox-disc--spin,
+[data-motion='reduced'] .jukebox-eq--live > span {
+  animation: none;
+}
+
+/* ---------- The phone controller (#/controller) ----------
+ * A pad, not a shrunken site: a framed top screen mirroring the desktop's menu, then a D-pad on
+ * the left and A / B / START on the right, sized for thumbs.
+ */
+.pad-page {
+  min-height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.pad-screen {
+  margin: 4px 16px 0;
+  height: clamp(220px, 40dvh, 380px);
+  background: #e8ecf4;
+  color: var(--color-ink);
+  border-radius: var(--gv-radius);
+  box-shadow: var(--gv-window);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pad-screen > * {
+  flex: 1;
+  min-height: 0;
+}
+.pad-options {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pad-option {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 17px;
+  color: var(--color-ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.pad-option--on {
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--gv-ink);
+}
+.pad-controls {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 20px 8px;
+  touch-action: none;
+}
+.pad-controls--off {
+  opacity: 0.45;
+}
+.pad-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, var(--pad-cell, 62px));
+  grid-template-rows: repeat(3, var(--pad-cell, 62px));
+}
+.pad-dir {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  color: var(--color-frame-hi);
+  font-size: 20px;
+  touch-action: none;
+}
+.pad-dir--up {
+  grid-area: 1 / 2;
+  border-radius: 8px 8px 0 0;
+}
+.pad-dir--left {
+  grid-area: 2 / 1;
+  border-radius: 8px 0 0 8px;
+}
+.pad-dir--mid {
+  grid-area: 2 / 2;
+  box-shadow: 0 0 0 calc(var(--u) * 0.67) var(--gv-ink);
+}
+.pad-dir--right {
+  grid-area: 2 / 3;
+  border-radius: 0 8px 8px 0;
+}
+.pad-dir--down {
+  grid-area: 3 / 2;
+  border-radius: 0 0 8px 8px;
+}
+.pad-ab {
+  display: grid;
+  grid-template-columns: repeat(2, 76px);
+  grid-template-rows: 40px 76px 40px;
+  gap: 0 10px;
+}
+.pad-btn {
+  font-family: var(--font-display);
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  touch-action: none;
+  color: #fff;
+  -webkit-tap-highlight-color: transparent;
+}
+.pad-btn--a,
+.pad-btn--b {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  font-size: 26px;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--btn) 70%, #fff) 0 18%, var(--btn) 19% 62%, color-mix(in srgb, var(--btn) 70%, #000) 63%);
+  box-shadow:
+    0 0 0 3px var(--gv-ink),
+    0 6px 0 3px rgb(4 6 16 / 0.5);
+}
+.pad-btn--a {
+  --btn: var(--color-dex-red);
+  grid-area: 1 / 2 / 3 / 3;
+  align-self: start;
+}
+.pad-btn--b {
+  --btn: #3a6fd0;
+  grid-area: 2 / 1 / 4 / 2;
+  align-self: end;
+}
+.pad-btn--a:active,
+.pad-btn--b:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 3px var(--gv-ink);
+}
+.pad-btn--start {
+  padding: 6px 16px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  border-radius: 999px;
+  background: #4c5170;
+  color: var(--color-frame-hi);
+  box-shadow:
+    0 0 0 2px var(--gv-ink),
+    0 3px 0 2px rgb(4 6 16 / 0.5);
+}
+.pad-btn--start:active {
+  transform: translateY(2px);
+}
+.pad-btn:disabled,
+.pad-dir:disabled {
+  cursor: default;
+}
+.pad-led {
+  width: 10px;
+  height: 10px;
+  background: #4a5068;
+  box-shadow: 0 0 0 2px var(--gv-ink);
+}
+.pad-led--on {
+  background: var(--color-leaf);
+}
+.pad-led--wait {
+  background: var(--color-amber);
+  animation: blink 1s steps(1) infinite;
+}
+[data-motion='reduced'] .pad-led--wait {
+  animation: none;
+}
+@media (max-width: 360px) {
+  .pad-dpad {
+    --pad-cell: 54px;
+  }
+  .pad-ab {
+    grid-template-columns: repeat(2, 66px);
+    grid-template-rows: 34px 66px 34px;
+  }
+  .pad-btn--a,
+  .pad-btn--b {
+    width: 66px;
+    height: 66px;
+  }
+}
+
+/* ---------- Admin activity chart ----------
+ * A light analytics layout inside the admin: white cards with a soft rim, blue bars stacked dark
+ * to light, dashed gridlines, small grey axis labels and a one-line readout under the chart.
+ */
+.act {
+  --act-ink: #1f2a3c;
+  --act-muted: #6a7488;
+  --act-line: #d5dde9;
+  --act-accent: #0d5fc2;
+  color: var(--act-ink);
+  font-family: var(--font-body);
+}
+.act-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px #dfe6f1,
+    0 2px 6px rgb(31 42 60 / 0.06);
+  padding: 12px 14px;
+}
+.act-state {
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  font-size: 15px;
+}
+.act-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background: #e3eaf4;
+  box-shadow: inset 0 1px 2px rgb(31 42 60 / 0.08);
+}
+.act-seg button {
+  border: 0;
+  background: transparent;
+  color: var(--act-ink);
+  font: inherit;
+  font-size: 14px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.act-seg button:hover {
+  background: rgb(255 255 255 / 0.6);
+}
+.act-seg .act-seg--on {
+  background: #fff;
+  color: var(--act-accent);
+  box-shadow: 0 1px 3px rgb(31 42 60 / 0.16);
+}
+.act-seg button:focus-visible,
+.act-refresh:focus-visible,
+.act-plot:focus-visible {
+  outline: 2px solid var(--act-accent);
+  outline-offset: 2px;
+}
+.act-refresh {
+  border: 0;
+  font: inherit;
+  font-size: 14px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(180deg, #4cc3f2 0 50%, #1d9fe0 50% 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 0 0 1px #1478b4;
+  cursor: pointer;
+}
+.act-refresh:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.act-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+.act-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+}
+.act-stat-label {
+  font-size: 13px;
+  color: var(--act-muted);
+}
+.act-stat-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--act-accent);
+}
+.act-stat-sub {
+  font-size: 12px;
+  color: var(--act-muted);
+}
+.act-sub,
+.act-legend,
+.act-note {
+  font-size: 13px;
+  color: var(--act-muted);
+}
+.act-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-left: auto;
+}
+.act-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.act-plot {
+  position: relative;
+  display: flex;
+  height: clamp(170px, 28cqi, 280px);
+  margin-top: 10px;
+  outline: none;
+}
+.act-yaxis {
+  position: relative;
+  width: 28px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--act-muted);
+}
+.act-yaxis span {
+  position: absolute;
+  right: 6px;
+  transform: translateY(50%);
+  line-height: 1;
+}
+.act-area {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.act-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--act-line);
+}
+.act-grid--base {
+  border-top: 1px solid #b9c4d6;
+}
+.act-bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+}
+.act-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  cursor: crosshair;
+}
+.act-col--on {
+  background: rgb(13 95 194 / 0.06);
+}
+.act-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 2px 2px 0 0;
+  overflow: hidden;
+}
+.act-stack > span {
+  flex-basis: 0;
+  min-height: 1px;
+}
+.act-col--on .act-stack {
+  filter: brightness(1.08) saturate(1.1);
+}
+.act-tip {
+  position: absolute;
+  top: 4px;
+  min-width: 140px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px #cfd8e6,
+    0 4px 12px rgb(31 42 60 / 0.15);
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+.act-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--act-muted);
+}
+.act-xaxis {
+  position: relative;
+  height: 18px;
+  margin: 4px 0 0 28px;
+  font-size: 12px;
+  color: var(--act-muted);
+}
+.act-xaxis span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.act-xaxis .act-x--first {
+  transform: none;
+  left: 0 !important;
+}
+.act-xaxis .act-x--last {
+  transform: none;
+  left: auto !important;
+  right: 0;
+}
+@container (max-width: 520px) {
+  .act-xaxis .act-x--mid {
+    display: none;
+  }
+}
+.act-readout {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--act-ink);
 }

@@ -44,6 +44,15 @@ export async function submitMessage(body: { name: string; message: string; avata
   throw new Error(msg)
 }
 
+/**
+ * Supabase client for the phone controller's Realtime channel: anonymous, no session kept (lazy,
+ * so it only loads when someone pairs a phone).
+ */
+export async function realtimeClient() {
+  const { createClient } = await import('@supabase/supabase-js')
+  return createClient(URL, ANON, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
+}
+
 /** Supabase client for the admin dashboard only (lazy, so visitors never download it). */
 export async function adminClient() {
   const { createClient } = await import('@supabase/supabase-js')

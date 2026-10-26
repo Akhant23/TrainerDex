@@ -9,6 +9,7 @@ import { AvatarIcon } from './PokePager'
 import { CharacterSprite } from '../ui/CharacterSprite'
 import { parseAppearance } from '../../supabase/functions/_shared/appearance'
 import { SectionScreen } from './SectionScreen'
+import { AdminActivity } from './AdminActivity'
 
 /**
  * Hidden moderation dashboard (#/admin). Authentication is Supabase Auth; authorisation is the
@@ -132,17 +133,23 @@ function SignIn({ db }: { db: SupabaseClient }) {
 }
 
 function AdminTabs({ db, email }: { db: SupabaseClient; email: string }) {
-  const [view, setView] = useState<'messages' | 'suggestions' | 'trainers'>('messages')
+  const [view, setView] = useState<'messages' | 'suggestions' | 'trainers' | 'activity'>('messages')
   return (
     <div className="space-y-3">
-      <div className="flex gap-1" role="tablist" aria-label="Moderate">
-        {(['messages', 'suggestions', 'trainers'] as const).map((v) => (
+      <div className="flex flex-wrap gap-1" role="tablist" aria-label="Moderate">
+        {(['messages', 'suggestions', 'trainers', 'activity'] as const).map((v) => (
           <button key={v} type="button" role="tab" aria-selected={view === v} className={`pixel-btn !text-[13px] ${view === v ? 'pixel-btn--primary' : ''}`} onClick={() => setView(v)}>
-            {v === 'messages' ? 'PAGER MESSAGES' : v === 'suggestions' ? 'SUGGESTIONS' : 'RESORT AVATARS'}
+            {v === 'messages' ? 'PAGER MESSAGES' : v === 'suggestions' ? 'SUGGESTIONS' : v === 'trainers' ? 'RESORT AVATARS' : 'ACTIVITY'}
           </button>
         ))}
       </div>
-      {view === 'trainers' ? <Trainers db={db} /> : <Dashboard key={view} db={db} email={email} kind={view === 'suggestions' ? 'suggestion' : 'message'} />}
+      {view === 'activity' ? (
+        <AdminActivity db={db} />
+      ) : view === 'trainers' ? (
+        <Trainers db={db} />
+      ) : (
+        <Dashboard key={view} db={db} email={email} kind={view === 'suggestions' ? 'suggestion' : 'message'} />
+      )}
     </div>
   )
 }
