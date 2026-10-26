@@ -73,14 +73,13 @@ export const photoScenes: Record<string, PhotoScene> = {
     cast: [{ me: true, x: 120, look: me({ hair: 'wavy', top: 'shirt', topColour: 'white', accentColour: 'white', face: 'grin', bottom: 'slacks' }) }],
     alt: 'Pixel-art me in a crisp white shirt, smiling, in front of tall bright windows.',
   },
-  '02-law-ball': {
-    backdrop: 'hall',
+  '02-with-rehan': {
+    backdrop: 'street',
     cast: [
-      { x: 64, look: friend({ skin: 'light', hair: 'short', top: 'suit', topColour: 'black', accentColour: 'black', bottom: 'slacks', shoes: 'formal' }), pose: { back: { el: [17, 36], wr: [13, 23], hand: 'open' }, mouth: 'grin' }, flip: true },
-      { me: true, x: 160, look: me({ top: 'shirt', topColour: 'black', accentColour: 'maroon', bottom: 'slacks', shoes: 'formal' }), pose: highFive, z: 1 },
+      { me: true, x: 88, y: 18, look: me({ top: 'hoodie', topColour: 'black', accentColour: 'black', accessories: ['chain'] }), pose: armsCrossed },
+      { x: 160, look: friend({ skin: 'tan', hair: 'curtains', top: 'jacket', topColour: 'black', accessories: ['glasses'], face: 'calm' }), pose: { back: { el: [16, 25], wr: [6, 9], hand: 'open' } }, z: 1 },
     ],
-    props: [{ id: 'sign', x: 110, y: 104, front: true }],
-    alt: 'Pixel-art me in a black shirt and maroon tie high-fiving a friend in a dark suit beside the Law Ball welcome sign.',
+    alt: 'Pixel-art me in a black jacket and chain, arms crossed, with a friend in a black puffer leaning an arm over my head at night.',
   },
   '03-tour-bags': {
     backdrop: 'bags',
@@ -88,16 +87,14 @@ export const photoScenes: Record<string, PhotoScene> = {
     props: [{ id: 'bagPile', x: 120, y: 132, front: true }],
     alt: 'Pixel-art me in a yellow Yellow Shirts tee, hands behind my head, sinking into a pile of O-Week tour bags.',
   },
-  '04-law-camp': {
-    backdrop: 'camp',
+  '04-law-ball': {
+    backdrop: 'hall',
     cast: [
-      { x: 38, look: friend({ skin: 'tan', hair: 'long', top: 'tank', topColour: 'tan', bottom: 'skirt', bottomColour: 'tan' }) },
-      { x: 92, look: friend({ skin: 'light', hair: 'long', top: 'tank', topColour: 'orange', bottom: 'shorts', bottomColour: 'white' }), z: 1 },
-      { me: true, x: 150, look: me({ hair: 'wavy', top: 'shirt', topColour: 'white', accentColour: 'white', face: 'grin' }), z: 1 },
-      { x: 204, look: friend({ skin: 'light', hair: 'short', top: 'tee', topColour: 'red', accentColour: 'green' }), pose: armAround },
+      { x: 64, look: friend({ skin: 'light', hair: 'short', top: 'suit', topColour: 'black', accentColour: 'black', bottom: 'slacks', shoes: 'formal' }), pose: { back: { el: [17, 36], wr: [13, 23], hand: 'open' }, mouth: 'grin' }, flip: true },
+      { me: true, x: 160, look: me({ top: 'shirt', topColour: 'black', accentColour: 'maroon', bottom: 'slacks', shoes: 'formal' }), pose: highFive, z: 1 },
     ],
-    props: [{ id: 'stringLights', x: 120, y: 2 }, { id: 'palm', x: 10, y: 150, front: true }, { id: 'palm', x: 230, y: 150, front: true, flip: true }],
-    alt: 'Pixel-art me in white linen with three friends at Law Camp, under fairy lights between two inflatable palm trees.',
+    props: [{ id: 'sign', x: 110, y: 104, front: true }],
+    alt: 'Pixel-art me in a black shirt and maroon tie high-fiving a friend in a dark suit beside the Law Ball welcome sign.',
   },
   '05-merch-shoot': {
     backdrop: 'studio',
@@ -122,13 +119,29 @@ export const photoScenes: Record<string, PhotoScene> = {
     ],
     alt: 'Pixel-art me in a white jersey with a big navy spider, black sleeves underneath, striking a pose next to a friend in a red-and-navy striped kit.',
   },
-  '08-player-two': {
-    backdrop: 'cinema',
-    cast: [{ me: true, x: 112, look: me({ top: 'tee', topColour: 'white', accentColour: 'white', bottom: 'jeans', bottomColour: 'navy', accessories: ['glasses'] }), pose: hold }],
-    props: [{ id: 'sword', x: 168, y: 60, front: true }],
-    alt: 'Pixel-art me in glasses and a white tee holding up a giant pixel diamond sword in front of a projector screen.',
+  '08-aml-group': {
+    backdrop: 'party',
+    cast: [
+      { x: 34, look: friend({ skin: 'brown', hair: 'short', top: 'blazer', topColour: 'navy', accentColour: 'red', hat: 'bucket', hatColour: 'white', face: 'calm', bottom: 'slacks', shoes: 'formal' }) },
+      { x: 78, look: friend({ skin: 'deep', hair: 'curly', top: 'suit', topColour: 'black', accentColour: 'pink', accessories: ['sunglasses'], face: 'smirk', bottom: 'slacks', shoes: 'formal' }) },
+      { x: 166, look: friend({ skin: 'brown', hair: 'curly', top: 'shirt', topColour: 'black', accentColour: 'black', face: 'grin', bottom: 'slacks', shoes: 'formal' }) },
+      { x: 208, look: friend({ skin: 'light', hair: 'wavy', top: 'shirt', topColour: 'white', accentColour: 'white', face: 'smile', bottom: 'slacks', bottomColour: 'navy', shoes: 'formal' }), flip: true, pose: armAround },
+      { me: true, x: 120, y: 14, look: me({ top: 'suit', topColour: 'black', accentColour: 'lavender', face: 'grin', bottom: 'slacks', shoes: 'formal', accessories: ['earring', 'watch'] }), z: 1 },
+    ],
+    alt: 'Pixel-art me in a black suit and purple tie, grinning at the front of the AML crew in suits and ties, one in a white hat.',
   },
-  '09-disco': {
+  '09-law-camp': {
+    backdrop: 'camp',
+    cast: [
+      { x: 38, look: friend({ skin: 'tan', hair: 'long', top: 'tank', topColour: 'tan', bottom: 'skirt', bottomColour: 'tan' }) },
+      { x: 92, look: friend({ skin: 'light', hair: 'long', top: 'tank', topColour: 'orange', bottom: 'shorts', bottomColour: 'white' }), z: 1 },
+      { me: true, x: 150, look: me({ hair: 'wavy', top: 'shirt', topColour: 'white', accentColour: 'white', face: 'grin' }), z: 1 },
+      { x: 204, look: friend({ skin: 'light', hair: 'short', top: 'tee', topColour: 'red', accentColour: 'green' }), pose: armAround },
+    ],
+    props: [{ id: 'stringLights', x: 120, y: 2 }, { id: 'palm', x: 10, y: 150, front: true }, { id: 'palm', x: 230, y: 150, front: true, flip: true }],
+    alt: 'Pixel-art me in white linen with three friends at Law Camp, under fairy lights between two inflatable palm trees.',
+  },
+  '10-disco': {
     backdrop: 'party',
     cast: [
       { x: 120, y: -14, look: friend({ skin: 'brown', hair: 'curtains', top: 'shirt', topColour: 'white', accentColour: 'white', accessories: ['sunglasses'], face: 'grin' }), pose: armUp },
@@ -137,19 +150,11 @@ export const photoScenes: Record<string, PhotoScene> = {
     props: [{ id: 'partyLights', x: 120, y: 30 }, { id: 'discoBall', x: 64, y: 10 }],
     alt: 'Pixel-art me in sunglasses, white shirt and black tie, carrying a friend on my shoulders under a disco ball.',
   },
-  '10-side-quest': {
+  '11-side-quest': {
     backdrop: 'cafe',
     cast: [{ me: true, x: 120, look: me({ top: 'tee', topColour: 'white', accentColour: 'white', accessories: ['glasses'], face: 'grin' }), pose: bothForward }],
     props: [{ id: 'pancakes', x: 120, y: 122, front: true }],
     alt: 'Pixel-art me in glasses, grinning over a plate of tall fluffy pancakes topped with fruit.',
-  },
-  '11-with-rehan': {
-    backdrop: 'street',
-    cast: [
-      { me: true, x: 88, y: 18, look: me({ top: 'hoodie', topColour: 'black', accentColour: 'black', accessories: ['chain'] }), pose: armsCrossed },
-      { x: 160, look: friend({ skin: 'tan', hair: 'curtains', top: 'jacket', topColour: 'black', accessories: ['glasses'], face: 'calm' }), pose: { back: { el: [16, 25], wr: [6, 9], hand: 'open' } }, z: 1 },
-    ],
-    alt: 'Pixel-art me in a black jacket and chain, arms crossed, with a friend in a black puffer leaning an arm over my head at night.',
   },
   '12-gummy-bear': {
     backdrop: 'store',
