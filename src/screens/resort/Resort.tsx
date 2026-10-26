@@ -7,19 +7,19 @@ import { species, type SpeciesId } from '../../battle/data'
 import { challengeSetup, floors, floorSetup, unlockedSpecies } from '../../battle/tower'
 import { regulars } from '../../resort/regulars'
 import { formatRecord, type BattleRecord } from '../../../supabase/functions/_shared/trainer'
-import { maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, PLAZA_X, type MapId, type ResortMap, type VisitorSpot, type Warp } from '../../resort/maps'
+import { ARENA_SPOT, maps, settleVisitors, size, step, thingAt, tileAt, warpAt, isSolidTile, FLOOR_ARRIVAL, FLOOR_BOSS, PLAZA_X, type ArenaId, type MapId, type ResortMap, type VisitorSpot, type Warp } from '../../resort/maps'
 import { TILE } from '../../resort/tiles'
 import { cameraFor, drawWorld, project, RES, VIEW_H, VIEW_W, type Actor, type CreatureActor } from '../../resort/render'
 import { skyAt, skyLabel } from '../../resort/sky'
 import { ambientItems, departureItems, drawSkyFlyers, MOUNTS, newAmbient, recallItem, SURFERS, tickFlyers, tripEnds, type AmbientState } from '../../resort/ambient'
 import { staff } from '../../resort/npcs'
 import { ARRIVAL_HANDOFF, DEPARTURE_BOARD_AT, departureAt, HANDOVER_MS, departureMount, landingSide, type Departure } from '../../resort/departure'
-import { WALK_CYCLE, type Facing } from '../../sprites/overworld'
+import { strideFrame, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
 import { audio } from '../../systems/audio'
 import { useSettings } from '../../systems/settings'
-import { progress } from '../../systems/progress'
-import { recordResult, resortSave, useResortSave } from '../../systems/resortSave'
+import { progress, useProgress } from '../../systems/progress'
+import { playerLook, recordResult, resortSave, useResortSave } from '../../systems/resortSave'
 import { setReturnTo } from '../../systems/returnTo'
 import { fetchTrainers, saveTrainer, syncTrainer, trainersOnline, type OnlineTrainer } from '../../systems/trainers'
 import { ChoiceMenu } from '../../ui/ChoiceMenu'
@@ -28,8 +28,10 @@ import { PixelBox } from '../../ui/PixelBox'
 import { CharacterSprite } from '../../ui/CharacterSprite'
 import { CreatureSprite } from '../battle/BattleBits'
 import Fight from '../battle/Fight'
+import { ChampionEnding } from '../battle/ChampionEnding'
 import { SectionScreen } from '../SectionScreen'
 import AvatarStudio, { DEFAULT_AVATAR, randomAvatar } from './AvatarStudio'
+import { Boutique } from './Boutique'
 import SuggestionBox from './SuggestionBox'
 import PartyBag from './PartyBag'
 import { PixelIcon } from '../../ui/PixelIcon'
@@ -188,7 +190,16 @@ type FightPlan = { seed: number } & ({ kind: 'tower'; floor: number } | { kind: 
 
 export default function Resort() {
   const save = useResortSave()
+  const { hallOfFame } = useProgress()
   const [fight, setFight] = useState<FightPlan | null>(null)
+  // after beating the Champion: the Hall of Fame and credits, then back to the plaza
+  const [ending, setEnding] = useState<{ pinAwarded: boolean } | null>(null)
+
+  if (ending) {
+    const champs = hallOfFame.filter((h) => h.difficulty === 'champion')
+    const entry = champs[0] ?? { date: new Date().toISOString(), difficulty: 'champion' as const, team: save.party, turns: 0, name: save.name }
+    return <ChampionEnding entry={entry} look={playerLook()} name={(save.name || 'TRAINER').toUpperCase()} pinAwarded={ending.pinAwarded} entryNumber={Math.max(1, champs.length)} onDone={() => setEnding(null)} />
+  }
 
   if (fight?.kind === 'tower') {
     const stage = towerStages[fight.floor - 1]
@@ -200,17 +211,25 @@ export default function Resort() {
         title={`FLOOR ${fight.floor} · ${stage.title}`}
         opponent={{ look: stage.look, name: 'AARYAN', tag: `FLOOR ${fight.floor} · ${stage.title}`, winLines: [`AARYAN: ${line(`tower.${stage.id}.defeat`)}`], loseLines: [`AARYAN: ${line('tower.lose')}`] }}
         mode="tower"
-        arena={{ map: `floor${fight.floor}` as MapId, x: FLOOR_BOSS.x, y: FLOOR_BOSS.y + 3 }}
+        arena={{ map: `arena${fight.floor}` as ArenaId, ...ARENA_SPOT }}
         recordWin={fight.floor === 5 ? 'champion' : null}
         onExit={(_to, won) => {
+          // the first Champion win awards the pin, and pins it on (the Studio can take it off)
+          const pinAwarded = won && fight.floor === 5 && resortSave.get().floorCleared < 5
           if (won) {
             resortSave.update({ floorCleared: Math.max(resortSave.get().floorCleared, fight.floor) })
             if (fight.floor >= 3) progress.unlock('tower-climber')
+          }
+          if (pinAwarded) {
+            const look = resortSave.get().avatar
+            if (look) resortSave.update({ avatar: { ...look, badge: 'champion' } })
           }
           // beating the Champion floor earns a title
           recordResult(won, fight.floor === 5)
           void syncTrainer().catch(() => undefined)
           setFight(null)
+          // every Champion win plays the ending (the win is already saved, so it's safe to skip or replay)
+          if (won && fight.floor === 5) setEnding({ pinAwarded })
         }}
       />
     )
@@ -250,6 +269,17 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const [dialogue, setDialogue] = useState<Dialogue | null>(null)
   const [choicesReady, setChoicesReady] = useState(false)
   const [panel, setPanel] = useState<Panel>(save.avatar ? 'none' : 'studio')
+  // the Studio: the look being put together (shown in the boutique's mirror), and the one just
+  // saved while the changing-room routine plays (the panel closes when it ends)
+  const [studioDraft, setStudioDraft] = useState<Appearance | null>(null)
+  const [studioSaving, setStudioSaving] = useState<{ look: Appearance; first: boolean; name: string } | null>(null)
+  const finishStudio = () => {
+    const done = studioSaving
+    setStudioSaving(null)
+    setStudioDraft(null)
+    setPanel('none')
+    if (done?.first) say({ lines: lines('resort.welcome', { name: done.name }) })
+  }
   const [nearby, setNearby] = useState<Char | null>(null)
   const [profile, setProfile] = useState<Char | null>(null)
   const [online, setOnline] = useState<OnlineTrainer[]>([])
@@ -304,7 +334,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
     return () => ro.disconnect()
   }, [])
   const tagRefs = useRef(new Map<string, HTMLDivElement>())
-  const me = useRef({ ...world.get(), moving: null as null | { tx: number; ty: number; t0: number; dur: number }, turnAt: 0, bumpAt: 0 })
+  const me = useRef({ ...world.get(), moving: null as null | { tx: number; ty: number; t0: number; dur: number }, turnAt: 0, bumpAt: 0, steps: 0 })
   // your lead creature follows one step behind
   const pet = useRef({ ...(() => { const w = world.get(); return petSpot(w.map, w.x, w.y, w.facing) })(), moving: null as null | { fx: number; fy: number; tx: number; ty: number; t0: number; dur: number } })
   const held = useRef<Facing[]>([])
@@ -609,6 +639,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
             } else {
               const dur = run.current ? RUN_MS : WALK_MS
               m.moving = { tx: t.x, ty: t.y, t0: now, dur }
+              m.steps++
               // the creature steps into the tile you just left
               const pt = pet.current
               // finish its previous step first, or it snaps back a tile when you keep walking
@@ -633,7 +664,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
 
       // camera follows the player's feet; the world is drawn in 2.5D
       const cam = cameraFor(mp, px + 8, py + 14)
-      const walkFrame = WALK_CYCLE[Math.floor(now / 140) % 4]
+      const walkFrame = strideFrame(k, m.steps)
       const actors: Actor[] = charsRef.current.map((c) => ({ look: c.look, facing: c.facing, frame: 0, x: c.x * TILE + 8, y: c.y * TILE + 14 }))
       const dep = departure.current
       const depFrame = dep ? departureAt(dep, now) : null
@@ -644,7 +675,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         m.turnAt = now
       }
       // once they hop on, the player is drawn by the departure (on the hop, then as the rider)
-      if (!depFrame || depFrame.standing) actors.push({ look: resortSave.get().avatar ?? DEFAULT_AVATAR, facing: m.facing, frame: m.moving ? walkFrame : 0, x: px + 8, y: py + 14 })
+      if (!depFrame || depFrame.standing) actors.push({ look: playerLook(), facing: m.facing, frame: m.moving ? walkFrame : 0, x: px + 8, y: py + 14 })
       if (dep && depFrame?.phase === 'complete' && !dep.done) {
         // gone over the horizon: fade out and leave the way the exit always has
         dep.done = true
@@ -677,7 +708,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
         skyLayer: mp.id === 'plaza' ? (c, horizonY) => drawSkyFlyers(c, amb, now, horizonY) : undefined,
         items: (proj) => [
           ...(mp.id === 'plaza' ? ambientItems(amb, now, proj, viewH.current, (id) => charsRef.current.some((c) => c.id === id)) : []),
-          ...(dep ? departureItems(dep, now, proj, viewH.current, resortSave.get().avatar ?? DEFAULT_AVATAR) : []),
+          ...(dep ? departureItems(dep, now, proj, viewH.current, playerLook()) : []),
           ...(lead && recall > 0 && recall < 1 ? recallItem(petX, petY, recall, proj, viewH.current) : []),
         ],
       })
@@ -753,6 +784,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
                 {c.kind !== 'staff' && <span className="font-display bg-ink/75 px-1 text-[10px] leading-tight text-paper">{c.name}</span>}
               </div>
             ))}
+          {panel === 'studio' && <Boutique look={avatar} draft={studioDraft ?? avatar} saving={studioSaving?.look ?? null} onFinished={finishStudio} />}
           <div className={`pointer-events-none absolute inset-0 bg-black transition-opacity duration-150 ${fade ? 'opacity-100' : 'opacity-0'}`} />
           {dialogue && (
             <div className="absolute inset-x-[2%] bottom-[2%] flex flex-col items-end gap-1 [container-type:inline-size]">
@@ -785,28 +817,37 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
       }
     >
       {panel === 'studio' ? (
-        <>
-          {!save.avatar && (
-            <PixelBox className="m-[3%] mb-0 px-4 py-3">
-              <p className="font-display m-0 text-[15px] text-dex-red">WELCOME TO THE RESORT!</p>
-              <p className="m-0 mt-1">Make your avatar first — other visitors will see it walking around.</p>
-            </PixelBox>
-          )}
-          <AvatarStudio
-            initial={avatar}
-            initialName={save.name}
-            initialGreeting={save.greeting}
-            onCancel={save.avatar ? () => setPanel('none') : undefined}
-            onSave={(a, name, greeting) => {
-              const first = !save.avatar
-              resortSave.update({ avatar: a, name, greeting })
-              progress.unlock('resort-guest')
-              pushOnline({ avatar: a, name, greeting })
-              setPanel('none')
-              if (first) say({ lines: lines('resort.welcome', { name }) })
-            }}
-          />
-        </>
+        studioSaving ? (
+          <PixelBox className="m-[3%] px-4 py-3">
+            <p className="font-display m-0 text-[15px] text-dex-red">IN THE FITTING ROOM…</p>
+            <p className="m-0 mt-1">Trying on your new look. Tap the top screen to skip.</p>
+          </PixelBox>
+        ) : (
+          <>
+            {!save.avatar && (
+              <PixelBox className="m-[3%] mb-0 px-4 py-3">
+                <p className="font-display m-0 text-[15px] text-dex-red">WELCOME TO THE RESORT!</p>
+                <p className="m-0 mt-1">Make your avatar first — other visitors will see it walking around.</p>
+              </PixelBox>
+            )}
+            <AvatarStudio
+              initial={avatar}
+              initialName={save.name}
+              initialGreeting={save.greeting}
+              onDraft={setStudioDraft}
+              pinEarned={save.floorCleared >= 5}
+              onCancel={save.avatar ? () => setPanel('none') : undefined}
+              onSave={(a, name, greeting) => {
+                const first = !save.avatar
+                resortSave.update({ avatar: a, name, greeting })
+                progress.unlock('resort-guest')
+                pushOnline({ avatar: a, name, greeting })
+                // the boutique plays the changing room, then closes the Studio (finishStudio)
+                setStudioSaving({ look: a, first, name })
+              }}
+            />
+          </>
+        )
       ) : panel === 'pc' ? (
         <PartyPC
           onDone={(party) => {
@@ -1053,7 +1094,7 @@ function PartyPC({ onDone }: { onDone: (party: SpeciesId[]) => void }) {
         <p className="font-display m-0 text-[15px] text-dex-red">BOX: YOUR CREATURES</p>
         <ul className="m-0 mt-1 list-none space-y-1 p-0 text-[14px]">
           <li>▸ Pick up to 3 for your party, in battle order.</li>
-          <li>▸ Clear tower floors to unlock more of Aaryan’s creatures.</li>
+          <li>▸ Clear tower floors to unlock more of my creatures.</li>
         </ul>
       </PixelBox>
       <div className="grid grid-cols-3 gap-2">

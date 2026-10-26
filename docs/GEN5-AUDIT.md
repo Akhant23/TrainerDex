@@ -358,3 +358,92 @@ Captures: `dex-entry-objection.png`, `dex-entry-selecta.png`, `dex-list-unseen.p
 `glasses-clean-browser.png`, `glasses-clean-frames.png` (all but the two sprite sheets are the real
 site in a browser).
 
+
+## Tenth pass: the VS card, album layout, city backdrops
+
+**VS card (`VsScreen`, Fight.tsx; `src/battle/vsPoses.ts`).** IMPLEMENTED AND VISUALLY CHECKED
+(desktop 1400×900, phone 390×844, Champion). The BW principle is that the card is a moment
+rather than a still: in Black and White each trainer strikes their own pose as the card hits,
+and the backdrop keeps moving behind them. This is the site's own version:
+- **Layers, back to front:** a slowly turning sunburst; the two bands, each with two layers of
+  speed lines streaming at different speeds (the near layer brighter); the trainers, outlined in
+  the band's light colour; name plates whose underline draws in on impact; the seam between the
+  bands; a shockwave ring; the VS mark; the flash.
+- **Poses:** each side holds a wind-up while its band slides in and snaps to a strike on the
+  impact flash. The poses are `callOut` (fist up → a finger levelled), `unbothered` (arms folded
+  → a hand raised in a beckon), `fired` (guard up → fist thrown high) and `coolHand` (hands behind
+  the head → one finger to the sky). They're PoseFrames of the layered sprite, so every look and
+  outfit wears them without new art (`CharacterSprite`'s new `frame` prop). The opponent's pose
+  is a stable pick from their tag, and the two sides never share one. The Champion always folds
+  his arms and beckons, while the challenger comes in fired up.
+- **The impact (640 ms):** a shake and a flash. A lightning bolt draws across the seam, the V and
+  the S slam in from opposite corners to meet, and a ring expands from the middle. After that,
+  only the sunburst, the speed lines and a slow throb on the mark keep moving.
+- **Leaving:** the bands fly apart diagonally, the mark zooms through and the backdrop fades
+  onto the battle. The flow's timings (Fight.tsx's opening) are unchanged.
+- **Champion:** the band, sunburst and seam turn gold (tower floor 5, and the quick battle's
+  Champion difficulty).
+- **Reduced motion:** everything holds still on the finished card (strike poses, mark, seam).
+
+Captures: `vs-card-desktop.png`, `vs-card-phone.png`, `vs-card-champion.png`, `vs-poses.png`
+(wind-up/strike pairs, sprite sheet).
+
+**Photo Album.** On phones and tablets the viewer scrolls, so a portrait photo can take up to two
+thirds of the screen's height. Grid slots are 3:4 prints when the screens are stacked, and
+thumbnails crop around where the faces are. The focused print lifts slightly, and the top
+screen's print fades in.
+
+**City backdrops.** The home screen's panning skyline (`SceneBackdrop`) now sits behind the
+album's top screen and the Trainer Card.
+
+**The Studio boutique (`src/screens/resort/Boutique.tsx`).** IMPLEMENTED AND VISUALLY CHECKED
+(desktop and phone). Opening the Studio now takes you inside a boutique on the top screen: you
+walk in from the shop door to a long mirror. The shop has a rack of tops in every cloth colour,
+a hat shelf, shoe boxes and two fitting rooms with lamps and panelled doors. The mirror shows
+the look you're building on the touch screen as you go. The touch screen's form is now
+organised into departments (CLOTHES · STYLE · EXTRAS · ID CARD); STYLE holds the photo match,
+and a name error jumps to ID CARD.
+
+Saving plays the changing room: walk to the fitting room → door opens → step in → door shuts,
+the lamp turns red and the cubicle throws clothes over the top → door opens → you step out in
+the new look, hop, sparkle, "LOOKING SHARP!" → back to the plaza. The save is written straight
+away, so leaving mid-routine loses nothing. Tap to skip; with reduced motion you simply appear
+in the new look. The room is drawn once per door state on a 192-wide canvas. A taller screen
+gets more ceiling and floor rather than cropping the fitting rooms.
+
+**One avatar everywhere.** The saved look is still the single source of truth
+(`resortSave.avatar` / `playerLook()`): the resort walker, the VS card, battles, the main menu's
+trainer head and the online copy all read it, so a new outfit shows up everywhere the moment
+the routine starts.
+
+Captures: `studio-door-open.png`, `studio-changing.png`, `studio-reveal.png`,
+`studio-sequence.png` (frames ~280 ms apart, from the save to the plaza).
+
+**The Champion ending (`src/screens/battle/ChampionEnding.tsx`).** IMPLEMENTED AND VISUALLY
+CHECKED through the Hall of Fame replay (desktop and phone). The live floor-5 trigger is wired
+but wasn't played through in this pass: it needs a full Champion battle won. It follows Black
+and White's Hall of Fame, in the site's own art:
+1. **Hall of Fame:** the winning team is registered one creature at a time. Each drops onto a
+   gold pedestal with a camera flash, its name and level, then the entry number and date.
+2. **Champion:** you, in the victory pose and wearing the pin, over turning gold rays, with your
+   name on a gold plate.
+3. **The pin:** the CHAMPION PIN spins in (a large rosette drawn for this scene). The first win
+   awards it and pins it on; later wins and replays just show it.
+4. **Credits:** they roll up over the home screen's panning city, in gold.
+5. **THE END:** a button returns to the resort (or to the Hall of Fame, on a replay).
+
+Every Champion win plays it. A / Enter / a click moves on; B or SKIP jumps to THE END. The win,
+title and floor are saved before it opens and the ending itself writes nothing (the pin's only
+write happens once, on the first win), so skipping, closing the tab or replaying is safe.
+`#/battle/hall-of-fame` has ▶ REPLAY THE ENDING once the tower's Champion has been beaten.
+With reduced motion every scene holds still and the credits sit centred.
+
+**The Champion pin.** A gold medal on a pink and blue ribbon, over the heart (the wearer's left)
+on the battle sprite, and a two-pixel gold glint on the walker. It's a field of the look
+(`appearance.badge`), so it shows wherever the avatar does: the resort, the VS card, battles,
+the Studio's mirror and preview, and other visitors' screens (once `save-trainer` is redeployed;
+see BACKEND.md). The Studio's EXTRAS tab has a toggle for it, locked until the Champion is
+beaten. Checked across tops (jersey, tee, jacket, hoodie with chain) for alignment.
+
+Captures: `ending-hall-of-fame.png`, `ending-champion.png`, `ending-pin-phone.png`,
+`ending-credits.png`, `studio-champion-pin.png`, `champion-pin-sprites.png`.

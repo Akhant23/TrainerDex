@@ -17,12 +17,14 @@ export interface PublicMessage {
   message: string
   avatar: Avatar
   created_at: string
+  /** the resort trainer the message is linked to, if any (its avatar is shown for 'trainer') */
+  trainer_id?: string | null
 }
 
 const headers = () => ({ apikey: ANON, Authorization: `Bearer ${ANON}` })
 
 export async function fetchApproved(limit = 50): Promise<PublicMessage[]> {
-  const res = await fetch(`${URL}/rest/v1/messages?select=id,name,message,avatar,created_at&order=created_at.desc&limit=${limit}`, { headers: headers() })
+  const res = await fetch(`${URL}/rest/v1/messages?select=id,name,message,avatar,created_at,trainer_id&order=created_at.desc&limit=${limit}`, { headers: headers() })
   if (!res.ok) throw new Error(`Couldn’t load messages (${res.status}).`)
   return res.json()
 }

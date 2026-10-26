@@ -61,7 +61,7 @@ export default function SuggestionBox({ onClose }: { onClose: () => void }) {
         <p className="font-display m-0 text-[15px] text-dex-red">SUGGESTION BOX</p>
         <ul className="m-0 mt-1 list-none space-y-1 p-0 text-[14px]">
           <li>▸ Got an idea for a creature, a move or a whole new type? Pitch it here.</li>
-          <li>▸ Only Aaryan reads these. The best ones might show up on a future floor.</li>
+          <li>▸ Only I read these. The best ones might show up on a future floor.</li>
         </ul>
       </PixelBox>
 

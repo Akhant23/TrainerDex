@@ -297,6 +297,8 @@ function bodyDetails(g: Grid, a: Appearance, back: boolean) {
   if (has(a, 'watch')) g.rect(cx + 8, 45, cx + 11, 45, 'Z')
   if (has(a, 'bracelet')) g.rect(cx - 11, 45, cx - 8, 45, 'X')
   if (has(a, 'beltchain')) g.set(cx + 5, 46.5, 'X').set(cx + 6, 47.5, 'X').set(cx + 7, 46.5, 'X')
+  // the Champion pin: a gold dot with a glint, over the heart
+  if (a.badge === 'champion') g.stamp(cx + 3, 39, ['DW', 'DD'])
 }
 
 /** Shoulder-blade-length and bigger styles need a little more volume around the head. */
@@ -636,3 +638,12 @@ export function riderQuarterFor(a: Appearance, h: -1 | 1): Pixels {
 
 /** Walk cycle order: stand, step A, stand, step B. */
 export const WALK_CYCLE = [0, 1, 0, 2] as const
+/**
+ * The walk frame for a step `k` (0–1) of the way across a tile, BW-style: a stride for the first
+ * half of the step and the standing frame for the second, the stride alternating feet tile by tile
+ * (`step` counts tiles walked). Tied to the step rather than a clock, so a walk always starts on a
+ * stride and every tile looks the same, at any speed.
+ */
+export function strideFrame(k: number, step: number): 0 | 1 | 2 {
+  return k < 0.55 ? (step % 2 ? 1 : 2) : 0
+}

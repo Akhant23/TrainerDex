@@ -23,9 +23,11 @@ export interface Spot {
 
 /** Rooms elsewhere on the site drawn with the resort's renderer (not part of the resort itself). */
 export type RoomId = 'medalHall'
+/** The Battle Tower's battle halls (only ever seen from a battle): 0 = the lobby, 1–5 = the floors. */
+export type ArenaId = 'arena0' | 'arena1' | 'arena2' | 'arena3' | 'arena4' | 'arena5'
 
 export interface ResortMap {
-  id: MapId | RoomId
+  id: MapId | RoomId | ArenaId
   name: string
   rows: string[]
   /** Arrive here when entering the resort. */
@@ -42,6 +44,8 @@ export interface ResortMap {
   music?: 'resort' | 'floor1' | 'floor2' | 'floor3' | 'floor4' | 'floor5'
   /** Outdoors the map edges extend into the distance; indoors it fades to black. */
   outdoor?: boolean
+  /** Indoors: the building drawn round the floor (resort/interior.ts), so no black shows past the walls. */
+  interior?: 'tower'
   /**
    * What lies past the map's edges (outdoors), tile by tile: drawn, never walkable (moving off the
    * map is always blocked). Without it, the edge tiles are carried on.
@@ -73,10 +77,10 @@ const plaza: ResortMap = {
     'O,f,,,,,,,,,,,,,,,,,,::::O::::::::::O::::,,,,,,,,,,f,,,,,,,,,O',
     'OO,,Y,,,,Y,,,,#####,,::::::::::::::::::::,,#####,,,,,Y,,,,Y,OO',
     'O,,,,,,,,,,,,,#####,,::::::::::::::::::::,,#####,,,,,,,,,,,,,O',
-    'O,,Y,,,,,Y,,,,##D##,,::::::::::::::::::::,,##D##,,,b,,,,ff,,,O',
-    'O:::::::::::::x::::s::::::::::FF::::::::::s::::x:::::::::::::O',
-    'O::::::l::::::::::::::::::::::FF::::::::::::::::::::l::::::::O',
-    'O,,,,,,,,,,,,O,,,,,,,::::::::::::::::::::,,,,,,,,,,,,,,,,,,,,O',
+    'O,,Y,,,,,Y,,,,##D##,,::::::::FFFF::::::::,,##D##,,,b,,,,ff,,,O',
+    'O:::::::::::::x::::s:::::::::FFFF:::::::::s::::x:::::::::::::O',
+    'O::::::l:::::::::::::::::::::FFFF:::::::::::::::::::l::::::::O',
+    'O,,,,,,,,,,,,O,,,,,,,::::::::FFFF::::::::,,,,,,,,,,,,,,,,,,,,O',
     'O,O,,ff,,,,,,,,,,,,,O::::::::::::::::::::O,,,,,,O,,,,,O,,,Y,,O',
     'O,,,,ff,,O,,,,####,,,::::::::::::::::::::,,,####,,,ff,,,,,,,OO',
     'OO,,,,,,,,,,,,####,,,::::::::::::::::::::,,,####,,,ff,,Y,,,,,O',
@@ -101,7 +105,8 @@ const plaza: ResortMap = {
     { kind: 'gallery', x: PLAZA_X + 31, y: 10, w: 5, d: 3 },
     { kind: 'studio', x: PLAZA_X + 2, y: 17, w: 4, d: 3 },
     { kind: 'post', x: PLAZA_X + 32, y: 17, w: 4, d: 3 },
-    { kind: 'fountain', x: PLAZA_X + 18, y: 13, w: 2, d: 2 },
+    // the plaza's centrepiece, on the tower door's axis: a 4×4 basin with a two-tier fountain
+    { kind: 'fountain', x: PLAZA_X + 17, y: 12, w: 4, d: 4 },
   ],
   spawn: { x: PLAZA_X + 18, y: 19, facing: 'up' },
   warps: [
@@ -159,6 +164,7 @@ const reception: ResortMap = {
     { x: 13, y: 1, id: 'lift' },
   ],
   music: 'resort',
+  interior: 'tower',
 }
 
 /** Each floor is themed to a stage of Aaryan's life: floor texture, decor, banners and music. */
@@ -201,8 +207,48 @@ function floorMap(n: number): ResortMap {
       { x: 8, y: 1, id: 'lift-up' },
     ],
     music: `floor${n}` as ResortMap['music'],
+    interior: 'tower',
   }
 }
+
+/**
+ * A tower battle hall: deeper and wider than the walk-around floors, so the battle camera can stand
+ * well back inside it (no zoom, no black past the room) and the far platform rests on open floor in
+ * the middle of the room. Each floor's hall keeps that floor's theme: its floor band, its decor and
+ * its banners, with the lift doors in the back wall and columns down either side; the lobby's hall
+ * has the reception's red carpet. The steel-and-glass shell (interior.ts) goes round it.
+ */
+function arenaMap(n: number): ResortMap {
+  const W = 20
+  const t = n ? FLOOR_THEMES[n - 1] : { floor: 'c', deco: 't', banner: null, year: null }
+  const row = (inner: string) => `X${inner}X`
+  const rows = ['X'.repeat(W), 'X'.repeat(9) + 'LL' + 'X'.repeat(9), row(t.deco + 'o'.repeat(16) + t.deco)]
+  for (let y = 3; y < 19; y++) {
+    const band = y >= 4 && y <= 15 ? t.floor.repeat(14) : 'o'.repeat(14)
+    const side = y % 5 === 1 ? '|' : 'o'
+    rows.push(row(side + 'o' + band + 'o' + side))
+  }
+  rows.push('X'.repeat(W))
+  return {
+    id: `arena${n}` as ArenaId,
+    name: n ? `TOWER · FLOOR ${n}` : 'TOWER LOBBY',
+    rows,
+    structures: t.banner && t.year ? [{ kind: t.banner as StructureKind, x: 2, y: 1, w: 5, d: 1 }, { kind: t.year as StructureKind, x: 13, y: 1, w: 5, d: 1 }] : [],
+    warps: [],
+    things: [],
+    interior: 'tower',
+  }
+}
+export const arenas: Record<ArenaId, ResortMap> = {
+  arena0: arenaMap(0),
+  arena1: arenaMap(1),
+  arena2: arenaMap(2),
+  arena3: arenaMap(3),
+  arena4: arenaMap(4),
+  arena5: arenaMap(5),
+}
+/** Where a tower battle's camera stands in its hall (and so where the platforms land). */
+export const ARENA_SPOT = { x: 10, y: 14 }
 
 export const maps: Record<MapId, ResortMap> = {
   plaza,

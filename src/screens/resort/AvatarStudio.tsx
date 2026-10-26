@@ -20,25 +20,10 @@ import { readPhoto, suggestColours, type PixelData } from '../../systems/photoCo
 import { useSettings } from '../../systems/settings'
 import { CharacterSprite, type CharacterPose } from '../../ui/CharacterSprite'
 import { OverworldSprite } from '../../ui/OverworldSprite'
+import { DEFAULT_AVATAR } from '../../systems/resortSave'
 
-export const DEFAULT_AVATAR: Appearance = {
-  skin: 'light',
-  hair: 'short',
-  hairColour: 'brown',
-  eyes: 'round',
-  eyeColour: 'brown',
-  face: 'smile',
-  top: 'tee',
-  topColour: 'blue',
-  accentColour: 'white',
-  hat: 'cap',
-  hatColour: 'red',
-  bottom: 'shorts',
-  bottomColour: 'navy',
-  shoes: 'sneakers',
-  shoeColour: 'red',
-  accessories: [],
-}
+export { DEFAULT_AVATAR }
+
 
 const EYE_SWATCHES = Object.fromEntries(Object.entries(EYE_COLOURS).map(([k, v]) => [k, [v]])) as unknown as Record<keyof typeof EYE_COLOURS, readonly string[]>
 
@@ -75,6 +60,14 @@ const LABEL: Record<string, string> = {
   sneakers: 'SNEAKERS', boots: 'BOOTS', formal: 'FORMAL',
 }
 
+type Tab = 'clothes' | 'style' | 'extras' | 'id'
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'clothes', label: 'CLOTHES', icon: '👕' },
+  { id: 'style', label: 'STYLE', icon: '✂' },
+  { id: 'extras', label: 'EXTRAS', icon: '🕶' },
+  { id: 'id', label: 'ID CARD', icon: '🪪' },
+]
+
 /** The turnaround the preview steps through: front, right profile, back, left profile. */
 const TURN: { pose: CharacterPose; flip?: boolean; label: string }[] = [
   { pose: 'idle', label: 'FRONT' },
@@ -89,12 +82,18 @@ export default function AvatarStudio({
   initialGreeting,
   onSave,
   onCancel,
+  onDraft,
+  pinEarned = false,
 }: {
   initial: Appearance
   initialName: string
   initialGreeting: string
   onSave: (a: Appearance, name: string, greeting: string) => void
   onCancel?: () => void
+  /** Told about every change, so the boutique's mirror can show the look as it comes together. */
+  onDraft?: (a: Appearance) => void
+  /** Beaten the Champion: the CHAMPION PIN can be worn (EXTRAS). */
+  pinEarned?: boolean
 }) {
   const { sfx } = useSettings()
   const [a, setA] = useState<Appearance>(initial)
@@ -105,6 +104,9 @@ export default function AvatarStudio({
   const fileRef = useRef<HTMLInputElement>(null)
   const [camera, setCamera] = useState(false)
   const [turn, setTurn] = useState(0)
+  // the boutique's departments; a first visit starts on STYLE (where the photo match is)
+  const [tab, setTab] = useState<Tab>(initialName ? 'clothes' : 'style')
+  useEffect(() => onDraft?.(a), [a, onDraft])
 
   const set = <K extends keyof Appearance>(k: K, v: Appearance[K]) => {
     sfx('cursor')
@@ -151,9 +153,15 @@ export default function AvatarStudio({
 
   const save = () => {
     const n = validateTrainerName(name)
-    if (!n.ok) return setError(n.error)
+    if (!n.ok) {
+      setTab('id')
+      return setError(n.error)
+    }
     const g = validateGreeting(greeting)
-    if (!g.ok) return setError(g.error)
+    if (!g.ok) {
+      setTab('id')
+      return setError(g.error)
+    }
     setError('')
     sfx('save')
     onSave(a, n.value, g.value)
@@ -174,96 +182,145 @@ export default function AvatarStudio({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="font-display text-[13px]">TRAINER NAME</span>
-          <input className="studio-input" value={name} maxLength={16} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="font-display text-[13px]">GREETING (OTHERS SEE THIS)</span>
-          <input className="studio-input" value={greeting} maxLength={60} onChange={(e) => setGreeting(e.target.value)} placeholder="Hi!" />
-        </label>
+      {/* the boutique's departments */}
+      <div role="tablist" aria-label="Studio departments" className="studio-tabs flex gap-1 overflow-x-auto">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => {
+              sfx('cursor')
+              setTab(t.id)
+            }}
+            className="studio-tab font-display flex shrink-0 cursor-pointer items-center gap-1 border-0 px-3 py-2 text-[13px]"
+          >
+            <span aria-hidden>{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
       </div>
-
-      <section className="space-y-2 bg-[#eef3fa] px-3 py-3 gv-card">
-        <h3 className="font-display m-0 text-[14px] text-dex-red">START FROM A PHOTO (OPTIONAL)</h3>
-        <ul className="m-0 list-none space-y-1 p-0 text-[14px]">
-          <li>▸ Take a selfie or pick a photo and we’ll match your skin tone, hair and top colour.</li>
-          <li>▸ It’s read only in your browser, then deleted straight away. Nothing is uploaded or saved.</li>
-          <li>▸ Rather not? Skip it — build your look below, or roll a random one.</li>
-        </ul>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <button type="button" className="pixel-btn !text-[14px]" onClick={() => setCamera(true)}>
-            📷 TAKE A PHOTO
-          </button>
-          <button type="button" className="pixel-btn !text-[14px]" onClick={() => fileRef.current?.click()}>
-            🖼 UPLOAD A PHOTO
-          </button>
-          <button type="button" className="pixel-btn !text-[14px]" onClick={() => setA(randomAvatar())}>
-            🎲 RANDOMISE
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void onPhoto(e.target.files?.[0])} />
-        </div>
-        {camera && (
-          <CameraSnap
-            onCancel={() => setCamera(false)}
-            onSnap={(img) => {
-              setCamera(false)
-              applyPhoto(img)
-            }}
-            onFallback={() => {
-              setCamera(false)
-              setPhotoNote('Couldn’t open the camera here — try UPLOAD A PHOTO instead.')
-            }}
-          />
+      <div role="tabpanel" aria-label={TABS.find((t) => t.id === tab)!.label} className="space-y-4">
+        {tab === 'clothes' && (
+          <>
+            <Row label="TOP">
+              <Cycler value={LABEL[a.top]} onPrev={() => cycle('top', TOPS, -1)} onNext={() => cycle('top', TOPS, 1)} />
+              <Swatches table={CLOTH_COLOURS} value={a.topColour} onPick={(v) => set('topColour', v)} />
+              <span className="font-display w-full text-[12px] text-muted">TRIM / TIE</span>
+              <Swatches table={CLOTH_COLOURS} value={a.accentColour} onPick={(v) => set('accentColour', v)} />
+            </Row>
+            <Row label="HAT">
+              <Cycler value={LABEL[a.hat]} onPrev={() => cycle('hat', HATS, -1)} onNext={() => cycle('hat', HATS, 1)} />
+              {a.hat !== 'none' && <Swatches table={CLOTH_COLOURS} value={a.hatColour} onPick={(v) => set('hatColour', v)} />}
+            </Row>
+            <Row label="BOTTOMS">
+              <Cycler value={LABEL[a.bottom]} onPrev={() => cycle('bottom', BOTTOMS, -1)} onNext={() => cycle('bottom', BOTTOMS, 1)} />
+              <Swatches table={CLOTH_COLOURS} value={a.bottomColour} onPick={(v) => set('bottomColour', v)} />
+            </Row>
+            <Row label="SHOES">
+              <Cycler value={LABEL[a.shoes]} onPrev={() => cycle('shoes', SHOES, -1)} onNext={() => cycle('shoes', SHOES, 1)} />
+              <Swatches table={CLOTH_COLOURS} value={a.shoeColour} onPick={(v) => set('shoeColour', v)} />
+            </Row>
+          </>
         )}
-        {photoNote && <p className="m-0 text-[14px] text-muted">{photoNote}</p>}
-      </section>
-
-      <Row label="SKIN">
-        <Swatches table={SKINS} value={a.skin} onPick={(v) => set('skin', v)} />
-      </Row>
-      <Row label="HAIR">
-        <Cycler value={LABEL[a.hair]} onPrev={() => cycle('hair', HAIR_STYLES, -1)} onNext={() => cycle('hair', HAIR_STYLES, 1)} />
-        <Swatches table={HAIR_COLOURS} value={a.hairColour} onPick={(v) => set('hairColour', v)} />
-      </Row>
-      <Row label="EYES">
-        <Cycler value={LABEL[a.eyes]} onPrev={() => cycle('eyes', EYE_STYLES, -1)} onNext={() => cycle('eyes', EYE_STYLES, 1)} />
-        <Swatches table={EYE_SWATCHES} value={a.eyeColour} onPick={(v) => set('eyeColour', v)} />
-      </Row>
-      <Row label="FACE">
-        <Cycler value={LABEL[a.face]} onPrev={() => cycle('face', FACES, -1)} onNext={() => cycle('face', FACES, 1)} />
-      </Row>
-      <Row label="TOP">
-        <Cycler value={LABEL[a.top]} onPrev={() => cycle('top', TOPS, -1)} onNext={() => cycle('top', TOPS, 1)} />
-        <Swatches table={CLOTH_COLOURS} value={a.topColour} onPick={(v) => set('topColour', v)} />
-        <span className="font-display w-full text-[12px] text-muted">TRIM / TIE</span>
-        <Swatches table={CLOTH_COLOURS} value={a.accentColour} onPick={(v) => set('accentColour', v)} />
-      </Row>
-      <Row label="HAT">
-        <Cycler value={LABEL[a.hat]} onPrev={() => cycle('hat', HATS, -1)} onNext={() => cycle('hat', HATS, 1)} />
-        {a.hat !== 'none' && <Swatches table={CLOTH_COLOURS} value={a.hatColour} onPick={(v) => set('hatColour', v)} />}
-      </Row>
-      <Row label="BOTTOMS">
-        <Cycler value={LABEL[a.bottom]} onPrev={() => cycle('bottom', BOTTOMS, -1)} onNext={() => cycle('bottom', BOTTOMS, 1)} />
-        <Swatches table={CLOTH_COLOURS} value={a.bottomColour} onPick={(v) => set('bottomColour', v)} />
-      </Row>
-      <Row label="SHOES">
-        <Cycler value={LABEL[a.shoes]} onPrev={() => cycle('shoes', SHOES, -1)} onNext={() => cycle('shoes', SHOES, 1)} />
-        <Swatches table={CLOTH_COLOURS} value={a.shoeColour} onPick={(v) => set('shoeColour', v)} />
-      </Row>
-      <Row label={`ACCESSORIES (UP TO ${MAX_ACCESSORIES})`}>
-        <div className="flex flex-wrap gap-1.5">
-          {ACCESSORIES.map((x) => {
-            const on = a.accessories.includes(x)
-            return (
-              <button key={x} type="button" aria-pressed={on} onClick={() => toggleAcc(x)} className="gv-toggle px-2.5 py-1.5 text-[13px]">
-                {x.toUpperCase()}
-              </button>
-            )
-          })}
-        </div>
-      </Row>
+        {tab === 'style' && (
+          <>
+            <section className="space-y-2 bg-[#eef3fa] px-3 py-3 gv-card">
+              <h3 className="font-display m-0 text-[14px] text-dex-red">START FROM A PHOTO (OPTIONAL)</h3>
+              <ul className="m-0 list-none space-y-1 p-0 text-[14px]">
+                <li>▸ Take a selfie or pick a photo and we’ll match your skin tone, hair and top colour.</li>
+                <li>▸ It’s read only in your browser, then deleted straight away. Nothing is uploaded or saved.</li>
+                <li>▸ Rather not? Skip it — build your look below, or roll a random one.</li>
+              </ul>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button type="button" className="pixel-btn !text-[14px]" onClick={() => setCamera(true)}>
+                  📷 TAKE A PHOTO
+                </button>
+                <button type="button" className="pixel-btn !text-[14px]" onClick={() => fileRef.current?.click()}>
+                  🖼 UPLOAD A PHOTO
+                </button>
+                <button type="button" className="pixel-btn !text-[14px]" onClick={() => setA(randomAvatar())}>
+                  🎲 RANDOMISE
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void onPhoto(e.target.files?.[0])} />
+              </div>
+              {camera && (
+                <CameraSnap
+                  onCancel={() => setCamera(false)}
+                  onSnap={(img) => {
+                    setCamera(false)
+                    applyPhoto(img)
+                  }}
+                  onFallback={() => {
+                    setCamera(false)
+                    setPhotoNote('Couldn’t open the camera here — try UPLOAD A PHOTO instead.')
+                  }}
+                />
+              )}
+              {photoNote && <p className="m-0 text-[14px] text-muted">{photoNote}</p>}
+            </section>
+            <Row label="SKIN">
+              <Swatches table={SKINS} value={a.skin} onPick={(v) => set('skin', v)} />
+            </Row>
+            <Row label="HAIR">
+              <Cycler value={LABEL[a.hair]} onPrev={() => cycle('hair', HAIR_STYLES, -1)} onNext={() => cycle('hair', HAIR_STYLES, 1)} />
+              <Swatches table={HAIR_COLOURS} value={a.hairColour} onPick={(v) => set('hairColour', v)} />
+            </Row>
+            <Row label="EYES">
+              <Cycler value={LABEL[a.eyes]} onPrev={() => cycle('eyes', EYE_STYLES, -1)} onNext={() => cycle('eyes', EYE_STYLES, 1)} />
+              <Swatches table={EYE_SWATCHES} value={a.eyeColour} onPick={(v) => set('eyeColour', v)} />
+            </Row>
+            <Row label="FACE">
+              <Cycler value={LABEL[a.face]} onPrev={() => cycle('face', FACES, -1)} onNext={() => cycle('face', FACES, 1)} />
+            </Row>
+          </>
+        )}
+        {tab === 'extras' && (
+          <>
+            <Row label={`ACCESSORIES (UP TO ${MAX_ACCESSORIES})`}>
+              <div className="flex flex-wrap gap-1.5">
+                {ACCESSORIES.map((x) => {
+                  const on = a.accessories.includes(x)
+                  return (
+                    <button key={x} type="button" aria-pressed={on} onClick={() => toggleAcc(x)} className="gv-toggle px-2.5 py-1.5 text-[13px]">
+                      {x.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            </Row>
+            <Row label="CHAMPION PIN">
+              {pinEarned ? (
+                <button
+                  type="button"
+                  aria-pressed={a.badge === 'champion'}
+                  onClick={() => set('badge', a.badge === 'champion' ? undefined : 'champion')}
+                  className="gv-toggle px-2.5 py-1.5 text-[13px]"
+                >
+                  {a.badge === 'champion' ? '★ WEARING IT' : '☆ PIN IT ON'}
+                </button>
+              ) : (
+                <span className="text-[14px] text-muted">🔒 Beat Champion Aaryan on the Battle Tower’s top floor to earn it.</span>
+              )}
+            </Row>
+          </>
+        )}
+        {tab === 'id' && (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1">
+                <span className="font-display text-[13px]">TRAINER NAME</span>
+                <input className="studio-input" value={name} maxLength={16} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="font-display text-[13px]">GREETING (OTHERS SEE THIS)</span>
+                <input className="studio-input" value={greeting} maxLength={60} onChange={(e) => setGreeting(e.target.value)} placeholder="Hi!" />
+              </label>
+            </div>
+          </>
+        )}
+      </div>
 
       {error && (
         <p role="alert" className="m-0 bg-ember px-3 py-2 text-paper">

@@ -8,6 +8,7 @@ import { StatBar } from '../ui/StatBar'
 import { TrainerSprite } from '../ui/TrainerSprite'
 import { Bullets, Heading, Sources, Tags } from '../ui/bits'
 import { SectionScreen } from './SectionScreen'
+import { SceneBackdrop } from '../ui/SceneBackdrop'
 
 const entry = menu.find((m) => m.id === 'profile')!
 const PAGES = ['INFO', 'STUDIES', 'SKILLS', 'STATS', 'LIKES'] as const
@@ -43,13 +44,14 @@ function TrainerInfo() {
   ]
   return (
     <div className="bg-stripes absolute inset-0 flex" style={{ ['--s1' as string]: entry.color[0], ['--s2' as string]: entry.color[1] }}>
+      <SceneBackdrop tones={entry.color} />
       <div className="relative w-[42%]">
         <div aria-hidden className="absolute bottom-[8%] left-[12%] h-[13%] w-[76%] rounded-[50%] bg-[#f8d8a8] shadow-[inset_0_-6px_0_#d8a870,0_0_0_3px_#1c1a24]" />
         <div className="absolute bottom-[13%] left-1/2 flex h-[76%] -translate-x-1/2 items-end">
           <TrainerSprite fill={0.98} />
         </div>
       </div>
-      <div className="flex w-[58%] flex-col justify-center py-[4%] pr-[4%]">
+      <div className="relative flex w-[58%] flex-col justify-center py-[4%] pr-[4%]">
         <PixelBox variant="plate" className="px-[5%] py-[4%]">
           <p className="font-display cq-text-xs m-0 mb-[5%] text-muted">TRAINER INFO</p>
           <dl className="font-display cq-text-xs m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-[0.85em]">

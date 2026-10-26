@@ -21,9 +21,9 @@ export const profile = {
   started: 2023,
 
   bio: [
-    'Aaryan Khan is a fourth-year Law / Science (Biotechnology) student at UNSW Sydney and a Paralegal in Clayton Utz’s Data Intelligence & Risk Advisory team.',
-    'Alongside the degree he has spent three years as a UNSW Student Ambassador, led O-Week campus tours for a post-COVID record of 3,500 first-years, and ran marketing for the UNSW Law Society.',
-    'He does his best work in leadership roles, and his strongest moves are presentation, communication and people management.',
+    'I’m a fourth-year Law / Science (Biotechnology) student at UNSW Sydney and a Paralegal in Clayton Utz’s Data Intelligence & Risk Advisory team.',
+    'Alongside my degree I’ve spent three years as a UNSW Student Ambassador, led O-Week campus tours for a post-COVID record of 3,500 first-years, and ran marketing for the UNSW Law Society.',
+    'I do my best work in leadership roles, and my strongest moves are presentation, communication and people management.',
   ],
 
   /** Legal areas he's most interested in (resume + LinkedIn About). */

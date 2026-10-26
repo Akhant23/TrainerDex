@@ -16,10 +16,12 @@ import { SectionScreen } from '../SectionScreen'
 import { CreatureSprite, useHeightScale } from './BattleBits'
 import { CHAR_H } from '../../sprites/character'
 import Fight from './Fight'
-import { Backdrop, RECEPTION_ARENA } from './Backdrop'
+import { Backdrop } from './Backdrop'
+import { RECEPTION_ARENA } from '../../resort/arena'
 import Resort from '../resort/Resort'
 import { presetSetup } from '../../battle/engine'
-import { recordResult } from '../../systems/resortSave'
+import { playerLook, recordResult, useResortSave } from '../../systems/resortSave'
+import { ChampionEnding } from './ChampionEnding'
 import { syncTrainer } from '../../systems/trainers'
 
 const entry = menu.find((m) => m.id === 'battle')!
@@ -231,7 +233,13 @@ function StarterPick({ onPick }: { onPick: (s: SpeciesId) => void }) {
 
 function HallOfFame() {
   const { hallOfFame, trainerdexBadge: has } = useProgress()
+  const save = useResortSave()
   const latest = hallOfFame[0]
+  // once the tower's Champion has been beaten, the ending can be watched again from here
+  const champs = hallOfFame.filter((h) => h.difficulty === 'champion')
+  const [replay, setReplay] = useState(false)
+  if (replay && champs[0])
+    return <ChampionEnding entry={champs[0]} look={playerLook()} name={(save.name || champs[0].name || 'TRAINER').toUpperCase()} pinAwarded={false} entryNumber={champs.length} onDone={() => setReplay(false)} doneLabel="BACK TO THE HALL OF FAME" />
   return (
     <SectionScreen
       entry={entry}
@@ -288,7 +296,12 @@ function HallOfFame() {
             </li>
           ))}
         </ol>
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          {save.floorCleared >= 5 && champs.length > 0 && (
+            <button type="button" className="pixel-btn !text-[14px]" onClick={() => setReplay(true)}>
+              ▶ REPLAY THE ENDING
+            </button>
+          )}
           <button type="button" className="pixel-btn pixel-btn--primary !text-[14px]" onClick={() => navigate('/battle')}>
             BATTLE AARYAN
           </button>

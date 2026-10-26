@@ -47,6 +47,17 @@
   /* motion: game UI moves in steps, never smooth tweens */
   --gv-fast: 90ms;
   --gv-pulse: 1.1s;
+
+  /*
+   * Motion. One convention for everything that *moves* (slides, entrances, attacks, camera): a
+   * continuous eased curve with enough keyframes for the in-between poses, never a handful of
+   * steps, which read as a sprite teleporting. Things that *change frame* (blinks, hit flashes,
+   * sprite-sheet frames, the one-pixel breathing bob) stay stepped, as BW's sprites do.
+   */
+  --ease-move: cubic-bezier(0.2, 0.75, 0.25, 1); /* decelerate into place: entrances, slides */
+  --ease-swing: cubic-bezier(0.45, 0, 0.3, 1); /* out and back: attacks, hops, dodges */
+  --ease-drop: cubic-bezier(0.55, 0, 0.8, 0.3); /* accelerate away: faints, exits */
+  --ease-pop: cubic-bezier(0.3, 1.35, 0.5, 1); /* overshoot and settle: the VS mark, entrances */
 }
 @media (min-width: 768px) {
   :root {
@@ -603,11 +614,14 @@ body {
   transform: scaleX(0);
 }
 .wipe--cover > span {
-  animation: wipe-in 220ms steps(6) forwards;
+  animation: wipe-in 200ms var(--ease-swing) forwards;
 }
 .wipe--reveal > span {
   transform: scaleX(1);
-  animation: wipe-out 220ms steps(6) forwards;
+  animation: wipe-out 200ms var(--ease-swing) forwards;
+}
+.wipe > span:nth-child(even) {
+  animation-delay: 20ms;
 }
 .wipe > span:nth-child(odd) {
   transform-origin: left;
@@ -645,14 +659,24 @@ body {
   }
 }
 .hop {
-  animation: hop 380ms steps(5);
+  animation: hop 440ms var(--ease-swing);
+  transform-origin: 50% 100%;
 }
 @keyframes hop {
-  40% {
-    transform: translateY(-14%);
+  15% {
+    transform: translateY(-7%);
   }
-  70% {
-    transform: translateY(-4%);
+  35% {
+    transform: translateY(-15%);
+  }
+  55% {
+    transform: translateY(-11%);
+  }
+  78% {
+    transform: translateY(-2%);
+  }
+  88% {
+    transform: translateY(0) scale(1.04, 0.96);
   }
 }
 .shine {
@@ -677,7 +701,7 @@ body {
   }
 }
 .sparkle {
-  animation: sparkle 1.4s steps(4) infinite;
+  animation: sparkle 1.4s ease-in-out infinite;
 }
 @keyframes sparkle {
   0%,
@@ -754,6 +778,59 @@ body {
   animation: none !important;
 }
 
+/* Photo Album grid. Side by side the three rows share the screen's height; stacked (phones,
+   tablets) each slot is a 3:4 print so the grid reaches down the screen instead of leaving
+   squat thumbnails above empty space. */
+.album-grid {
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+}
+.album-grid > .album-slot {
+  aspect-ratio: 3 / 4;
+}
+@media (min-width: 1024px) and (min-aspect-ratio: 5/4) {
+  .album-grid {
+    grid-template-rows: repeat(var(--rows), minmax(64px, 1fr));
+  }
+  .album-grid > .album-slot {
+    aspect-ratio: auto;
+  }
+}
+/* the print under the cursor lifts a pixel or two and its photo leans in */
+.album-slot {
+  transition: transform 160ms var(--ease-move);
+}
+.album-thumb {
+  transition:
+    transform 260ms var(--ease-move),
+    filter 260ms var(--ease-move);
+  filter: saturate(0.92);
+}
+.album-slot[aria-selected='true'] {
+  transform: translateY(calc(var(--u) * -0.67));
+}
+.album-slot[aria-selected='true'] .album-thumb {
+  transform: scale(1.06);
+  filter: none;
+}
+/* the top screen's print fades up as the focus moves */
+.album-preview {
+  animation: album-preview-in 220ms var(--ease-move);
+}
+@keyframes album-preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+[data-motion='reduced'] .album-slot,
+[data-motion='reduced'] .album-thumb,
+[data-motion='reduced'] .album-preview {
+  transition: none;
+  animation: none;
+  transform: none;
+}
+
 /* ---------- Battle ---------- */
 
 .battle-field {
@@ -793,6 +870,28 @@ body {
   transform: translate(-50%, -100%);
   transform-origin: 50% 100%;
 }
+/* a battler's contact shadow, centred on the point its feet stand on (Fight.tsx BattleShadow) */
+.battle-shadow {
+  position: absolute;
+  transform: translate(-50%, -55%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgb(20 22 40 / 0.42) 0 45%, rgb(20 22 40 / 0.22) 62%, transparent 72%);
+  pointer-events: none;
+  transition: opacity 420ms var(--ease-drop);
+}
+/* a flyer holds itself a little above its platform, rising and settling slowly */
+.battle-hover {
+  translate: 0 -14%;
+  animation: battle-hover 2.4s ease-in-out infinite;
+}
+@keyframes battle-hover {
+  50% {
+    translate: 0 -19%;
+  }
+}
+[data-motion='reduced'] .battle-hover {
+  animation: none;
+}
 .flip {
   transform: scaleX(-1);
 }
@@ -831,26 +930,81 @@ body {
   animation-duration: calc(900ms * var(--tempo, 1));
 }
 .anim-enter {
-  animation: b-enter 420ms steps(6);
+  animation: b-enter 520ms var(--ease-pop);
 }
 @keyframes b-enter {
   from {
-    transform: scale(0.1);
+    scale: 0.1;
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+}
+/* the foe trainer walks on from the right edge of the field and stops on their platform; you slide
+   in from the left (your back to the camera), then step out of shot as your creature goes in */
+.anim-trainer-in {
+  animation: b-trainer-in 640ms var(--ease-move);
+}
+@keyframes b-trainer-in {
+  from {
+    translate: 70% 0;
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+}
+.anim-trainer-out {
+  animation: b-trainer-out 360ms var(--ease-drop) forwards;
+}
+@keyframes b-trainer-out {
+  to {
+    translate: 60% 0;
     opacity: 0;
   }
 }
-.anim-lunge-right {
-  animation: b-lunge-r 360ms steps(6);
+.anim-me-in {
+  animation: b-me-in 640ms var(--ease-move);
 }
+@keyframes b-me-in {
+  from {
+    translate: -70% 0;
+  }
+}
+.anim-me-out {
+  animation: b-me-out 380ms var(--ease-drop) forwards;
+}
+@keyframes b-me-out {
+  to {
+    translate: -80% 0;
+  }
+}
+.anim-lunge-right {
+  animation: b-lunge-r 360ms var(--ease-swing);
+}
+/* a wind-up back, the strike, a short recoil, then home */
 @keyframes b-lunge-r {
+  18% {
+    translate: -3% 1%;
+  }
   45% {
     translate: 14% -6%;
   }
+  65% {
+    translate: 6% -2%;
+  }
 }
 .anim-lunge-left {
-  animation: b-lunge-l 360ms steps(6);
+  animation: b-lunge-l 360ms var(--ease-swing);
 }
 @keyframes b-lunge-l {
+  18% {
+    translate: 3% -1%;
+  }
+  65% {
+    translate: -6% 2%;
+  }
   45% {
     translate: -14% 6%;
   }
@@ -873,7 +1027,7 @@ body {
   }
 }
 .anim-faint {
-  animation: b-faint 520ms steps(6) forwards;
+  animation: b-faint 620ms var(--ease-drop) forwards;
 }
 /* BW faint: the creature sinks straight down through its platform */
 @keyframes b-faint {
@@ -884,37 +1038,68 @@ body {
 }
 /* attacker motions (each move's recipe picks one) */
 .anim-cast {
-  animation: b-cast 360ms steps(6);
+  animation: b-cast 360ms var(--ease-swing);
 }
 @keyframes b-cast {
   35% {
     translate: 0 -6%;
   }
+  60% {
+    translate: 0 -3%;
+  }
 }
 .anim-jump-right {
-  animation: b-jump-r 640ms steps(10);
+  animation: b-jump-r 640ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-jump-r {
+  10% {
+    translate: -2% 2%;
+    scale: 1.04 0.95;
+  }
+  22% {
+    translate: 12% -30%;
+    scale: 1;
+  }
   35% {
     translate: 28% -45%;
+  }
+  50% {
+    translate: 40% -36%;
   }
   65% {
     translate: 48% -18%;
   }
+  80% {
+    translate: 24% -6%;
+  }
 }
 .anim-jump-left {
-  animation: b-jump-l 640ms steps(10);
+  animation: b-jump-l 640ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-jump-l {
+  10% {
+    translate: 2% -2%;
+    scale: 1.04 0.95;
+  }
+  22% {
+    translate: -10% -28%;
+    scale: 1;
+  }
   35% {
     translate: -20% -40%;
+  }
+  50% {
+    translate: -32% -20%;
   }
   65% {
     translate: -42% 14%;
   }
+  80% {
+    translate: -20% 6%;
+  }
 }
 .anim-dive-right {
-  animation: b-dive-r 900ms steps(14);
+  animation: b-dive-r 900ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-dive-r {
   30%,
@@ -929,7 +1114,7 @@ body {
   }
 }
 .anim-dive-left {
-  animation: b-dive-l 900ms steps(14);
+  animation: b-dive-l 900ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 @keyframes b-dive-l {
   30%,
@@ -944,7 +1129,7 @@ body {
   }
 }
 .anim-dodge-left {
-  animation: b-dodge-l 320ms steps(5);
+  animation: b-dodge-l 320ms var(--ease-swing);
 }
 @keyframes b-dodge-l {
   40% {
@@ -952,7 +1137,7 @@ body {
   }
 }
 .anim-dodge-right {
-  animation: b-dodge-r 320ms steps(5);
+  animation: b-dodge-r 320ms var(--ease-swing);
 }
 @keyframes b-dodge-r {
   40% {
@@ -960,7 +1145,7 @@ body {
   }
 }
 .anim-statUp {
-  animation: b-up 600ms steps(6);
+  animation: b-up 600ms ease-in-out;
 }
 @keyframes b-up {
   0%,
@@ -972,7 +1157,7 @@ body {
   }
 }
 .anim-statDown {
-  animation: b-down 600ms steps(6);
+  animation: b-down 600ms ease-in-out;
 }
 @keyframes b-down {
   0%,
@@ -984,7 +1169,7 @@ body {
   }
 }
 .anim-heal {
-  animation: b-heal 700ms steps(7);
+  animation: b-heal 700ms ease-in-out;
 }
 @keyframes b-heal {
   50% {
@@ -992,7 +1177,7 @@ body {
   }
 }
 .anim-slide-out {
-  animation: b-slide-out 420ms steps(6) forwards;
+  animation: b-slide-out 420ms var(--ease-drop) forwards;
 }
 @keyframes b-slide-out {
   to {
@@ -1001,7 +1186,7 @@ body {
   }
 }
 .screen-shake {
-  animation: b-shake 360ms steps(6);
+  animation: b-shake 360ms linear;
 }
 @keyframes b-shake {
   20% {
@@ -1022,25 +1207,29 @@ body {
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  animation: encounter 1100ms steps(1) forwards;
+  /* three hard flashes (frames, so stepped), then the black closes smoothly to a line */
+  animation:
+    encounter 920ms steps(1) forwards,
+    encounter-close 220ms 900ms var(--ease-drop) forwards;
 }
 @keyframes encounter {
   0%,
-  30%,
-  60% {
+  33%,
+  66% {
     background: #ffffff;
   }
-  15%,
-  45%,
-  75% {
-    background: #000000;
-  }
-  90% {
-    background: #000000;
-    clip-path: inset(0 0 0 0);
-  }
+  17%,
+  50%,
+  83%,
   100% {
     background: #000000;
+  }
+}
+@keyframes encounter-close {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
     clip-path: inset(50% 0 50% 0);
   }
 }
@@ -1072,7 +1261,7 @@ body {
 }
 
 .medal-toast {
-  animation: medal-in 3200ms steps(8) forwards;
+  animation: medal-in 3200ms var(--ease-move) forwards;
 }
 @keyframes medal-in {
   0% {
@@ -1163,34 +1352,126 @@ body {
   }
 }
 
-/* ---------- VS screen before a trainer battle ---------- */
-.vs-in-right {
-  animation: vs-in-right 360ms steps(6) both;
+/* ---------- VS screen before a trainer battle ----------
+ * Timeline (ms from the card going up): bands slice in 0–460 · names 300 · the bands meet at
+ * 640 (flash, shake, seam, VS slam, ring, strike poses: VS_IMPACT_MS in Fight.tsx) · held until
+ * the battle starts · leaving 260. Everything after the slam loops gently (sunburst, speed lines).
+ */
+.vs-band--foe {
+  animation: vs-in-right 460ms var(--ease-move) both;
 }
-.vs-in-left {
-  animation: vs-in-left 360ms steps(6) both;
-}
-.vs-mark {
-  animation: vs-mark 320ms 320ms steps(4) both;
+.vs-band--me {
+  animation: vs-in-left 460ms 60ms var(--ease-move) both;
 }
 @keyframes vs-in-right {
   from {
     transform: translateX(110%);
+  }
+  70% {
+    transform: translateX(-2%);
   }
 }
 @keyframes vs-in-left {
   from {
     transform: translateX(-110%);
   }
+  70% {
+    transform: translateX(2%);
+  }
 }
-@keyframes vs-mark {
+/* the sunburst behind everything: two tones of rays turning slowly */
+.vs-burst {
+  translate: -50% -50%;
+  background: repeating-conic-gradient(from 0deg, rgb(255 255 255 / 0.07) 0 9deg, transparent 9deg 18deg);
+  animation: vs-spin 24s linear infinite;
+}
+.vs-root--champion .vs-burst {
+  background: repeating-conic-gradient(from 0deg, rgb(255 215 90 / 0.12) 0 9deg, transparent 9deg 18deg);
+}
+@keyframes vs-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+/* speed lines: dashes on thin rows (the mask), streaming sideways; the near layer is brighter and faster */
+.vs-streaks {
+  background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.16) 0 46px, transparent 46px 150px, rgb(255 255 255 / 0.1) 150px 172px, transparent 172px 260px);
+  mask-image: repeating-linear-gradient(180deg, #000 0 2px, transparent 2px 13px);
+  animation: vs-stream 900ms linear infinite;
+}
+.vs-streaks--near {
+  background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.28) 0 90px, transparent 90px 330px);
+  mask-image: repeating-linear-gradient(180deg, transparent 0 7px, #000 7px 10px, transparent 10px 29px);
+  animation-duration: 520ms;
+}
+.vs-band--me .vs-streaks {
+  animation-direction: reverse;
+}
+@keyframes vs-stream {
   from {
-    transform: scale(2.4);
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -260px;
+  }
+}
+.vs-streaks--near {
+  animation-name: vs-stream-near;
+}
+@keyframes vs-stream-near {
+  to {
+    background-position-x: -330px;
+  }
+}
+/* the trainers: slide in a beat behind their band, lit round the edge in the band's light colour */
+.vs-band--foe .vs-sprite {
+  animation: vs-sprite-r 560ms 70ms var(--ease-move) both;
+}
+.vs-band--me .vs-sprite {
+  animation: vs-sprite-l 560ms 130ms var(--ease-move) both;
+}
+.vs-sprite {
+  filter: drop-shadow(2px 0 0 var(--glow)) drop-shadow(-2px 0 0 var(--glow)) drop-shadow(0 -2px 0 var(--glow));
+}
+@keyframes vs-sprite-r {
+  from {
+    translate: 45% 0;
     opacity: 0;
   }
 }
+@keyframes vs-sprite-l {
+  from {
+    translate: -45% 0;
+    opacity: 0;
+  }
+}
+.vs-name {
+  animation: vs-name 380ms 300ms var(--ease-move) both;
+}
+@keyframes vs-name {
+  from {
+    translate: 0 30%;
+    opacity: 0;
+  }
+}
+.vs-underline {
+  transform-origin: left;
+  animation: vs-underline 300ms 640ms var(--ease-move) both;
+}
+.vs-band--foe .vs-underline {
+  transform-origin: left;
+}
+.vs-band--me .vs-underline {
+  transform-origin: right;
+}
+@keyframes vs-underline {
+  from {
+    scale: 0 1;
+  }
+}
+/* the impact: a shake, a flash, the seam's lightning drawn across, a shockwave ring */
 .vs-impact {
-  animation: vs-impact 260ms 560ms steps(4) both;
+  animation: vs-impact 300ms 640ms linear both;
 }
 @keyframes vs-impact {
   25% {
@@ -1205,23 +1486,323 @@ body {
 }
 .vs-flash {
   opacity: 0;
-  animation: vs-flash 300ms 560ms ease-out both;
+  animation: vs-flash 320ms 640ms ease-out both;
 }
 @keyframes vs-flash {
   30% {
-    opacity: 0.45;
+    opacity: 0.55;
   }
   to {
     opacity: 0;
   }
 }
-[data-motion='reduced'] .vs-impact,
-[data-motion='reduced'] .vs-flash,
-[data-motion='reduced'] .vs-in-right,
-[data-motion='reduced'] .vs-in-left,
-[data-motion='reduced'] .vs-mark,
+.vs-seam polyline {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 3px #fff7c0);
+  animation: vs-seam 180ms 620ms ease-out forwards;
+}
+.vs-root--champion .vs-seam polyline {
+  stroke: #ffe27a;
+}
+@keyframes vs-seam {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.vs-ring {
+  translate: -50% -50%;
+  box-shadow:
+    0 0 0 4px #fff,
+    0 0 24px 6px rgb(255 240 180 / 0.6);
+  opacity: 0;
+  scale: 0.2;
+  animation: vs-ring 520ms 640ms var(--ease-move) both;
+}
+@keyframes vs-ring {
+  10% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 2.6;
+  }
+}
+/* the mark: the V drops in from the top left and the S from the bottom right, meeting on the flash, then a slow throb */
+.vs-mark {
+  animation: vs-throb 1400ms 1000ms ease-in-out infinite;
+}
+.vs-v {
+  animation: vs-v 300ms 360ms var(--ease-pop) both;
+}
+.vs-s {
+  animation: vs-s 300ms 400ms var(--ease-pop) both;
+}
+@keyframes vs-v {
+  from {
+    translate: -140% -120%;
+    rotate: -30deg;
+    scale: 2.2;
+    opacity: 0;
+  }
+}
+@keyframes vs-s {
+  from {
+    translate: 140% 120%;
+    rotate: 30deg;
+    scale: 2.2;
+    opacity: 0;
+  }
+}
+@keyframes vs-throb {
+  50% {
+    scale: 1.06;
+    filter: brightness(1.25);
+  }
+}
+/* leaving: the bands fly apart diagonally, the mark zooms through, and the backdrop fades */
+.vs-out .vs-band--foe {
+  animation: vs-out-r 260ms var(--ease-drop) forwards;
+}
+.vs-out .vs-band--me {
+  animation: vs-out-l 260ms var(--ease-drop) forwards;
+}
+.vs-out .vs-mark {
+  animation: vs-mark-out 240ms var(--ease-drop) forwards;
+}
+.vs-out .vs-seam,
+.vs-out .vs-burst {
+  animation: vs-gone 160ms ease-in forwards;
+}
+.vs-out {
+  animation: vs-fade 260ms ease-in forwards;
+}
+@keyframes vs-out-r {
+  to {
+    transform: translate(110%, -20%);
+  }
+}
+@keyframes vs-out-l {
+  to {
+    transform: translate(-110%, 20%);
+  }
+}
+@keyframes vs-mark-out {
+  to {
+    scale: 3;
+    opacity: 0;
+  }
+}
+@keyframes vs-gone {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vs-fade {
+  70% {
+    background-color: rgb(16 16 24 / 0.6);
+  }
+  to {
+    background-color: rgb(16 16 24 / 0);
+  }
+}
+[data-motion='reduced'] .vs-root *,
+[data-motion='reduced'] .vs-out {
+  animation: none !important;
+}
+[data-motion='reduced'] .vs-seam polyline {
+  stroke-dashoffset: 0;
+}
+[data-motion='reduced'] .vs-ring,
+[data-motion='reduced'] .vs-flash {
+  opacity: 0;
+}
 [data-motion='reduced'] .bw-nod {
   animation: none;
+}
+
+/* ---------- The Champion ending (Hall of Fame, credits) ---------- */
+.ending-scene {
+  animation: ending-in 500ms var(--ease-move) both;
+}
+@keyframes ending-in {
+  from {
+    opacity: 0;
+  }
+}
+/* a warm spotlight from above */
+.ending-spot {
+  background: radial-gradient(ellipse 55% 70% at 50% 35%, rgb(255 220 130 / 0.22), transparent 70%);
+}
+.ending-title {
+  animation: ending-title 700ms var(--ease-pop) both;
+}
+@keyframes ending-title {
+  from {
+    opacity: 0;
+    scale: 1.4;
+  }
+}
+/* each creature drops onto its pedestal as the camera flashes */
+.ending-register {
+  animation: ending-register 520ms var(--ease-pop) both;
+}
+@keyframes ending-register {
+  from {
+    opacity: 0;
+    translate: 0 -40px;
+    scale: 0.6;
+  }
+}
+.ending-flash {
+  opacity: 0;
+  animation: ending-flash 380ms ease-out both;
+}
+@keyframes ending-flash {
+  15% {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 0;
+  }
+}
+/* gold rays turning slowly behind the Champion */
+.ending-rays {
+  translate: -50% -50%;
+  background:
+    radial-gradient(circle, rgb(255 215 90 / 0.25), transparent 45%),
+    repeating-conic-gradient(from 0deg, rgb(255 215 90 / 0.12) 0 8deg, transparent 8deg 16deg);
+  animation: vs-spin 40s linear infinite;
+}
+.ending-plate {
+  background: linear-gradient(160deg, #f8e08a, #f0c040 50%, #d89a20);
+  box-shadow:
+    0 0 0 3px #1c1a24,
+    0 6px 0 3px rgb(0 0 0 / 0.4);
+  animation: ending-title 600ms 400ms var(--ease-pop) both;
+}
+/* the pin spins in on its edge and lands face on, with a glint */
+.ending-pin {
+  animation: ending-pin 900ms var(--ease-pop) both;
+  filter: drop-shadow(0 0 18px rgb(255 215 90 / 0.6));
+}
+@keyframes ending-pin {
+  from {
+    transform: rotateY(720deg) scale(0.2);
+    opacity: 0;
+  }
+}
+.ending-credits {
+  animation: ending-credits linear both;
+}
+@keyframes ending-credits {
+  to {
+    transform: translateY(calc(-100% - 100vh));
+  }
+}
+[data-motion='reduced'] .ending *,
+[data-motion='reduced'] .ending {
+  animation: none !important;
+}
+/* with reduced motion the credits sit still, centred (they don't roll) */
+[data-motion='reduced'] .ending-credits {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ---------- The Studio boutique (top screen) ---------- */
+/* the reveal: a hop on the spot */
+.boutique-hop {
+  animation: boutique-hop 420ms var(--ease-swing) 2;
+}
+@keyframes boutique-hop {
+  50% {
+    translate: 0 -12%;
+  }
+}
+/* clothes tossed over the top of the cubicle while they change */
+.boutique-toss {
+  opacity: 0;
+  animation: boutique-toss 700ms var(--ease-move) infinite;
+}
+@keyframes boutique-toss {
+  0% {
+    opacity: 1;
+    translate: 0 40%;
+    rotate: 0deg;
+  }
+  60% {
+    opacity: 1;
+    translate: var(--dx) -160%;
+    rotate: 200deg;
+  }
+  100% {
+    opacity: 0;
+    translate: calc(var(--dx) * 1.4) -60%;
+    rotate: 320deg;
+  }
+}
+.boutique-sparkle {
+  translate: -50% -50%;
+  animation: boutique-sparkle 700ms var(--ease-move) both;
+}
+@keyframes boutique-sparkle {
+  from {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(0) scale(0.4);
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(var(--r)) scale(1);
+  }
+}
+.boutique-bubble {
+  animation: boutique-bubble 260ms var(--ease-pop) both;
+}
+@keyframes boutique-bubble {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+/* a slow glint across the mirror glass */
+.boutique-mirror-glint {
+  background: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.45) 45%, transparent 55%) no-repeat;
+  background-size: 300% 100%;
+  animation: boutique-glint 4.5s ease-in-out infinite;
+}
+@keyframes boutique-glint {
+  0%,
+  60% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+/* the Studio's department tabs (touch screen): shop-sign tabs, the open one in the boutique's pink */
+.studio-tab {
+  background: #dfe6f2;
+  color: var(--color-ink);
+  box-shadow:
+    0 0 0 2px var(--gv-ink),
+    0 3px 0 2px var(--gv-drop);
+  transition: translate 120ms var(--ease-move);
+}
+.studio-tab[aria-selected='true'] {
+  background: #c04a78;
+  color: #fff;
+  translate: 0 -2px;
+}
+.studio-tabs {
+  padding: 4px 3px 7px;
+}
+[data-motion='reduced'] .boutique *,
+[data-motion='reduced'] .boutique {
+  animation: none !important;
 }
 
 @layer components {
@@ -1450,11 +2031,12 @@ body {
     0 1px 0 rgb(255 255 255 / 0.12);
 }
 
-/* Main menu backdrop: the skyline bands pan a tile at a time, one art pixel per step; clouds drift
+/* Main menu backdrop: the skyline bands pan continuously, a tile per loop (seamless: the band tiles); clouds drift
    across the top; stars twinkle at night (MenuSky.tsx) */
 .skyline-pan {
   animation-name: skyline-pan;
   animation-iteration-count: infinite;
+  will-change: transform;
 }
 @keyframes skyline-pan {
   to {
@@ -1501,7 +2083,8 @@ body::before {
   background-image: var(--page-pattern, none);
   background-size: var(--page-pattern-size, 128px) var(--page-pattern-size, 128px);
   image-rendering: pixelated;
-  animation: page-pattern-drift 64s steps(128) infinite;
+  animation: page-pattern-drift 22s linear infinite;
+  will-change: transform;
 }
 body::after {
   content: '';
@@ -2068,4 +2651,46 @@ body::after {
   margin-top: 4px;
   font-size: 13px;
   color: var(--act-ink);
+}
+
+/* The badge trophy's polish (ui/Trophy.tsx): a band of light sweeps across the metal, cut to the
+   trophy's silhouette; four-point sparkles pop on the metal and fade */
+.trophy-sweep {
+  background: linear-gradient(105deg, transparent 45%, rgb(255 248 210 / 0.35) 47.5%, rgb(255 255 255 / 0.6) 50%, rgb(255 248 210 / 0.35) 52.5%, transparent 55%);
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  animation: trophy-sweep 620ms var(--ease-move) forwards;
+}
+@keyframes trophy-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+.trophy-sparkle {
+  translate: -50% -50%;
+  background: #fffbe6;
+  box-shadow: 0 0 6px 2px rgb(255 240 170 / 0.8);
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  animation: trophy-sparkle 620ms var(--ease-swing) forwards;
+}
+@keyframes trophy-sparkle {
+  from {
+    scale: 0;
+    rotate: 0deg;
+  }
+  40% {
+    scale: 1.25;
+  }
+  to {
+    scale: 0;
+    rotate: 90deg;
+  }
+}
+[data-motion='reduced'] .trophy-sweep,
+[data-motion='reduced'] .trophy-sparkle {
+  display: none;
 }

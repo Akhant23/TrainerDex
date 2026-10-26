@@ -16,9 +16,10 @@ import { paletteFor, type Appearance } from '../sprites/character'
 import { creatureArtHi } from '../sprites/creatures'
 import { flipX } from '../sprites/raster'
 import { tiles, tilePalette, TILE } from './tiles'
-import { structureArt } from './structures'
+import { FOUNTAIN_FRAMES, fountainFrames, structureArt } from './structures'
 import { sceneryAt, size, tileAt, type ResortMap } from './maps'
 import { drawHorizon, drawSky, drawWeatherOverlay, type SkyState } from './sky'
+import { drawTowerShell, TOWER_FRONT } from './interior'
 
 export const VIEW_W = 256
 /** Default view height; the actual height follows the screen's shape (taller screens see further). */
@@ -231,7 +232,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   const outdoor = !!m.outdoor
   const { w, h } = size(m)
   ctx.imageSmoothingEnabled = false
-  ctx.fillStyle = outdoor ? '#bfe4f8' : '#101018'
+  ctx.fillStyle = outdoor ? '#bfe4f8' : m.interior === 'tower' ? TOWER_FRONT : '#101018'
   ctx.fillRect(0, 0, VIEW_W * RES, vh * RES)
 
   // sky down to where the ground ends, with distant hills on the horizon
@@ -301,7 +302,8 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
   const x1 = Math.min(w - 1 + far, Math.ceil((cam.x + 260) / TILE))
   for (let ty = y0; ty <= y1; ty++)
     for (let tx = x0; tx <= x1; tx++) {
-      const def = tiles[sceneryAt(m, tx, ty)]
+      const ch = sceneryAt(m, tx, ty)
+      const def = tiles[ch]
       if (!def?.prop) continue
       if (def.wall) {
         // walls only face you where there is open floor in front of them
@@ -309,7 +311,9 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
         if (ty + 1 >= h || !front || front.wall || front.solid && !front.prop) continue
       }
       const prop = def.prop
-      const img = pixelCanvas(prop.px, tilePalette, `prop:${tileAt(m, tx, ty)}`)
+      // keyed by the tile actually drawn: past the plaza's edge tileAt says 'X' (a wall) while the
+      // scenery there is a tree, and keying by tileAt cached that tree as every indoor wall
+      const img = pixelCanvas(prop.px, tilePalette, `prop:${ch}`)
       const bx = tx * TILE + 8
       const by = (ty + 1) * TILE
       if (tileAt(m, tx, ty) === 'l' && inView(project(cam, bx, by, vh), vh)) lamps.push([bx, by])
@@ -329,11 +333,39 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
     }
   }
   for (const st of m.structures ?? []) {
-    const art = structureArt[st.kind]
-    const img = pixelCanvas(art, tilePalette, `structure:${st.kind}`)
     const by = (st.y + st.d) * TILE
+    if (st.kind === 'fountain') {
+      // the fountain is round and its water moves: a paved ring and a soft shadow on the ground
+      // (round, not the buildings' straight contact band), then the frame for this moment
+      const frame = Math.floor(now / 170) % FOUNTAIN_FRAMES
+      const img = pixelCanvas(fountainFrames[frame], tilePalette, `fountain:${frame}`)
+      const fx = (st.x + st.w / 2) * TILE
+      const fy = (st.y + st.d / 2) * TILE + 6
+      items.push({ depth: -1e8, draw: () => groundRing(fx, fy, (st.w * TILE) / 2 + 7, (st.d * TILE) / 2 + 3) })
+      items.push({ depth: by, draw: () => sprite(img, st.x * TILE, by, 0) })
+      continue
+    }
+    const img = pixelCanvas(structureArt[st.kind], tilePalette, `structure:${st.kind}`)
     const grounded = m.outdoor && st.d > 1
     items.push({ depth: by, draw: () => (grounded && contact(st.x * TILE, (st.x + st.w) * TILE, by), sprite(img, st.x * TILE, by, 0)) })
+  }
+  /** A round paved surround on the ground, centred on world (cx, cy): a darker kerb ring, lighter paving, a shadow under the basin. */
+  function groundRing(cx: number, cy: number, rx: number, ry: number) {
+    const ring = (k: number, fill: string) => {
+      ctx.fillStyle = fill
+      ctx.beginPath()
+      for (let i = 0; i <= 48; i++) {
+        const t = (i / 48) * Math.PI * 2
+        const p = project(cam, cx + Math.cos(t) * rx * k, cy + Math.sin(t) * ry * k, vh)
+        if (i) ctx.lineTo(p.x * RES, p.y * RES)
+        else ctx.moveTo(p.x * RES, p.y * RES)
+      }
+      ctx.closePath()
+      ctx.fill()
+    }
+    ring(1, tilePalette['2'])
+    ring(0.93, tilePalette['1'])
+    ring(0.8, 'rgba(20,24,40,0.22)')
   }
   const onMap = (x: number, y: number) => inView(project(cam, x, y, vh), vh)
   for (const a of actors) {
@@ -347,6 +379,8 @@ export function drawWorld(ctx: CanvasRenderingContext2D, m: ResortMap, cam: Came
     items.push({ depth: c.y, draw: () => (shadow(c.x, c.y, 6), sprite(img, c.x, c.y + 2 - c.hop, img.width / 2, CREATURE_WORLD)) })
   }
   for (const it of extras.items?.((wx, wy) => project(cam, wx, wy, vh)) ?? []) items.push({ depth: it.depth, draw: () => it.draw(ctx) })
+  // indoors, the building round the floor goes behind everything standing on it
+  if (!outdoor && m.interior === 'tower') items.push({ depth: -1e9, draw: () => drawTowerShell(ctx, m, (wx, wy) => project(cam, wx, wy, vh), vh, extras.sky) })
 
   try {
     items.sort((p, q) => p.depth - q.depth).forEach((i) => i.draw())

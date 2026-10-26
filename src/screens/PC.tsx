@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode, type SyntheticEvent } from 'react'
 import { navigate } from '../app/router'
 import { menu } from '../content/menu'
 import { profile } from '../content/profile'
@@ -53,7 +53,7 @@ function MonitorTop({ label, children }: { label: string; children?: ReactNode }
 function PCMenu() {
   const { sfx } = useSettings()
   const [ready, setReady] = useState(false)
-  const [lines] = useState(() => (greeted ? ['What would you like to do?'] : ["Welcome to Aaryan's PC!", 'What would you like to do?']))
+  const [lines] = useState(() => (greeted ? ['What would you like to do?'] : ['Welcome to my PC!', 'What would you like to do?']))
   useEffect(() => {
     greeted = true
   }, [])
@@ -289,21 +289,8 @@ function PortfolioBoxes() {
       backTo="/pc"
       title="PORTFOLIO"
       top={
-        <div className="absolute inset-0 flex gap-[3%] bg-[#2a4a8a] p-[3%]">
-          {focused ? (
-            <>
-              <div className="flex w-[52%] items-center justify-center overflow-hidden bg-[#0e1a3a] shadow-[0_0_0_var(--u)_var(--color-ink)]">
-                <img src={focused.thumb} alt="" className="max-h-full max-w-full object-contain" />
-              </div>
-              <PixelBox variant="plate" className="flex min-w-0 flex-1 flex-col justify-center gap-[4%] px-[4%] py-[3%]">
-                <p className="font-display m-0 text-[clamp(11px,3.1cqi,18px)] text-dex-red">{focused.type.toUpperCase()}</p>
-                <p className="m-0 text-[clamp(13px,3.2cqi,19px)] leading-tight font-semibold">{focused.title}</p>
-                <p className="m-0 text-[clamp(11px,2.6cqi,15px)] text-muted">{focused.org}</p>
-              </PixelBox>
-            </>
-          ) : (
-            <p className="m-auto text-paper">This box is empty.</p>
-          )}
+        <div className="absolute inset-0 bg-[#2a4a8a] p-[3%]">
+          {focused ? <PortfolioPreview key={focused.id} project={focused} /> : <p className="m-auto text-paper">This box is empty.</p>}
         </div>
       }
       subheader={
@@ -349,6 +336,59 @@ function PortfolioBoxes() {
         <p className="m-0 mt-3 text-[13px] text-muted">◀ ▶ switch boxes (or Q / E). Select a slot to open its case study.</p>
       </div>
     </SectionScreen>
+  )
+}
+
+/**
+ * Whether a piece is wide or tall. The content records each piece's size, so the layout is right
+ * from the first frame (no jump while it loads); the thumbnail's real size, once loaded, confirms it.
+ */
+function useOrientation(project: Project) {
+  const m = project.media[0]
+  const [wide, setWide] = useState(m.width > m.height * 1.1)
+  const onLoad = (e: SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth: w, naturalHeight: h } = e.currentTarget
+    if (w && h) setWide(w > h * 1.1)
+  }
+  return { wide, onLoad }
+}
+
+/**
+ * The selected piece on the top screen. Tall pieces (posters, stories) keep the side-by-side layout:
+ * the piece in a tall frame, its details on a plate beside it. Wide pieces (event covers) get the
+ * whole width at their own aspect ratio, with the details on a plate underneath, so more of the
+ * picture shows instead of a small strip in a tall frame.
+ */
+function PortfolioPreview({ project }: { project: Project }) {
+  const { wide, onLoad } = useOrientation(project)
+  const m = project.media[0]
+  const details = (
+    <>
+      <p className="font-display m-0 text-[clamp(11px,3.1cqi,18px)] text-dex-red">{project.type.toUpperCase()}</p>
+      <p className="m-0 text-[clamp(13px,3.2cqi,19px)] leading-tight font-semibold">{project.title}</p>
+      <p className="m-0 text-[clamp(11px,2.6cqi,15px)] text-muted">{project.org}</p>
+    </>
+  )
+  if (wide)
+    return (
+      <div className="flex h-full flex-col items-stretch justify-center gap-[3%]" style={{ animation: 'photo-in 260ms var(--ease-move)' }}>
+        <div className="mx-auto flex max-h-[72%] w-full items-center justify-center overflow-hidden bg-[#0e1a3a] shadow-[0_0_0_var(--u)_var(--color-ink)]" style={{ aspectRatio: `${m.width} / ${m.height}` }}>
+          <img src={project.thumb} alt="" onLoad={onLoad} className="h-full w-full object-contain" />
+        </div>
+        <PixelBox variant="plate" className="flex min-w-0 flex-col justify-center gap-[2%] px-[4%] py-[2.5%]">
+          {details}
+        </PixelBox>
+      </div>
+    )
+  return (
+    <div className="flex h-full gap-[3%]" style={{ animation: 'photo-in 260ms var(--ease-move)' }}>
+      <div className="flex w-[52%] items-center justify-center overflow-hidden bg-[#0e1a3a] shadow-[0_0_0_var(--u)_var(--color-ink)]">
+        <img src={project.thumb} alt="" onLoad={onLoad} className="max-h-full max-w-full object-contain" />
+      </div>
+      <PixelBox variant="plate" className="flex min-w-0 flex-1 flex-col justify-center gap-[4%] px-[4%] py-[3%]">
+        {details}
+      </PixelBox>
+    </div>
   )
 }
 
