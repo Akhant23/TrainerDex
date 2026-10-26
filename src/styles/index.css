@@ -753,6 +753,59 @@ body {
   animation: none !important;
 }
 
+/* Photo Album grid. Side by side the three rows share the screen's height; stacked (phones,
+   tablets) each slot is a 3:4 print so the grid reaches down the screen instead of leaving
+   squat thumbnails above empty space. */
+.album-grid {
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+}
+.album-grid > .album-slot {
+  aspect-ratio: 3 / 4;
+}
+@media (min-width: 1024px) and (min-aspect-ratio: 5/4) {
+  .album-grid {
+    grid-template-rows: repeat(var(--rows), minmax(64px, 1fr));
+  }
+  .album-grid > .album-slot {
+    aspect-ratio: auto;
+  }
+}
+/* the print under the cursor lifts a pixel or two and its photo leans in */
+.album-slot {
+  transition: transform 160ms var(--ease-move);
+}
+.album-thumb {
+  transition:
+    transform 260ms var(--ease-move),
+    filter 260ms var(--ease-move);
+  filter: saturate(0.92);
+}
+.album-slot[aria-selected='true'] {
+  transform: translateY(calc(var(--u) * -0.67));
+}
+.album-slot[aria-selected='true'] .album-thumb {
+  transform: scale(1.06);
+  filter: none;
+}
+/* the top screen's print fades up as the focus moves */
+.album-preview {
+  animation: album-preview-in 220ms var(--ease-move);
+}
+@keyframes album-preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+[data-motion='reduced'] .album-slot,
+[data-motion='reduced'] .album-thumb,
+[data-motion='reduced'] .album-preview {
+  transition: none;
+  animation: none;
+  transform: none;
+}
+
 /* ---------- Battle ---------- */
 
 .battle-field {

@@ -14,9 +14,12 @@ import { Bullets, Heading, Sources, Tags } from '../ui/bits'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 import { Trophy } from '../ui/Trophy'
+import { SceneBackdrop } from '../ui/SceneBackdrop'
 
 const entry = menu.find((m) => m.id === 'card')!
 const COLS = 4
+/** The card's slate stripes (the city behind it is drawn in darker shades of these). */
+const CARD_TONES = ['#3a4258', '#323a4e'] as const
 
 export default function TrainerCard({ path }: { path: string }) {
   const id = path.split('/')[2]
@@ -44,7 +47,9 @@ function CardAndCase() {
       compactTop={false}
       title="BADGE CASE"
       top={
-        <div className="bg-stripes absolute inset-0 flex items-center justify-center p-[4%]" style={{ ['--s1' as string]: '#3a4258', ['--s2' as string]: '#323a4e' }}>
+        <div className="bg-stripes absolute inset-0 flex items-center justify-center p-[4%]" style={{ ['--s1' as string]: CARD_TONES[0], ['--s2' as string]: CARD_TONES[1] }}>
+          {/* the home screen's city, panning slowly behind the card */}
+          <SceneBackdrop tones={CARD_TONES} />
           <FlipCard
             flipped={flipped}
             onFlip={() => {

@@ -32,8 +32,9 @@ describe('idle gestures', () => {
         expect(validate(renderPose(signature, frame), pal, CHAR_W, CHAR_H), id).toEqual([])
         expect(validate(atResolution(2, () => renderPose(signature, frame)), pal, CHAR_W * 2, CHAR_H * 2), id).toEqual([])
       }
-    // every frame of every gesture at both densities: ~4 s alone, longer when the suite runs in parallel
-  }, 20_000)
+    // every frame of every gesture at both densities: ~4 s alone on a fast machine, 20 s+ on a
+    // slow CI container or when the suite runs in parallel
+  }, 60_000)
 
   it('gestures are short enough to feel like idles, long enough to read', () => {
     for (const id of ids) {

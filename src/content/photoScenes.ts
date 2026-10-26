@@ -59,7 +59,6 @@ const bothForward: PoseFrame = { back: { el: [25, 53], wr: [33, 50], hand: 'fist
 const fingerGuns: PoseFrame = { back: { el: [21, 52], wr: [27, 47], hand: 'pointOut' }, front: { el: [59, 52], wr: [52, 47], hand: 'pointOut' }, mouth: 'smirk', brow: 'up' }
 const armUp: PoseFrame = { front: { el: [60, 32], wr: [62, 18], hand: 'pointOut' }, mouth: 'grin' }
 const armAround: PoseFrame = { front: { el: [64, 40], wr: [76, 36], hand: 'fist' } }
-const hold: PoseFrame = { front: { el: [61, 50], wr: [62, 45], hand: 'fist' }, mouth: 'smirk' }
 // one arm raised high, holding the phone up beside his head to frame the view (his face stays clear)
 const phoneUp: PoseFrame = { front: { el: [59.5, 32], wr: [58, 22.5], hand: 'fist' }, mouth: 'calm' }
 const glovesUp: PoseFrame = { back: { el: [15, 34], wr: [17, 21], hand: 'open' }, front: { el: [65, 34], wr: [63, 21], hand: 'open' }, mouth: 'calm' }
