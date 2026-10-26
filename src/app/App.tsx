@@ -8,6 +8,7 @@ import MainMenu from '../screens/MainMenu'
 import { progress } from '../systems/progress'
 import { MedalToast } from '../ui/Medals'
 import { useKonami } from '../systems/konami'
+import { secondScreenHost } from '../systems/secondScreen'
 
 // Sections load on demand so the first visit only downloads the shell, intro and menu.
 const loaders = {
@@ -24,6 +25,8 @@ const loaders = {
   admin: () => import('../screens/Admin'),
 }
 const Intro = lazy(() => import('../screens/Intro'))
+// the phone controller is its own page: no intro, menu or system bar
+const Controller = lazy(() => import('../screens/Controller'))
 const SettingsScreen = lazy(loaders.settings)
 const ComingSoon = lazy(loaders.comingSoon)
 const MedalBox = lazy(loaders.medals)
@@ -56,10 +59,21 @@ export default function App() {
   return (
     <SettingsProvider>
       <VisitorProvider>
-        <Game />
+        <Root />
       </VisitorProvider>
     </SettingsProvider>
   )
+}
+
+function Root() {
+  const path = useHashPath()
+  if (path === '/controller' || path.startsWith('/controller?'))
+    return (
+      <Suspense fallback={<Loading />}>
+        <Controller />
+      </Suspense>
+    )
+  return <Game />
 }
 
 function Game() {
@@ -70,6 +84,8 @@ function Game() {
   const finishIntro = useCallback(() => setIntroSeen(true), [setIntroSeen])
   usePrefetchSections(introSeen)
   useKonami()
+  // a phone paired before this tab reloaded reconnects
+  useEffect(() => secondScreenHost.resume(), [])
 
   // Unknown routes fall back to the menu.
   const entry = menuEntryForRoute(shown)

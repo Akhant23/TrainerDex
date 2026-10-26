@@ -197,6 +197,19 @@ describe('character model', () => {
     expect(parseAppearance({ ...signature, accessories: signature.accessories.slice(0, 3) })).not.toBeNull()
     expect(renderFlat(signature).length).toBe(CHAR_H)
   })
+  it('the Champion pin travels with the look, and anything else in its place is dropped, not rejected', () => {
+    const base = { ...signature, accessories: signature.accessories.slice(0, 3) }
+    expect(parseAppearance({ ...base, badge: 'champion' })?.badge).toBe('champion')
+    const odd = parseAppearance({ ...base, badge: 'gym-leader' })
+    expect(odd).not.toBeNull()
+    expect(odd && 'badge' in odd).toBe(false)
+    // the pin renders on both sprites, front and walking
+    const pinned = { ...base, badge: 'champion' as const }
+    const pal = paletteFor(pinned)
+    expect(validate(renderFlat(pinned), pal, CHAR_W, CHAR_H)).toEqual([])
+    expect(JSON.stringify(renderFlat(pinned))).not.toBe(JSON.stringify(renderFlat(base)))
+    expect(JSON.stringify(overworldFor(pinned).down)).not.toBe(JSON.stringify(overworldFor(base).down))
+  })
   it('backend rejects bad appearances and parties', () => {
     expect(parseAppearance({ ...signature, skin: 'green' })).toBeNull()
     expect(parseAppearance({ ...signature, accessories: ['glasses', 'chain', 'earring', 'watch'] })).toBeNull()

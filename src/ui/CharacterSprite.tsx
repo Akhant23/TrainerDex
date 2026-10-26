@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { atResolution, CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderArmLayer, renderBack, renderHairBackLayer, renderHeadLayer, renderHeldLayer, renderLayers, renderSide, type Appearance, type ArmPose, type CharacterLayers, type PoseFrame } from '../sprites/character'
+import { atResolution, CHAR_H, CHAR_W, flatten, LAYER_ORDER, paletteFor, PORTRAIT, renderBack, renderHeldLayer, renderLayers, renderSide, type Appearance, type ArmPose, type CharacterLayers, type PoseFrame } from '../sprites/character'
 import { GESTURES, type GestureId } from '../sprites/gestures'
 import { useGestures } from './useGestures'
-import { crop, type Pixels } from '../sprites/pixels'
+import { crop, hexToRgba, type Pixels } from '../sprites/pixels'
 import { pixelsToDataUrl } from '../sprites/render'
 import { useSettings } from '../systems/settings'
 import { overrideUrl } from '../sprites/assets'
@@ -24,30 +24,63 @@ function layersFor(a: Appearance, pose: ArmPose, hi = false) {
   return hit
 }
 /*
- * Posed frames (idle gestures) are cached per part — an arm by its position, a head by its
- * expression — so a gesture only renders the pieces that change, and frames are reused.
+ * A gesture frame is drawn as one picture of the whole upper body (back hair, torso, both arms,
+ * head, anything held), cached per frame and painted onto a single canvas synchronously. Swapping
+ * the sources of several <img> layers instead let the browser decode them a frame apart (a part
+ * blinking out for a frame) and gave a held thing its own breathing clock, a pixel off the face.
  */
-const partCache = new Map<string, string>()
-function partUrl(key: string, hi: boolean, palette: ReturnType<typeof paletteFor>, draw: () => Pixels): string {
-  const k = key + (hi ? ':2' : ':1')
-  let u = partCache.get(k)
-  if (!u) partCache.set(k, (u = pixelsToDataUrl(atResolution(hi ? 2 : 1, draw), palette)))
-  return u
+const frameCache = new Map<string, HTMLCanvasElement>()
+const UPPER: Array<keyof CharacterLayers> = ['hairBack', 'torso', 'armBack', 'armFront', 'head']
+function frameCanvas(a: Appearance, f: PoseFrame, hi: boolean, blink: boolean, palette: ReturnType<typeof paletteFor>): HTMLCanvasElement {
+  const pose: PoseFrame = blink && !f.eyes ? { ...f, eyes: 'closed' } : f
+  const key = JSON.stringify(a) + JSON.stringify(pose) + hi
+  let cv = frameCache.get(key)
+  if (cv) return cv
+  const px = atResolution(hi ? 2 : 1, () => {
+    const l = renderLayers(a, 'idle', pose)
+    const parts = UPPER.map((n) => l[n])
+    return flatten(pose.held ? [...parts, renderHeldLayer(a, pose.held)] : parts)
+  })
+  cv = document.createElement('canvas')
+  cv.width = px[0].length
+  cv.height = px.length
+  const ctx = cv.getContext('2d')!
+  const img = ctx.createImageData(cv.width, cv.height)
+  px.forEach((row, y) =>
+    [...row].forEach((ch, x) => {
+      if (ch !== '.') img.data.set(hexToRgba(palette[ch]), (y * cv!.width + x) * 4)
+    }),
+  )
+  ctx.putImageData(img, 0, 0)
+  frameCache.set(key, cv)
+  return cv
 }
-type LayerUrls = Record<keyof CharacterLayers | 'held', string>
-function frameUrls(a: Appearance, f: PoseFrame, hi: boolean, palette: ReturnType<typeof paletteFor>): Partial<LayerUrls> {
-  const id = JSON.stringify(a)
-  const face: PoseFrame = { eyes: f.eyes, mouth: f.mouth, brow: f.brow, ruffle: f.ruffle, tilt: f.tilt, glasses: f.glasses }
-  const fk = JSON.stringify(face)
-  const out: Partial<LayerUrls> = {
-    hairBack: partUrl(`hb:${id}:${f.tilt ?? 0}`, hi, palette, () => renderHairBackLayer(a, f.tilt ?? 0)),
-    head: partUrl(`h:${id}:${fk}`, hi, palette, () => renderHeadLayer(a, false, face)),
-    headBlink: partUrl(`hk:${id}:${fk}`, hi, palette, () => renderHeadLayer(a, true, face)),
-  }
-  if (f.back) out.armBack = partUrl(`ab:${id}:${JSON.stringify(f.back)}`, hi, palette, () => renderArmLayer(a, 'back', f.back))
-  if (f.front) out.armFront = partUrl(`af:${id}:${JSON.stringify(f.front)}`, hi, palette, () => renderArmLayer(a, 'front', f.front))
-  if (f.held) out.held = partUrl(`hd:${id}:${JSON.stringify(f.held)}`, hi, palette, () => renderHeldLayer(a, f.held))
-  return out
+
+/**
+ * Every breathing layer runs on one clock (the page's), not from when its element mounted, so a
+ * layer added later (a gesture's canvas) bobs in step with the rest and starting or ending a
+ * gesture never jumps a pixel. A negative delay of "now mod the period" at mount does it.
+ */
+const BREATH_MS = 1600
+function useBreathPhase() {
+  const [delay] = useState(() => `-${Math.round(performance.now() % BREATH_MS)}ms`)
+  return delay
+}
+
+/** The upper body in a gesture frame: one canvas, redrawn in step with React's commit. */
+function GestureCanvas({ frame, w, h, cls }: { frame: HTMLCanvasElement; w: number; h: number; cls: string }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  const delay = useBreathPhase()
+  useLayoutEffect(() => {
+    const c = ref.current
+    const ctx = c?.getContext('2d')
+    if (!c || !ctx) return
+    if (c.width !== frame.width) c.width = frame.width
+    if (c.height !== frame.height) c.height = frame.height
+    ctx.clearRect(0, 0, c.width, c.height)
+    ctx.drawImage(frame, 0, 0)
+  }, [frame])
+  return <canvas ref={ref} aria-hidden className={`pixelated absolute inset-0 ${cls}`} style={{ width: w, height: h, animationDelay: delay }} />
 }
 
 const portraitCache = new Map<string, Pixels>()
@@ -123,6 +156,8 @@ interface Props {
   gestures?: boolean
   /** Ask for a specific gesture now (e.g. wave when tapped); change `key` to ask again. */
   gestureTrigger?: { id: GestureId; key: number }
+  /** Hold this pose (the VS screen's wind-ups and strikes): the standing sprite's arms and face posed by a PoseFrame. */
+  frame?: PoseFrame
   className?: string
   style?: CSSProperties
   alt: string
@@ -134,7 +169,7 @@ interface Props {
  */
 const SLOT_FOR: Partial<Record<CharacterPose, AssetSlot>> = { idle: 'aaryan.front', point: 'aaryan.vs', victory: 'aaryan.victory', portrait: 'aaryan.portrait' }
 
-export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill, still = false, nod = false, gestures = false, gestureTrigger, className = '', style, alt }: Props) {
+export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill, still = false, nod = false, gestures = false, gestureTrigger, frame: heldFrame, className = '', style, alt }: Props) {
   const { reducedMotion } = useSettings()
   useAssetLoads()
   const slot = SLOT_FOR[pose]
@@ -181,8 +216,9 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
   const portraitUrl = useMemo(() => (isPortrait ? pixelsToDataUrl(portraitPixels(appearance, hi), palette) : ''), [isPortrait, appearance, palette, hi])
 
   // idle gestures: only for the standing pose, never with reduced motion
-  const gesturing = gestures && animate && pose === 'idle' && !handDrawn
-  const frame = useGestures(gesturing, gestureTrigger)
+  const gesturing = gestures && animate && pose === 'idle' && !handDrawn && !heldFrame
+  const gestureNow = useGestures(gesturing, gestureTrigger)
+  const frame = pose === 'idle' && heldFrame ? heldFrame : gestureNow
   // warm the cache with every gesture frame in idle time, so the first gesture plays smoothly
   useEffect(() => {
     if (!gesturing) return
@@ -191,15 +227,14 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
     let handle = 0
     const step = () => {
       const end = Math.min(todo.length, i + 3)
-      for (; i < end; i++) frameUrls(appearance, todo[i], hi, palette)
+      for (; i < end; i++) frameCanvas(appearance, todo[i], hi, false, palette)
       if (i < todo.length) handle = window.setTimeout(step, 30)
     }
     handle = window.setTimeout(step, 400)
     return () => window.clearTimeout(handle)
   }, [gesturing, appearance, hi, palette])
-  const framed = frame ? frameUrls(appearance, frame, hi, palette) : null
-  const posed = framed ? { ...urls, ...framed } : urls
-  const heldUrl = framed?.held
+  const gestureFrame = frame ? frameCanvas(appearance, frame, hi, blink, palette) : null
+  const breath = useBreathPhase()
 
   if (isPortrait) {
     return (
@@ -226,20 +261,26 @@ export function CharacterSprite({ appearance, pose = 'idle', scale: fixed, fill,
       </div>
     )
   }
-  const layer = (src: string, cls: string) => <img src={src} width={w} height={h} alt="" aria-hidden draggable={false} className={`pixelated absolute inset-0 ${animate ? cls : ''}`} />
+  const layer = (src: string, cls: string) => <img src={src} width={w} height={h} alt="" aria-hidden draggable={false} className={`pixelated absolute inset-0 ${animate ? cls : ''}`} style={{ animationDelay: breath }} />
 
-  // a gesture's own eyes (glancing down, closed) take over from the random blink
-  const headUrl = blink && !frame?.eyes ? posed.headBlink : posed.head
   return (
     <div ref={ref} role="img" aria-label={alt} className={`relative ${className}`} style={{ width: w, height: h, ['--px' as string]: `${scale}px`, ...style }}>
-      {layer(posed.hairBack, nod ? 'bw-nod' : 'bw-hair')}
-      {layer(posed.legs, '')}
-      {layer(posed.torso, 'bw-breathe')}
-      {layer(posed.armBack, 'bw-arm-a')}
-      {layer(posed.armFront, pose === 'victory' ? 'bw-pump' : pose === 'point' ? '' : 'bw-breathe')}
-      {layer(headUrl, nod ? 'bw-nod' : 'bw-head')}
-      {/* anything a gesture holds up (his glasses, a cloth) goes in front of the face, moving with the hand */}
-      {heldUrl && layer(heldUrl, 'bw-breathe')}
+      {gestureFrame ? (
+        <>
+          {/* mid-gesture: the planted legs, and the whole upper body as one frame (it breathes as one piece) */}
+          {layer(urls.legs, '')}
+          <GestureCanvas frame={gestureFrame} w={w} h={h} cls={animate ? 'bw-breathe' : ''} />
+        </>
+      ) : (
+        <>
+          {layer(urls.hairBack, nod ? 'bw-nod' : 'bw-hair')}
+          {layer(urls.legs, '')}
+          {layer(urls.torso, 'bw-breathe')}
+          {layer(urls.armBack, 'bw-arm-a')}
+          {layer(urls.armFront, pose === 'victory' ? 'bw-pump' : pose === 'point' ? '' : 'bw-breathe')}
+          {layer(blink ? urls.headBlink : urls.head, nod ? 'bw-nod' : 'bw-head')}
+        </>
+      )}
     </div>
   )
 }

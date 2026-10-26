@@ -17,12 +17,14 @@ export interface PublicMessage {
   message: string
   avatar: Avatar
   created_at: string
+  /** the resort trainer the message is linked to, if any (its avatar is shown for 'trainer') */
+  trainer_id?: string | null
 }
 
 const headers = () => ({ apikey: ANON, Authorization: `Bearer ${ANON}` })
 
 export async function fetchApproved(limit = 50): Promise<PublicMessage[]> {
-  const res = await fetch(`${URL}/rest/v1/messages?select=id,name,message,avatar,created_at&order=created_at.desc&limit=${limit}`, { headers: headers() })
+  const res = await fetch(`${URL}/rest/v1/messages?select=id,name,message,avatar,created_at,trainer_id&order=created_at.desc&limit=${limit}`, { headers: headers() })
   if (!res.ok) throw new Error(`Couldn’t load messages (${res.status}).`)
   return res.json()
 }
@@ -42,6 +44,15 @@ export async function submitMessage(body: { name: string; message: string; avata
     /* keep default */
   }
   throw new Error(msg)
+}
+
+/**
+ * Supabase client for the phone controller's Realtime channel: anonymous, no session kept (lazy,
+ * so it only loads when someone pairs a phone).
+ */
+export async function realtimeClient() {
+  const { createClient } = await import('@supabase/supabase-js')
+  return createClient(URL, ANON, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
 }
 
 /** Supabase client for the admin dashboard only (lazy, so visitors never download it). */

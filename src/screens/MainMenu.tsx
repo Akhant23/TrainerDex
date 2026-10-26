@@ -18,6 +18,8 @@ import { progress, useProgress } from '../systems/progress'
 import { medals } from '../content/medals'
 import { MedalArt } from '../ui/Medals'
 import { hasShinyCharm } from '../systems/konami'
+import { usePlayerLook } from '../systems/resortSave'
+import { TrainerHead } from '../ui/TrainerHead'
 import { crispScale } from '../ui/CharacterSprite'
 import { CHAR_H } from '../sprites/character'
 import { SYDNEY_H } from '../sprites/skyline'
@@ -316,6 +318,7 @@ function useStatusLayout() {
 function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) => void }) {
   const { sfx } = useSettings()
   const { name } = useVisitor()
+  const me = usePlayerLook()
   const refs = useRef<Array<HTMLButtonElement | null>>([])
 
   const moveTo = (i: number) => {
@@ -359,8 +362,14 @@ function TouchMenu({ focus, setFocus }: { focus: number; setFocus: (i: number) =
     <div className="bg-dots flex h-full flex-1 flex-col">
       <div className="gv-header font-display flex items-center justify-between px-[3%] py-[1.6%] text-[clamp(13px,3.1cqi,18px)] text-paper">
         <span>MENU</span>
-        <span className="text-frame-hi">
-          TRAINER: <span className="text-gold">{name}</span>
+        {/* you, the player: your Battle Resort trainer beside your name */}
+        <span className="text-frame-hi flex items-center gap-2">
+          <span aria-hidden className="flex h-[1.9em] w-[1.9em] items-center justify-center overflow-hidden rounded-full bg-paper/85 shadow-[0_0_0_2px_var(--gv-ink)]">
+            <TrainerHead look={me} scale={1} />
+          </span>
+          <span>
+            TRAINER: <span className="text-gold">{name}</span>
+          </span>
         </span>
       </div>
       <nav aria-label="Sections" className="grid flex-1 grid-cols-2 gap-[2.2%] p-[2.5%] [grid-auto-rows:minmax(72px,1fr)] sm:[grid-auto-rows:1fr]">

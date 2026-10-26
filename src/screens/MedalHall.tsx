@@ -12,7 +12,7 @@ import { structureArt } from '../resort/structures'
 import { tilePalette, tiles, TILE } from '../resort/tiles'
 import type { Spot } from '../resort/maps'
 import { MEDAL_TIER_COLOURS, medalPixels } from '../sprites/medalArt'
-import { WALK_CYCLE, type Facing } from '../sprites/overworld'
+import { strideFrame, type Facing } from '../sprites/overworld'
 import { paletteFor, PORTRAIT, renderFlat, type Appearance } from '../sprites/character'
 import { creatureArt } from '../sprites/creatures'
 import { crop, type Palette, type Pixels } from '../sprites/pixels'
@@ -452,6 +452,7 @@ export default function MedalHall({ focus, earned, onPick }: { focus: number; ea
   const me = useRef<Walker & { path: Spot[]; face?: Facing; then?: () => void; idleAt: number }>({ ...ENTRANCE, moving: null, path: [], idleAt: 0 })
   const pet = useRef<Walker>({ x: ENTRANCE.x - 1, y: ENTRANCE.y, facing: 'up', moving: null })
   const hits = useRef<Hit[]>([])
+  const steps = useRef(0)
   const state = useRef({ focus, earned, reducedMotion, busy: false })
   state.current = { focus, earned, reducedMotion, busy: !!dialogue || fade }
 
@@ -556,6 +557,7 @@ export default function MedalHall({ focus, earned, onPick }: { focus: number; ea
         else {
           m.facing = n.x > m.x ? 'right' : n.x < m.x ? 'left' : n.y > m.y ? 'down' : 'up'
           m.moving = { fx: m.x, fy: m.y, tx: n.x, ty: n.y, t0: now }
+          steps.current++
           // the partner steps into the tile he just left
           if (pt.x !== m.x || pt.y !== m.y) {
             pt.facing = pt.x < m.x ? 'right' : pt.x > m.x ? 'left' : pt.y < m.y ? 'down' : 'up'
@@ -576,7 +578,7 @@ export default function MedalHall({ focus, earned, onPick }: { focus: number; ea
       const pp = at(pt)
       const actors: Actor[] = [
         { look: curatorLook, facing: CURATOR.facing, frame: 0, x: CURATOR.x * TILE + 8, y: CURATOR.y * TILE + 14 },
-        { look: signature, facing: m.facing, frame: m.moving ? WALK_CYCLE[Math.floor(now / 140) % 4] : 0, x: mp.x, y: mp.y },
+        { look: signature, facing: m.facing, frame: m.moving ? strideFrame(mp.k, steps.current) : 0, x: mp.x, y: mp.y },
       ]
       const creatures: CreatureActor[] = [{ id: PARTNER, facing: pt.facing, x: pp.x, y: pp.y - 1, hop: pt.moving ? Math.sin(pp.k * Math.PI) * 3 : 0, breath: pt.moving || still ? 0 : Math.floor(now / 520) % 2 }]
 

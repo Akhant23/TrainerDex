@@ -5,6 +5,8 @@
  * Nothing plays until the visitor turns sound on (and the browser has seen a click/keypress).
  */
 
+import { load, save } from './storage'
+
 export type Sfx = 'cursor' | 'select' | 'back' | 'blip' | 'open' | 'save' | 'error' | 'start' | 'bump' | 'hit' | 'superHit' | 'weakHit' | 'miss' | 'faint' | 'statUp' | 'statDown' | 'heal' | 'encounter' | 'sendOut' | 'badge'
 
 const NOTE_INDEX: Record<string, number> = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 }
@@ -142,6 +144,59 @@ const TRACKS: Record<Track, TrackData> = {
   },
 }
 
+/** One entry in the jukebox: the tracks a visitor can pick by hand, named for where they play. */
+export interface JukeboxTrack {
+  id: Track
+  name: string
+  where: string
+}
+
+/**
+ * Every pickable track, in jukebox order, with a stable id. The victory fanfare is a one-shot
+ * jingle rather than a song, so it isn't listed.
+ */
+export const JUKEBOX: readonly JukeboxTrack[] = [
+  { id: 'menu', name: 'Main Menu', where: 'The menu and every section' },
+  { id: 'resort', name: 'Battle Resort', where: 'The resort plaza and the Tower reception' },
+  { id: 'battle', name: 'Trainer Battle', where: 'Battles' },
+  { id: 'floor1', name: 'Tower Floor 1: School', where: 'Battle Tower, first floor' },
+  { id: 'floor2', name: 'Tower Floor 2: First Year', where: 'Battle Tower, second floor' },
+  { id: 'floor3', name: 'Tower Floor 3: Law Ball', where: 'Battle Tower, third floor' },
+  { id: 'floor4', name: 'Tower Floor 4: Tour Guides', where: 'Battle Tower, fourth floor' },
+  { id: 'floor5', name: 'Tower Floor 5: Champion', where: 'Battle Tower, top floor' },
+]
+
+export const isJukeboxTrack = (v: unknown): v is Track => JUKEBOX.some((t) => t.id === v)
+
+/**
+ * What the music is doing, for the jukebox: `off` is the Music setting (the mute), `paused` is the
+ * jukebox's pause, `blocked` means the browser is holding audio until a tap or key press, and
+ * `unavailable` means this browser can't make sound at all.
+ */
+export type MusicState = 'off' | 'paused' | 'blocked' | 'playing' | 'unavailable'
+
+export interface MusicStatus {
+  state: MusicState
+  /** The track that plays (or would, once unmuted / unpaused): the pick, else the area's. */
+  current: Track
+  /** A hand-picked track, which overrides the area's music until the visitor goes back to Auto. */
+  pinned: Track | null
+  /** The track the current place asks for. */
+  area: Track
+}
+
+/** One playing track. Switching tracks fades the old voice out while the new one fades in. */
+interface Voice {
+  track: Track
+  bus: GainNode
+  step: number
+  next: number
+  /** Set once the voice is fading out: it stops scheduling notes and is dropped at this time. */
+  endAt: number | null
+}
+
+const FADE = 0.4
+
 class AudioEngine {
   private ctx: AudioContext | null = null
   private master: GainNode | null = null
@@ -149,17 +204,60 @@ class AudioEngine {
   private musicOn = false
   private volume = 0.6
   private musicTimer: number | null = null
-  private nextStepTime = 0
-  private step = 0
-  private track: Track = 'menu'
+  private voices: Voice[] = []
+  private area: Track = 'menu'
+  private pinned: Track | null = load<Track | null>('jukebox', null, (v): v is Track | null => v === null || isJukeboxTrack(v))
+  private paused = false
+  private unavailable = false
+  private listeners = new Set<() => void>()
+  private status: MusicStatus = this.computeStatus()
 
-  /** Switch the music track (only audible when music is on). */
+  /** The music the current place wants (screens call this as the visitor moves around). */
   setTrack(track: Track) {
-    if (track === this.track) return
-    this.track = track
-    this.step = 0
-    if (this.ctx) this.nextStepTime = this.ctx.currentTime + 0.08
-    if (this.musicOn && this.musicTimer == null) this.startMusic()
+    if (track === this.area) return
+    this.area = track
+    this.refreshMusic()
+  }
+
+  /** Pick a track by hand (null goes back to following the area). Saved across visits. */
+  pin(track: Track | null) {
+    this.pinned = track
+    this.paused = false
+    save('jukebox', track)
+    this.refreshMusic()
+  }
+
+  setPaused(paused: boolean) {
+    if (paused === this.paused) return
+    this.paused = paused
+    this.refreshMusic()
+  }
+
+  getStatus = (): MusicStatus => this.status
+
+  subscribe = (fn: () => void): (() => void) => {
+    this.listeners.add(fn)
+    return () => {
+      this.listeners.delete(fn)
+    }
+  }
+
+  private computeStatus(): MusicStatus {
+    const current = this.pinned ?? this.area
+    let state: MusicState = 'playing'
+    if (this.unavailable) state = 'unavailable'
+    else if (!this.musicOn) state = 'off'
+    else if (this.paused) state = 'paused'
+    else if (!this.ctx || this.ctx.state !== 'running') state = 'blocked'
+    return { state, current, pinned: this.pinned, area: this.area }
+  }
+
+  private emit() {
+    const next = this.computeStatus()
+    const prev = this.status
+    if (prev.state === next.state && prev.current === next.current && prev.pinned === next.pinned && prev.area === next.area) return
+    this.status = next
+    this.listeners.forEach((fn) => fn())
   }
 
   configure(opts: { sfx: boolean; music: boolean; volume: number }) {
@@ -168,8 +266,7 @@ class AudioEngine {
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.02)
     if (opts.music !== this.musicOn) {
       this.musicOn = opts.music
-      if (opts.music) this.startMusic()
-      else this.stopMusic()
+      this.refreshMusic()
     }
   }
 
@@ -177,25 +274,33 @@ class AudioEngine {
   unlock() {
     if (!this.sfxOn && !this.musicOn) return
     const ctx = this.ensure()
-    if (ctx && ctx.state === 'suspended') void ctx.resume()
+    if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') void ctx.resume().catch(() => {})
   }
 
   private ensure(): AudioContext | null {
     if (this.ctx) return this.ctx
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (!Ctor) return null
+    if (!Ctor) {
+      this.unavailable = true
+      this.emit()
+      return null
+    }
     try {
-      this.ctx = new Ctor()
-      this.master = this.ctx.createGain()
+      const ctx = new Ctor()
+      this.ctx = ctx
+      this.master = ctx.createGain()
       this.master.gain.value = this.volume
-      this.master.connect(this.ctx.destination)
+      this.master.connect(ctx.destination)
+      ctx.addEventListener('statechange', () => this.emit())
     } catch {
       this.ctx = null
+      this.unavailable = true
     }
+    this.emit()
     return this.ctx
   }
 
-  private tone(freq: number, start: number, dur: number, type: OscillatorType, gain: number, slideTo?: number) {
+  private tone(freq: number, start: number, dur: number, type: OscillatorType, gain: number, slideTo?: number, out?: AudioNode) {
     const ctx = this.ctx
     if (!ctx || !this.master || freq <= 0) return
     const osc = ctx.createOscillator()
@@ -207,7 +312,7 @@ class AudioEngine {
     g.gain.linearRampToValueAtTime(gain, start + 0.005)
     g.gain.setValueAtTime(gain, start + Math.max(0.006, dur - 0.03))
     g.gain.linearRampToValueAtTime(0, start + dur)
-    osc.connect(g).connect(this.master)
+    osc.connect(g).connect(out ?? this.master)
     osc.start(start)
     osc.stop(start + dur + 0.02)
   }
@@ -336,43 +441,86 @@ class AudioEngine {
     }
   }
 
-  private startMusic() {
-    const ctx = this.ensure()
-    if (!ctx || this.musicTimer != null) return
-    this.step = 0
-    this.nextStepTime = ctx.currentTime + 0.1
-    this.musicTimer = window.setInterval(() => this.schedule(), 25)
-  }
-
-  private stopMusic() {
-    if (this.musicTimer != null) window.clearInterval(this.musicTimer)
-    this.musicTimer = null
+  /**
+   * Bring what's playing in line with the settings, the pick and the area. The same track never
+   * restarts; a different one crossfades in over FADE seconds, so at most two overlap, briefly.
+   */
+  private refreshMusic() {
+    const want = this.musicOn && !this.paused ? (this.pinned ?? this.area) : null
+    const live = this.voices.find((v) => v.endAt == null)
+    if ((live?.track ?? null) === want) return this.emit()
+    const ctx = want ? this.ensure() : this.ctx
+    if (ctx && this.master) {
+      const now = ctx.currentTime
+      const running = ctx.state === 'running'
+      // a quick fade when stopping, a crossfade when switching
+      const fade = want ? FADE : 0.08
+      for (const v of this.voices) {
+        if (v.endAt != null) continue
+        v.bus.gain.cancelScheduledValues(now)
+        v.bus.gain.setValueAtTime(v.bus.gain.value, now)
+        v.bus.gain.linearRampToValueAtTime(0, now + fade)
+        v.endAt = now + fade
+      }
+      // while the browser holds audio nothing has played yet, so the old voice just goes
+      if (!running) {
+        this.voices.forEach((v) => v.bus.disconnect())
+        this.voices = []
+      }
+      if (want) {
+        const bus = ctx.createGain()
+        bus.connect(this.master)
+        const start = now + 0.06
+        const crossfade = this.voices.length > 0
+        bus.gain.setValueAtTime(crossfade ? 0 : 1, start)
+        if (crossfade) bus.gain.linearRampToValueAtTime(1, start + FADE)
+        this.voices.push({ track: want, bus, step: 0, next: start, endAt: null })
+      }
+      if (this.voices.length && this.musicTimer == null) this.musicTimer = window.setInterval(() => this.schedule(), 25)
+    }
+    this.emit()
   }
 
   private schedule() {
     const ctx = this.ctx
-    if (!ctx || ctx.state !== 'running') {
+    if (!ctx) return
+    if (ctx.state !== 'running') {
       // keep the clock aligned while suspended so we don't burst-schedule on resume
-      if (ctx) this.nextStepTime = ctx.currentTime + 0.1
+      for (const v of this.voices) v.next = ctx.currentTime + 0.1
       return
     }
-    const tr = TRACKS[this.track]
+    const now = ctx.currentTime
+    this.voices = this.voices.filter((v) => {
+      if (v.endAt == null || now < v.endAt) return true
+      v.bus.disconnect()
+      return false
+    })
+    for (const v of this.voices) this.scheduleVoice(v, now)
+    if (!this.voices.length && this.musicTimer != null) {
+      window.clearInterval(this.musicTimer)
+      this.musicTimer = null
+    }
+  }
+
+  private scheduleVoice(v: Voice, now: number) {
+    const tr = TRACKS[v.track]
     const step = 60 / tr.bpm / 4
-    while (this.nextStepTime < ctx.currentTime + 0.12) {
-      if (!tr.loop && this.step >= tr.lead.length) return
-      const i = this.step % tr.lead.length
+    while (v.next < now + 0.12) {
+      if (v.endAt != null && v.next >= v.endAt) return
+      if (!tr.loop && v.step >= tr.lead.length) return
+      const i = v.step % tr.lead.length
       const tok = tr.lead[i]
       if (tok !== '-' && tok !== '.') {
         let len = 1
         while (tr.lead[(i + len) % tr.lead.length] === '-' && i + len < tr.lead.length) len++
-        this.tone(noteToFreq(tok), this.nextStepTime, len * step * 0.92, 'square', 0.035)
+        this.tone(noteToFreq(tok), v.next, len * step * 0.92, 'square', 0.035, undefined, v.bus)
       }
       if (i % 2 === 0) {
         const [root, fifth] = tr.bass[Math.floor(i / 16) % tr.bass.length]
-        this.tone(noteToFreq((i / 2) % 2 === 0 ? root : fifth), this.nextStepTime, step * 1.8, 'triangle', 0.09)
+        this.tone(noteToFreq((i / 2) % 2 === 0 ? root : fifth), v.next, step * 1.8, 'triangle', 0.09, undefined, v.bus)
       }
-      this.nextStepTime += step
-      this.step++
+      v.next += step
+      v.step++
     }
   }
 }

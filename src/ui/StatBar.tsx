@@ -28,7 +28,7 @@ export function StatBar({ label, value, max = 100, color }: { label: string; val
             width: `${pct}%`,
             background: fill,
             boxShadow: 'inset 0 calc(-1 * var(--u)) 0 rgb(0 0 0 / 0.25)',
-            transition: reducedMotion ? 'none' : 'width 900ms steps(18)',
+            transition: reducedMotion ? 'none' : 'width 900ms var(--ease-move)',
           }}
         />
       </div>

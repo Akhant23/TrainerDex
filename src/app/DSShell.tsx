@@ -4,7 +4,7 @@ import { SystemBar } from './SystemBar'
 
 export const WipeContext = createContext<WipePhase>('idle')
 
-function Wipe() {
+export function Wipe() {
   const phase = useContext(WipeContext)
   if (phase === 'idle') return null
   return (
