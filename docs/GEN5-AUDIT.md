@@ -395,3 +395,26 @@ screen's print fades in.
 
 **City backdrops.** The home screen's panning skyline (`SceneBackdrop`) now sits behind the
 album's top screen and the Trainer Card.
+
+**The Studio boutique (`src/screens/resort/Boutique.tsx`).** IMPLEMENTED AND VISUALLY CHECKED
+(desktop and phone). Opening the Studio now takes you inside a boutique on the top screen: you
+walk in from the shop door to a long mirror. The shop has a rack of tops in every cloth colour,
+a hat shelf, shoe boxes and two fitting rooms with lamps and panelled doors. The mirror shows
+the look you're building on the touch screen as you go. The touch screen's form is now
+organised into departments (CLOTHES · STYLE · EXTRAS · ID CARD); STYLE holds the photo match,
+and a name error jumps to ID CARD.
+
+Saving plays the changing room: walk to the fitting room → door opens → step in → door shuts,
+the lamp turns red and the cubicle throws clothes over the top → door opens → you step out in
+the new look, hop, sparkle, "LOOKING SHARP!" → back to the plaza. The save is written straight
+away, so leaving mid-routine loses nothing. Tap to skip; with reduced motion you simply appear
+in the new look. The room is drawn once per door state on a 192-wide canvas. A taller screen
+gets more ceiling and floor rather than cropping the fitting rooms.
+
+**One avatar everywhere.** The saved look is still the single source of truth
+(`resortSave.avatar` / `playerLook()`): the resort walker, the VS card, battles, the main menu's
+trainer head and the online copy all read it, so a new outfit shows up everywhere the moment
+the routine starts.
+
+Captures: `studio-door-open.png`, `studio-changing.png`, `studio-reveal.png`,
+`studio-sequence.png` (frames ~280 ms apart, from the save to the plaza).

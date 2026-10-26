@@ -1596,6 +1596,101 @@ body {
   animation: none;
 }
 
+/* ---------- The Studio boutique (top screen) ---------- */
+/* the reveal: a hop on the spot */
+.boutique-hop {
+  animation: boutique-hop 420ms var(--ease-swing) 2;
+}
+@keyframes boutique-hop {
+  50% {
+    translate: 0 -12%;
+  }
+}
+/* clothes tossed over the top of the cubicle while they change */
+.boutique-toss {
+  opacity: 0;
+  animation: boutique-toss 700ms var(--ease-move) infinite;
+}
+@keyframes boutique-toss {
+  0% {
+    opacity: 1;
+    translate: 0 40%;
+    rotate: 0deg;
+  }
+  60% {
+    opacity: 1;
+    translate: var(--dx) -160%;
+    rotate: 200deg;
+  }
+  100% {
+    opacity: 0;
+    translate: calc(var(--dx) * 1.4) -60%;
+    rotate: 320deg;
+  }
+}
+.boutique-sparkle {
+  translate: -50% -50%;
+  animation: boutique-sparkle 700ms var(--ease-move) both;
+}
+@keyframes boutique-sparkle {
+  from {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(0) scale(0.4);
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(var(--r)) scale(1);
+  }
+}
+.boutique-bubble {
+  animation: boutique-bubble 260ms var(--ease-pop) both;
+}
+@keyframes boutique-bubble {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+/* a slow glint across the mirror glass */
+.boutique-mirror-glint {
+  background: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.45) 45%, transparent 55%) no-repeat;
+  background-size: 300% 100%;
+  animation: boutique-glint 4.5s ease-in-out infinite;
+}
+@keyframes boutique-glint {
+  0%,
+  60% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+/* the Studio's department tabs (touch screen): shop-sign tabs, the open one in the boutique's pink */
+.studio-tab {
+  background: #dfe6f2;
+  color: var(--color-ink);
+  box-shadow:
+    0 0 0 2px var(--gv-ink),
+    0 3px 0 2px var(--gv-drop);
+  transition: translate 120ms var(--ease-move);
+}
+.studio-tab[aria-selected='true'] {
+  background: #c04a78;
+  color: #fff;
+  translate: 0 -2px;
+}
+.studio-tabs {
+  padding: 4px 3px 7px;
+}
+[data-motion='reduced'] .boutique *,
+[data-motion='reduced'] .boutique {
+  animation: none !important;
+}
+
 @layer components {
   .studio-input {
     width: 100%;

@@ -30,6 +30,7 @@ import { CreatureSprite } from '../battle/BattleBits'
 import Fight from '../battle/Fight'
 import { SectionScreen } from '../SectionScreen'
 import AvatarStudio, { DEFAULT_AVATAR, randomAvatar } from './AvatarStudio'
+import { Boutique } from './Boutique'
 import SuggestionBox from './SuggestionBox'
 import PartyBag from './PartyBag'
 import { PixelIcon } from '../../ui/PixelIcon'
@@ -250,6 +251,17 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
   const [dialogue, setDialogue] = useState<Dialogue | null>(null)
   const [choicesReady, setChoicesReady] = useState(false)
   const [panel, setPanel] = useState<Panel>(save.avatar ? 'none' : 'studio')
+  // the Studio: the look being put together (shown in the boutique's mirror), and the one just
+  // saved while the changing-room routine plays (the panel closes when it ends)
+  const [studioDraft, setStudioDraft] = useState<Appearance | null>(null)
+  const [studioSaving, setStudioSaving] = useState<{ look: Appearance; first: boolean; name: string } | null>(null)
+  const finishStudio = () => {
+    const done = studioSaving
+    setStudioSaving(null)
+    setStudioDraft(null)
+    setPanel('none')
+    if (done?.first) say({ lines: lines('resort.welcome', { name: done.name }) })
+  }
   const [nearby, setNearby] = useState<Char | null>(null)
   const [profile, setProfile] = useState<Char | null>(null)
   const [online, setOnline] = useState<OnlineTrainer[]>([])
@@ -754,6 +766,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
                 {c.kind !== 'staff' && <span className="font-display bg-ink/75 px-1 text-[10px] leading-tight text-paper">{c.name}</span>}
               </div>
             ))}
+          {panel === 'studio' && <Boutique look={avatar} draft={studioDraft ?? avatar} saving={studioSaving?.look ?? null} onFinished={finishStudio} />}
           <div className={`pointer-events-none absolute inset-0 bg-black transition-opacity duration-150 ${fade ? 'opacity-100' : 'opacity-0'}`} />
           {dialogue && (
             <div className="absolute inset-x-[2%] bottom-[2%] flex flex-col items-end gap-1 [container-type:inline-size]">
@@ -786,28 +799,36 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
       }
     >
       {panel === 'studio' ? (
-        <>
-          {!save.avatar && (
-            <PixelBox className="m-[3%] mb-0 px-4 py-3">
-              <p className="font-display m-0 text-[15px] text-dex-red">WELCOME TO THE RESORT!</p>
-              <p className="m-0 mt-1">Make your avatar first — other visitors will see it walking around.</p>
-            </PixelBox>
-          )}
-          <AvatarStudio
-            initial={avatar}
-            initialName={save.name}
-            initialGreeting={save.greeting}
-            onCancel={save.avatar ? () => setPanel('none') : undefined}
-            onSave={(a, name, greeting) => {
-              const first = !save.avatar
-              resortSave.update({ avatar: a, name, greeting })
-              progress.unlock('resort-guest')
-              pushOnline({ avatar: a, name, greeting })
-              setPanel('none')
-              if (first) say({ lines: lines('resort.welcome', { name }) })
-            }}
-          />
-        </>
+        studioSaving ? (
+          <PixelBox className="m-[3%] px-4 py-3">
+            <p className="font-display m-0 text-[15px] text-dex-red">IN THE FITTING ROOM…</p>
+            <p className="m-0 mt-1">Trying on your new look. Tap the top screen to skip.</p>
+          </PixelBox>
+        ) : (
+          <>
+            {!save.avatar && (
+              <PixelBox className="m-[3%] mb-0 px-4 py-3">
+                <p className="font-display m-0 text-[15px] text-dex-red">WELCOME TO THE RESORT!</p>
+                <p className="m-0 mt-1">Make your avatar first — other visitors will see it walking around.</p>
+              </PixelBox>
+            )}
+            <AvatarStudio
+              initial={avatar}
+              initialName={save.name}
+              initialGreeting={save.greeting}
+              onDraft={setStudioDraft}
+              onCancel={save.avatar ? () => setPanel('none') : undefined}
+              onSave={(a, name, greeting) => {
+                const first = !save.avatar
+                resortSave.update({ avatar: a, name, greeting })
+                progress.unlock('resort-guest')
+                pushOnline({ avatar: a, name, greeting })
+                // the boutique plays the changing room, then closes the Studio (finishStudio)
+                setStudioSaving({ look: a, first, name })
+              }}
+            />
+          </>
+        )
       ) : panel === 'pc' ? (
         <PartyPC
           onDone={(party) => {
