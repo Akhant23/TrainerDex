@@ -116,11 +116,17 @@ export function drawTowerShell(c: CanvasRenderingContext2D, m: ResortMap, proj: 
     sideQuad(c, proj, x, back, front, GLASS_FROM + GLASS_H, tall, '#5a6378')
   }
 
-  // above the wall: the window band, steel mullions, a transom, then the ceiling with light strips
+  // above the wall: the window band, steel mullions, a transom, then the ceiling with light strips.
+  // All of it stays inside the back wall's width: the city strip is tiled 256 px at a time and the
+  // reflections slant, so unclipped they ran past the corner and over the side wall's top
   const strip = cityStrip(sky?.phase ?? 'day')
   const gTop = Y(GLASS_FROM + GLASS_H)
   const gBot = Y(GLASS_FROM)
   c.imageSmoothingEnabled = false
+  c.save()
+  c.beginPath()
+  c.rect(X(0), 0, X(W) - X(0), Y(WALL_TOP))
+  c.clip()
   for (let x = 0; x < W; x += strip.width) c.drawImage(strip, X(x), gTop, X(x + strip.width) - X(x), gBot - gTop)
   c.fillStyle = 'rgba(255,255,255,0.10)'
   for (let x = 6; x < W; x += 32) {
@@ -148,6 +154,7 @@ export function drawTowerShell(c: CanvasRenderingContext2D, m: ResortMap, proj: 
     c.fillStyle = 'rgba(200,232,255,0.18)'
     c.fillRect(X(x) - Math.round(4 * s * R), gTop - Math.round(8 * s * R), Math.round(30 * s * R), Math.round(6 * s * R))
   }
+  c.restore()
 
   // the back wall's own art in every column, the corners included (the map's own wall props, the
   // PC and the lift, are drawn over it in the depth pass)
