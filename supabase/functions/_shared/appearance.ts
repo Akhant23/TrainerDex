@@ -38,6 +38,13 @@ export interface AppearanceData {
   shoes: (typeof SHOES)[number]
   shoeColour: (typeof CLOTH_COLOUR_IDS)[number]
   accessories: Array<(typeof ACCESSORIES)[number]>
+  /**
+   * A reward pinned to the chest: 'champion' for beating the Champion on the tower's top floor.
+   * Optional, and dropped (never rejected) when it's anything else, so older saves and older
+   * clients still parse. The server can't check it was earned: tower progress lives only in the
+   * visitor's browser, so this is honour-system cosmetics, like the rest of the look.
+   */
+  badge?: 'champion'
 }
 
 const FIELDS: Array<[keyof AppearanceData, readonly string[]]> = [
@@ -72,6 +79,7 @@ export function parseAppearance(input: unknown): AppearanceData | null {
   const uniq = [...new Set(acc)]
   if (!uniq.every((x) => typeof x === 'string' && (ACCESSORIES as readonly string[]).includes(x))) return null
   out.accessories = uniq
+  if (src.badge === 'champion') out.badge = 'champion'
   return out as unknown as AppearanceData
 }
 

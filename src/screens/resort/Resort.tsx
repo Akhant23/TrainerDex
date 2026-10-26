@@ -18,7 +18,7 @@ import { strideFrame, type Facing } from '../../sprites/overworld'
 import type { Appearance } from '../../sprites/character'
 import { audio } from '../../systems/audio'
 import { useSettings } from '../../systems/settings'
-import { progress } from '../../systems/progress'
+import { progress, useProgress } from '../../systems/progress'
 import { playerLook, recordResult, resortSave, useResortSave } from '../../systems/resortSave'
 import { setReturnTo } from '../../systems/returnTo'
 import { fetchTrainers, saveTrainer, syncTrainer, trainersOnline, type OnlineTrainer } from '../../systems/trainers'
@@ -28,6 +28,7 @@ import { PixelBox } from '../../ui/PixelBox'
 import { CharacterSprite } from '../../ui/CharacterSprite'
 import { CreatureSprite } from '../battle/BattleBits'
 import Fight from '../battle/Fight'
+import { ChampionEnding } from '../battle/ChampionEnding'
 import { SectionScreen } from '../SectionScreen'
 import AvatarStudio, { DEFAULT_AVATAR, randomAvatar } from './AvatarStudio'
 import { Boutique } from './Boutique'
@@ -189,7 +190,16 @@ type FightPlan = { seed: number } & ({ kind: 'tower'; floor: number } | { kind: 
 
 export default function Resort() {
   const save = useResortSave()
+  const { hallOfFame } = useProgress()
   const [fight, setFight] = useState<FightPlan | null>(null)
+  // after beating the Champion: the Hall of Fame and credits, then back to the plaza
+  const [ending, setEnding] = useState<{ pinAwarded: boolean } | null>(null)
+
+  if (ending) {
+    const champs = hallOfFame.filter((h) => h.difficulty === 'champion')
+    const entry = champs[0] ?? { date: new Date().toISOString(), difficulty: 'champion' as const, team: save.party, turns: 0, name: save.name }
+    return <ChampionEnding entry={entry} look={playerLook()} name={(save.name || 'TRAINER').toUpperCase()} pinAwarded={ending.pinAwarded} entryNumber={Math.max(1, champs.length)} onDone={() => setEnding(null)} />
+  }
 
   if (fight?.kind === 'tower') {
     const stage = towerStages[fight.floor - 1]
@@ -204,14 +214,22 @@ export default function Resort() {
         arena={{ map: `arena${fight.floor}` as ArenaId, ...ARENA_SPOT }}
         recordWin={fight.floor === 5 ? 'champion' : null}
         onExit={(_to, won) => {
+          // the first Champion win awards the pin, and pins it on (the Studio can take it off)
+          const pinAwarded = won && fight.floor === 5 && resortSave.get().floorCleared < 5
           if (won) {
             resortSave.update({ floorCleared: Math.max(resortSave.get().floorCleared, fight.floor) })
             if (fight.floor >= 3) progress.unlock('tower-climber')
+          }
+          if (pinAwarded) {
+            const look = resortSave.get().avatar
+            if (look) resortSave.update({ avatar: { ...look, badge: 'champion' } })
           }
           // beating the Champion floor earns a title
           recordResult(won, fight.floor === 5)
           void syncTrainer().catch(() => undefined)
           setFight(null)
+          // every Champion win plays the ending (the win is already saved, so it's safe to skip or replay)
+          if (won && fight.floor === 5) setEnding({ pinAwarded })
         }}
       />
     )
@@ -817,6 +835,7 @@ function World({ onBattle, onChallenge }: { onBattle: (floor: number) => void; o
               initialName={save.name}
               initialGreeting={save.greeting}
               onDraft={setStudioDraft}
+              pinEarned={save.floorCleared >= 5}
               onCancel={save.avatar ? () => setPanel('none') : undefined}
               onSave={(a, name, greeting) => {
                 const first = !save.avatar

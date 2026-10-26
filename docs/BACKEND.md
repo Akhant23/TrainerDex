@@ -148,3 +148,11 @@ Restart `npm run dev`. The Poké Pager's "NO SIGNAL" notice disappears.
 - [x] Suggestions are stored as `kind = 'suggestion'` and RLS never returns them to visitors.
 - [x] "Forget me": every message carries a SHA-256 of a random secret held only by the sender's browser (never readable by visitors); `forget-me` deletes those messages and the matching avatar.
 - [x] "Match my photo" runs entirely in the browser — the photo is never uploaded or stored.
+- [x] The Champion pin (`appearance.badge = 'champion'`) is a cosmetic field of the look. The server keeps it only if it's exactly `'champion'` and drops anything else (it never rejects the save over it). Like battle records, it's self-reported: tower progress lives only in the visitor's browser, so it can't be verified server-side.
+
+### Redeploy needed for the Champion pin
+
+`supabase/functions/_shared/appearance.ts` now accepts the optional `badge` field. Until
+`save-trainer` is redeployed (`supabase functions deploy save-trainer`), the live function keeps
+parsing with the old rules. It strips the unknown field and saves the rest, so nothing breaks,
+but other visitors won't see anyone's pin yet. Your own pin always shows in your own browser.

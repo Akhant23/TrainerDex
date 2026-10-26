@@ -1596,6 +1596,95 @@ body {
   animation: none;
 }
 
+/* ---------- The Champion ending (Hall of Fame, credits) ---------- */
+.ending-scene {
+  animation: ending-in 500ms var(--ease-move) both;
+}
+@keyframes ending-in {
+  from {
+    opacity: 0;
+  }
+}
+/* a warm spotlight from above */
+.ending-spot {
+  background: radial-gradient(ellipse 55% 70% at 50% 35%, rgb(255 220 130 / 0.22), transparent 70%);
+}
+.ending-title {
+  animation: ending-title 700ms var(--ease-pop) both;
+}
+@keyframes ending-title {
+  from {
+    opacity: 0;
+    scale: 1.4;
+  }
+}
+/* each creature drops onto its pedestal as the camera flashes */
+.ending-register {
+  animation: ending-register 520ms var(--ease-pop) both;
+}
+@keyframes ending-register {
+  from {
+    opacity: 0;
+    translate: 0 -40px;
+    scale: 0.6;
+  }
+}
+.ending-flash {
+  opacity: 0;
+  animation: ending-flash 380ms ease-out both;
+}
+@keyframes ending-flash {
+  15% {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 0;
+  }
+}
+/* gold rays turning slowly behind the Champion */
+.ending-rays {
+  translate: -50% -50%;
+  background:
+    radial-gradient(circle, rgb(255 215 90 / 0.25), transparent 45%),
+    repeating-conic-gradient(from 0deg, rgb(255 215 90 / 0.12) 0 8deg, transparent 8deg 16deg);
+  animation: vs-spin 40s linear infinite;
+}
+.ending-plate {
+  background: linear-gradient(160deg, #f8e08a, #f0c040 50%, #d89a20);
+  box-shadow:
+    0 0 0 3px #1c1a24,
+    0 6px 0 3px rgb(0 0 0 / 0.4);
+  animation: ending-title 600ms 400ms var(--ease-pop) both;
+}
+/* the pin spins in on its edge and lands face on, with a glint */
+.ending-pin {
+  animation: ending-pin 900ms var(--ease-pop) both;
+  filter: drop-shadow(0 0 18px rgb(255 215 90 / 0.6));
+}
+@keyframes ending-pin {
+  from {
+    transform: rotateY(720deg) scale(0.2);
+    opacity: 0;
+  }
+}
+.ending-credits {
+  animation: ending-credits linear both;
+}
+@keyframes ending-credits {
+  to {
+    transform: translateY(calc(-100% - 100vh));
+  }
+}
+[data-motion='reduced'] .ending *,
+[data-motion='reduced'] .ending {
+  animation: none !important;
+}
+/* with reduced motion the credits sit still, centred (they don't roll) */
+[data-motion='reduced'] .ending-credits {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 /* ---------- The Studio boutique (top screen) ---------- */
 /* the reveal: a hop on the spot */
 .boutique-hop {

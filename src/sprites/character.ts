@@ -581,8 +581,13 @@ function torso(a: Appearance): Pixels {
     oval(g, 48.5, 36.5, 2.6, 3.2, 'Z', 'z')
     g.set(31, 35, 'R').set(48, 35, 'R')
   }
+  // the Champion pin: a gold medal on its ribbon, over the heart (the wearer's left, the viewer's right)
+  if (a.badge === 'champion') g.stamp(44, 41, CHAMPION_PIN)
   return g.toPixels()
 }
+
+/** The Champion pin on the battle sprite's chest (N/J: the ribbon's two colours, D gold, W its glint). */
+export const CHAMPION_PIN = ['.KKK.', '.NKJ.', '.NKJ.', 'KKKKK', 'KDDWK', 'KDDDK', 'KDDDK', '.KKK.']
 
 /** Sleeve colours: upper arm, forearm, and the cuff at the wrist. */
 function sleeves(a: Appearance): { upper: [string, string]; lower: [string, string]; cuff?: string } {

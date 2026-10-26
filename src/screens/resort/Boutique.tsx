@@ -166,73 +166,73 @@ export function Boutique({ look, draft, saving, onFinished }: { look: Appearance
 
   return (
     <div ref={wrap} className="boutique absolute inset-0 cursor-pointer overflow-hidden bg-[#2a1a24]" onClick={skip} role="img" aria-label="Inside the Studio boutique: clothes racks, a long mirror and two fitting rooms">
-      {/* the room keeps a 4:3 shape, centred (the top screen is 4:3 or a little taller) */}
+      {/* the whole room always fits across; a taller screen shows more ceiling and floor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ width: u * W, height: rows * u }}>
         <canvas ref={canvas} width={W} height={rows} className="pixelated absolute inset-0 h-full w-full" />
         {/* everything below is placed in room units from the room's own top */}
         <div className="absolute inset-x-0" style={{ top: lift * u, height: H * u }}>
-        {/* the fitting rooms' sign (DOM text stays crisp at any size) */}
-        {u > 0 && (
-          <span aria-hidden className="font-display absolute flex items-center justify-center leading-none text-[#fff3e6]" style={{ left: 121 * u, top: 23 * u, width: 68 * u, height: 7 * u, fontSize: 5 * u, letterSpacing: 0.6 * u }}>
-            FITTING ROOMS
-          </span>
-        )}
-        {/* the mirror shows the look being put together on the touch screen */}
-        {u > 0 && (
-          <div className="absolute flex items-end justify-center overflow-hidden" style={{ left: 90 * u, top: 34 * u, width: 22 * u, height: 58 * u }}>
-            <div className="boutique-mirror-glint pointer-events-none absolute inset-0 z-10" />
-            <CharacterSprite appearance={draft} scale={crispScale((u * 52) / 120)} still={reducedMotion} alt="Your look in the mirror" style={{ opacity: 0.92 }} />
-          </div>
-        )}
-        {/* the trainer */}
-        {u > 0 && !pos.hidden && (
-          <div
-            className={`absolute ${phase === 'reveal' ? 'boutique-hop' : ''}`}
-            style={{
-              left: shown.x * u - owW / 2,
-              top: shown.y * u - owH,
-              width: owW,
-              height: owH,
-              transition: shown.ms ? `left ${shown.ms}ms linear, top ${shown.ms}ms linear` : 'none',
-            }}
-          >
-            <OverworldSprite appearance={wearing} facing={shown.facing} walking={shown.walking && !reducedMotion} scale={owScale} />
-          </div>
-        )}
-        {/* the cubicle rocks and clothes fly over the top while they change */}
-        {phase === 'changing' && u > 0 && (
-          <div aria-hidden className="pointer-events-none absolute" style={{ left: (room.x - 16) * u, top: 30 * u, width: 32 * u, height: 66 * u }}>
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="boutique-toss absolute"
-                style={{
-                  left: `${30 + i * 20}%`,
-                  top: 0,
-                  width: 7 * u,
-                  height: 6 * u,
-                  background: Object.values(CLOTH_COLOURS)[(i * 5 + 3) % 15][0],
-                  boxShadow: `0 0 0 ${Math.max(1, u * 0.6)}px #1c1a24`,
-                  animationDelay: `${i * 380}ms`,
-                  ['--dx' as string]: `${(i - 1) * 14 * u}px`,
-                }}
-              />
-            ))}
-          </div>
-        )}
-        {/* the reveal: sparkles round the new look */}
-        {phase === 'reveal' && u > 0 && (
-          <div aria-hidden className="pointer-events-none absolute" style={{ left: room.x * u, top: (room.y - 14) * u }}>
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <span key={i} className="boutique-sparkle absolute text-gold" style={{ fontSize: 9 * u, ['--a' as string]: `${i * 60}deg`, ['--r' as string]: `${22 * u}px`, animationDelay: `${(i % 3) * 90}ms` }}>
-                ✦
-              </span>
-            ))}
-            <span className="font-display boutique-bubble absolute -translate-x-1/2 gv-bubble px-2 py-0.5 whitespace-nowrap text-ink" style={{ top: -30 * u, fontSize: Math.max(11, 7 * u) }}>
-              LOOKING SHARP!
+          {/* the fitting rooms' sign (DOM text stays crisp at any size) */}
+          {u > 0 && (
+            <span aria-hidden className="font-display absolute flex items-center justify-center leading-none text-[#fff3e6]" style={{ left: 121 * u, top: 23 * u, width: 68 * u, height: 7 * u, fontSize: 5 * u, letterSpacing: 0.6 * u }}>
+              FITTING ROOMS
             </span>
-          </div>
-        )}
+          )}
+          {/* the mirror shows the look being put together on the touch screen */}
+          {u > 0 && (
+            <div className="absolute flex items-end justify-center overflow-hidden" style={{ left: 90 * u, top: 34 * u, width: 22 * u, height: 58 * u }}>
+              <div className="boutique-mirror-glint pointer-events-none absolute inset-0 z-10" />
+              <CharacterSprite appearance={draft} scale={crispScale((u * 52) / 120)} still={reducedMotion} alt="Your look in the mirror" style={{ opacity: 0.92 }} />
+            </div>
+          )}
+          {/* the trainer */}
+          {u > 0 && !pos.hidden && (
+            <div
+              className={`absolute ${phase === 'reveal' ? 'boutique-hop' : ''}`}
+              style={{
+                left: shown.x * u - owW / 2,
+                top: shown.y * u - owH,
+                width: owW,
+                height: owH,
+                transition: shown.ms ? `left ${shown.ms}ms linear, top ${shown.ms}ms linear` : 'none',
+              }}
+            >
+              <OverworldSprite appearance={wearing} facing={shown.facing} walking={shown.walking && !reducedMotion} scale={owScale} />
+            </div>
+          )}
+          {/* the cubicle rocks and clothes fly over the top while they change */}
+          {phase === 'changing' && u > 0 && (
+            <div aria-hidden className="pointer-events-none absolute" style={{ left: (room.x - 16) * u, top: 30 * u, width: 32 * u, height: 66 * u }}>
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="boutique-toss absolute"
+                  style={{
+                    left: `${30 + i * 20}%`,
+                    top: 0,
+                    width: 7 * u,
+                    height: 6 * u,
+                    background: Object.values(CLOTH_COLOURS)[(i * 5 + 3) % 15][0],
+                    boxShadow: `0 0 0 ${Math.max(1, u * 0.6)}px #1c1a24`,
+                    animationDelay: `${i * 380}ms`,
+                    ['--dx' as string]: `${(i - 1) * 14 * u}px`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {/* the reveal: sparkles round the new look */}
+          {phase === 'reveal' && u > 0 && (
+            <div aria-hidden className="pointer-events-none absolute" style={{ left: room.x * u, top: (room.y - 14) * u }}>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span key={i} className="boutique-sparkle absolute text-gold" style={{ fontSize: 9 * u, ['--a' as string]: `${i * 60}deg`, ['--r' as string]: `${22 * u}px`, animationDelay: `${(i % 3) * 90}ms` }}>
+                  ✦
+                </span>
+              ))}
+              <span className="font-display boutique-bubble absolute -translate-x-1/2 gv-bubble px-2 py-0.5 whitespace-nowrap text-ink" style={{ top: -30 * u, fontSize: Math.max(11, 7 * u) }}>
+                LOOKING SHARP!
+              </span>
+            </div>
+          )}
         </div>
       </div>
       <span className="font-display pointer-events-none absolute top-[2%] left-[2%] bg-ink/75 px-2 py-0.5 text-[clamp(10px,2.6cqi,14px)] text-paper">THE STUDIO · BOUTIQUE</span>

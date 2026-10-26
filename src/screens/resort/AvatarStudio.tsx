@@ -83,6 +83,7 @@ export default function AvatarStudio({
   onSave,
   onCancel,
   onDraft,
+  pinEarned = false,
 }: {
   initial: Appearance
   initialName: string
@@ -91,6 +92,8 @@ export default function AvatarStudio({
   onCancel?: () => void
   /** Told about every change, so the boutique's mirror can show the look as it comes together. */
   onDraft?: (a: Appearance) => void
+  /** Beaten the Champion: the CHAMPION PIN can be worn (EXTRAS). */
+  pinEarned?: boolean
 }) {
   const { sfx } = useSettings()
   const [a, setA] = useState<Appearance>(initial)
@@ -201,106 +204,120 @@ export default function AvatarStudio({
       <div role="tabpanel" aria-label={TABS.find((t) => t.id === tab)!.label} className="space-y-4">
         {tab === 'clothes' && (
           <>
-          <Row label="TOP">
-            <Cycler value={LABEL[a.top]} onPrev={() => cycle('top', TOPS, -1)} onNext={() => cycle('top', TOPS, 1)} />
-            <Swatches table={CLOTH_COLOURS} value={a.topColour} onPick={(v) => set('topColour', v)} />
-            <span className="font-display w-full text-[12px] text-muted">TRIM / TIE</span>
-            <Swatches table={CLOTH_COLOURS} value={a.accentColour} onPick={(v) => set('accentColour', v)} />
-          </Row>
-          <Row label="HAT">
-            <Cycler value={LABEL[a.hat]} onPrev={() => cycle('hat', HATS, -1)} onNext={() => cycle('hat', HATS, 1)} />
-            {a.hat !== 'none' && <Swatches table={CLOTH_COLOURS} value={a.hatColour} onPick={(v) => set('hatColour', v)} />}
-          </Row>
-          <Row label="BOTTOMS">
-            <Cycler value={LABEL[a.bottom]} onPrev={() => cycle('bottom', BOTTOMS, -1)} onNext={() => cycle('bottom', BOTTOMS, 1)} />
-            <Swatches table={CLOTH_COLOURS} value={a.bottomColour} onPick={(v) => set('bottomColour', v)} />
-          </Row>
-          <Row label="SHOES">
-            <Cycler value={LABEL[a.shoes]} onPrev={() => cycle('shoes', SHOES, -1)} onNext={() => cycle('shoes', SHOES, 1)} />
-            <Swatches table={CLOTH_COLOURS} value={a.shoeColour} onPick={(v) => set('shoeColour', v)} />
-          </Row>
+            <Row label="TOP">
+              <Cycler value={LABEL[a.top]} onPrev={() => cycle('top', TOPS, -1)} onNext={() => cycle('top', TOPS, 1)} />
+              <Swatches table={CLOTH_COLOURS} value={a.topColour} onPick={(v) => set('topColour', v)} />
+              <span className="font-display w-full text-[12px] text-muted">TRIM / TIE</span>
+              <Swatches table={CLOTH_COLOURS} value={a.accentColour} onPick={(v) => set('accentColour', v)} />
+            </Row>
+            <Row label="HAT">
+              <Cycler value={LABEL[a.hat]} onPrev={() => cycle('hat', HATS, -1)} onNext={() => cycle('hat', HATS, 1)} />
+              {a.hat !== 'none' && <Swatches table={CLOTH_COLOURS} value={a.hatColour} onPick={(v) => set('hatColour', v)} />}
+            </Row>
+            <Row label="BOTTOMS">
+              <Cycler value={LABEL[a.bottom]} onPrev={() => cycle('bottom', BOTTOMS, -1)} onNext={() => cycle('bottom', BOTTOMS, 1)} />
+              <Swatches table={CLOTH_COLOURS} value={a.bottomColour} onPick={(v) => set('bottomColour', v)} />
+            </Row>
+            <Row label="SHOES">
+              <Cycler value={LABEL[a.shoes]} onPrev={() => cycle('shoes', SHOES, -1)} onNext={() => cycle('shoes', SHOES, 1)} />
+              <Swatches table={CLOTH_COLOURS} value={a.shoeColour} onPick={(v) => set('shoeColour', v)} />
+            </Row>
           </>
         )}
         {tab === 'style' && (
           <>
-          <section className="space-y-2 bg-[#eef3fa] px-3 py-3 gv-card">
-            <h3 className="font-display m-0 text-[14px] text-dex-red">START FROM A PHOTO (OPTIONAL)</h3>
-            <ul className="m-0 list-none space-y-1 p-0 text-[14px]">
-              <li>▸ Take a selfie or pick a photo and we’ll match your skin tone, hair and top colour.</li>
-              <li>▸ It’s read only in your browser, then deleted straight away. Nothing is uploaded or saved.</li>
-              <li>▸ Rather not? Skip it — build your look below, or roll a random one.</li>
-            </ul>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <button type="button" className="pixel-btn !text-[14px]" onClick={() => setCamera(true)}>
-                📷 TAKE A PHOTO
-              </button>
-              <button type="button" className="pixel-btn !text-[14px]" onClick={() => fileRef.current?.click()}>
-                🖼 UPLOAD A PHOTO
-              </button>
-              <button type="button" className="pixel-btn !text-[14px]" onClick={() => setA(randomAvatar())}>
-                🎲 RANDOMISE
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void onPhoto(e.target.files?.[0])} />
-            </div>
-            {camera && (
-              <CameraSnap
-                onCancel={() => setCamera(false)}
-                onSnap={(img) => {
-                  setCamera(false)
-                  applyPhoto(img)
-                }}
-                onFallback={() => {
-                  setCamera(false)
-                  setPhotoNote('Couldn’t open the camera here — try UPLOAD A PHOTO instead.')
-                }}
-              />
-            )}
-            {photoNote && <p className="m-0 text-[14px] text-muted">{photoNote}</p>}
-          </section>
-          <Row label="SKIN">
-            <Swatches table={SKINS} value={a.skin} onPick={(v) => set('skin', v)} />
-          </Row>
-          <Row label="HAIR">
-            <Cycler value={LABEL[a.hair]} onPrev={() => cycle('hair', HAIR_STYLES, -1)} onNext={() => cycle('hair', HAIR_STYLES, 1)} />
-            <Swatches table={HAIR_COLOURS} value={a.hairColour} onPick={(v) => set('hairColour', v)} />
-          </Row>
-          <Row label="EYES">
-            <Cycler value={LABEL[a.eyes]} onPrev={() => cycle('eyes', EYE_STYLES, -1)} onNext={() => cycle('eyes', EYE_STYLES, 1)} />
-            <Swatches table={EYE_SWATCHES} value={a.eyeColour} onPick={(v) => set('eyeColour', v)} />
-          </Row>
-          <Row label="FACE">
-            <Cycler value={LABEL[a.face]} onPrev={() => cycle('face', FACES, -1)} onNext={() => cycle('face', FACES, 1)} />
-          </Row>
+            <section className="space-y-2 bg-[#eef3fa] px-3 py-3 gv-card">
+              <h3 className="font-display m-0 text-[14px] text-dex-red">START FROM A PHOTO (OPTIONAL)</h3>
+              <ul className="m-0 list-none space-y-1 p-0 text-[14px]">
+                <li>▸ Take a selfie or pick a photo and we’ll match your skin tone, hair and top colour.</li>
+                <li>▸ It’s read only in your browser, then deleted straight away. Nothing is uploaded or saved.</li>
+                <li>▸ Rather not? Skip it — build your look below, or roll a random one.</li>
+              </ul>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button type="button" className="pixel-btn !text-[14px]" onClick={() => setCamera(true)}>
+                  📷 TAKE A PHOTO
+                </button>
+                <button type="button" className="pixel-btn !text-[14px]" onClick={() => fileRef.current?.click()}>
+                  🖼 UPLOAD A PHOTO
+                </button>
+                <button type="button" className="pixel-btn !text-[14px]" onClick={() => setA(randomAvatar())}>
+                  🎲 RANDOMISE
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void onPhoto(e.target.files?.[0])} />
+              </div>
+              {camera && (
+                <CameraSnap
+                  onCancel={() => setCamera(false)}
+                  onSnap={(img) => {
+                    setCamera(false)
+                    applyPhoto(img)
+                  }}
+                  onFallback={() => {
+                    setCamera(false)
+                    setPhotoNote('Couldn’t open the camera here — try UPLOAD A PHOTO instead.')
+                  }}
+                />
+              )}
+              {photoNote && <p className="m-0 text-[14px] text-muted">{photoNote}</p>}
+            </section>
+            <Row label="SKIN">
+              <Swatches table={SKINS} value={a.skin} onPick={(v) => set('skin', v)} />
+            </Row>
+            <Row label="HAIR">
+              <Cycler value={LABEL[a.hair]} onPrev={() => cycle('hair', HAIR_STYLES, -1)} onNext={() => cycle('hair', HAIR_STYLES, 1)} />
+              <Swatches table={HAIR_COLOURS} value={a.hairColour} onPick={(v) => set('hairColour', v)} />
+            </Row>
+            <Row label="EYES">
+              <Cycler value={LABEL[a.eyes]} onPrev={() => cycle('eyes', EYE_STYLES, -1)} onNext={() => cycle('eyes', EYE_STYLES, 1)} />
+              <Swatches table={EYE_SWATCHES} value={a.eyeColour} onPick={(v) => set('eyeColour', v)} />
+            </Row>
+            <Row label="FACE">
+              <Cycler value={LABEL[a.face]} onPrev={() => cycle('face', FACES, -1)} onNext={() => cycle('face', FACES, 1)} />
+            </Row>
           </>
         )}
         {tab === 'extras' && (
           <>
-          <Row label={`ACCESSORIES (UP TO ${MAX_ACCESSORIES})`}>
-            <div className="flex flex-wrap gap-1.5">
-              {ACCESSORIES.map((x) => {
-                const on = a.accessories.includes(x)
-                return (
-                  <button key={x} type="button" aria-pressed={on} onClick={() => toggleAcc(x)} className="gv-toggle px-2.5 py-1.5 text-[13px]">
-                    {x.toUpperCase()}
-                  </button>
-                )
-              })}
-            </div>
-          </Row>
+            <Row label={`ACCESSORIES (UP TO ${MAX_ACCESSORIES})`}>
+              <div className="flex flex-wrap gap-1.5">
+                {ACCESSORIES.map((x) => {
+                  const on = a.accessories.includes(x)
+                  return (
+                    <button key={x} type="button" aria-pressed={on} onClick={() => toggleAcc(x)} className="gv-toggle px-2.5 py-1.5 text-[13px]">
+                      {x.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            </Row>
+            <Row label="CHAMPION PIN">
+              {pinEarned ? (
+                <button
+                  type="button"
+                  aria-pressed={a.badge === 'champion'}
+                  onClick={() => set('badge', a.badge === 'champion' ? undefined : 'champion')}
+                  className="gv-toggle px-2.5 py-1.5 text-[13px]"
+                >
+                  {a.badge === 'champion' ? '★ WEARING IT' : '☆ PIN IT ON'}
+                </button>
+              ) : (
+                <span className="text-[14px] text-muted">🔒 Beat Champion Aaryan on the Battle Tower’s top floor to earn it.</span>
+              )}
+            </Row>
           </>
         )}
         {tab === 'id' && (
           <>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="font-display text-[13px]">TRAINER NAME</span>
-              <input className="studio-input" value={name} maxLength={16} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="font-display text-[13px]">GREETING (OTHERS SEE THIS)</span>
-              <input className="studio-input" value={greeting} maxLength={60} onChange={(e) => setGreeting(e.target.value)} placeholder="Hi!" />
-            </label>
-          </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1">
+                <span className="font-display text-[13px]">TRAINER NAME</span>
+                <input className="studio-input" value={name} maxLength={16} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="font-display text-[13px]">GREETING (OTHERS SEE THIS)</span>
+                <input className="studio-input" value={greeting} maxLength={60} onChange={(e) => setGreeting(e.target.value)} placeholder="Hi!" />
+              </label>
+            </div>
           </>
         )}
       </div>

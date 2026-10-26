@@ -418,3 +418,32 @@ the routine starts.
 
 Captures: `studio-door-open.png`, `studio-changing.png`, `studio-reveal.png`,
 `studio-sequence.png` (frames ~280 ms apart, from the save to the plaza).
+
+**The Champion ending (`src/screens/battle/ChampionEnding.tsx`).** IMPLEMENTED AND VISUALLY
+CHECKED through the Hall of Fame replay (desktop and phone). The live floor-5 trigger is wired
+but wasn't played through in this pass: it needs a full Champion battle won. It follows Black
+and White's Hall of Fame, in the site's own art:
+1. **Hall of Fame:** the winning team is registered one creature at a time. Each drops onto a
+   gold pedestal with a camera flash, its name and level, then the entry number and date.
+2. **Champion:** you, in the victory pose and wearing the pin, over turning gold rays, with your
+   name on a gold plate.
+3. **The pin:** the CHAMPION PIN spins in (a large rosette drawn for this scene). The first win
+   awards it and pins it on; later wins and replays just show it.
+4. **Credits:** they roll up over the home screen's panning city, in gold.
+5. **THE END:** a button returns to the resort (or to the Hall of Fame, on a replay).
+
+Every Champion win plays it. A / Enter / a click moves on; B or SKIP jumps to THE END. The win,
+title and floor are saved before it opens and the ending itself writes nothing (the pin's only
+write happens once, on the first win), so skipping, closing the tab or replaying is safe.
+`#/battle/hall-of-fame` has ▶ REPLAY THE ENDING once the tower's Champion has been beaten.
+With reduced motion every scene holds still and the credits sit centred.
+
+**The Champion pin.** A gold medal on a pink and blue ribbon, over the heart (the wearer's left)
+on the battle sprite, and a two-pixel gold glint on the walker. It's a field of the look
+(`appearance.badge`), so it shows wherever the avatar does: the resort, the VS card, battles,
+the Studio's mirror and preview, and other visitors' screens (once `save-trainer` is redeployed;
+see BACKEND.md). The Studio's EXTRAS tab has a toggle for it, locked until the Champion is
+beaten. Checked across tops (jersey, tee, jacket, hoodie with chain) for alignment.
+
+Captures: `ending-hall-of-fame.png`, `ending-champion.png`, `ending-pin-phone.png`,
+`ending-credits.png`, `studio-champion-pin.png`, `champion-pin-sprites.png`.

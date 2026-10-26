@@ -297,6 +297,8 @@ function bodyDetails(g: Grid, a: Appearance, back: boolean) {
   if (has(a, 'watch')) g.rect(cx + 8, 45, cx + 11, 45, 'Z')
   if (has(a, 'bracelet')) g.rect(cx - 11, 45, cx - 8, 45, 'X')
   if (has(a, 'beltchain')) g.set(cx + 5, 46.5, 'X').set(cx + 6, 47.5, 'X').set(cx + 7, 46.5, 'X')
+  // the Champion pin: a gold dot with a glint, over the heart
+  if (a.badge === 'champion') g.stamp(cx + 3, 39, ['DW', 'DD'])
 }
 
 /** Shoulder-blade-length and bigger styles need a little more volume around the head. */
