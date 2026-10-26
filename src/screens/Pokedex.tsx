@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { dialogue } from '../content/dialogue'
 import { DialogueBox } from '../ui/DialogueBox'
-import { TrainerSprite } from '../ui/TrainerSprite'
 import { navigate } from '../app/router'
 import { menu } from '../content/menu'
 import { pokedex, types, type DexEntry } from '../content/pokedex'
@@ -12,6 +11,8 @@ import { DexArtView } from '../ui/PixelArt'
 import { Bullets, Sources, TypeChip } from '../ui/bits'
 import { DexHabitat } from '../ui/DexHabitat'
 import { HABITATS } from '../sprites/habitats'
+import { ENCOUNTER_ART, paintEncounter, type EncounterScene } from '../sprites/encounters'
+import { PaintedScene } from '../ui/PaintedScene'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 
@@ -83,6 +84,8 @@ let lastIndex = 0
 function Detail({ dex }: { dex: DexEntry }) {
   const { sfx } = useSettings()
   const [wild, setWild] = useState(() => Math.random() < 1 / dialogue.rareEncounter.odds)
+  // which line of the encounter is showing, so its picture can follow the story
+  const [line, setLine] = useState(0)
   useEffect(() => progress.seeDex(dex.no), [dex.no])
   useEffect(() => {
     if (wild) sfx('encounter')
@@ -104,10 +107,11 @@ function Detail({ dex }: { dex: DexEntry }) {
 
   if (wild)
     return (
-      <SectionScreen entry={entry} backTo="/pokedex" title="A WILD ENCOUNTER!" top={<WildEncounter />} backKeys={false}>
+      <SectionScreen entry={entry} backTo="/pokedex" title="A WILD ENCOUNTER!" compactTop={false} top={<WildEncounter line={line} />} backKeys={false}>
         <div className="p-[4%]">
           <DialogueBox
             lines={dialogue.rareEncounter.lines}
+            onLine={setLine}
             onDone={() => {
               progress.unlock('rare-encounter')
               sfx('back')
@@ -201,16 +205,21 @@ function DexScreen({ dex, seen }: { dex: DexEntry; seen: boolean }) {
   )
 }
 
-function WildEncounter() {
+/** The encounter's scene for each line of its dialogue, in order (the last one stays after). */
+const ENCOUNTER_SCENES: readonly EncounterScene[] = ['wild', 'charger', 'deadline', 'fled']
+
+/**
+ * The rare encounter's top screen: a painted scene per line of the story (in the grass, in his
+ * room hunting for the charger, at his desk checking his watch, gone in a puff of dust), opening
+ * on the battle-start flashes and cutting between scenes with a quick white flash.
+ */
+function WildEncounter({ line }: { line: number }) {
+  const scene = ENCOUNTER_SCENES[Math.min(line, ENCOUNTER_SCENES.length - 1)]
+  const paint = useCallback((frame: number) => paintEncounter(scene, frame).toRGBA(), [scene])
   return (
-    <div className="battle-field absolute inset-0 overflow-hidden">
-      <div className="platform" style={{ left: '50%', top: '86%', width: '50%', height: '14%' }} />
-      <div className="stand anim-enter" style={{ left: '50%', top: '88%', height: '72%' }}>
-        <TrainerSprite pose="victory" shiny fill={0.98} className="hop" />
-      </div>
-      <span aria-hidden className="sparkle absolute top-[14%] left-[60%] text-[clamp(14px,5cqi,28px)] text-gold">
-        ✦
-      </span>
+    <div className="absolute inset-0 overflow-hidden bg-[#0e1430]">
+      <PaintedScene key={scene} id={`encounter:${scene}`} frames={ENCOUNTER_ART[scene].frames} paint={paint} alt={ENCOUNTER_ART[scene].alt} className="h-full w-full" />
+      {line > 0 && <div key={`cut-${scene}`} className="encounter-cut" aria-hidden />}
       <div className="encounter" aria-hidden />
     </div>
   )

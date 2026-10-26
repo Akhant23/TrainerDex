@@ -1225,6 +1225,23 @@ body {
     background: #000000;
   }
 }
+/* the rare encounter cutting to its next scene: a quick white flash that fades */
+.encounter-cut {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: #ffffff;
+  animation: encounter-cut 260ms steps(4) forwards;
+}
+@keyframes encounter-cut {
+  to {
+    opacity: 0;
+  }
+}
+[data-motion='reduced'] .encounter-cut {
+  display: none;
+}
 @keyframes encounter-close {
   from {
     clip-path: inset(0 0 0 0);

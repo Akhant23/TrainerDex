@@ -11,6 +11,8 @@ interface Props {
   waitOnLast?: boolean
   /** Listen to keyboard globally (turn off when another control should own the keys). */
   active?: boolean
+  /** Told the index of each line as it comes up (e.g. to change the picture with the story). */
+  onLine?: (index: number) => void
   className?: string
 }
 
@@ -18,7 +20,7 @@ interface Props {
  * Gen IV-style dialogue box: types text out, ▼ when ready, click / Enter / Space / Z to
  * advance. The first press while typing completes the line instantly.
  */
-export function DialogueBox({ lines, onDone, waitOnLast = true, active = true, className = '' }: Props) {
+export function DialogueBox({ lines, onDone, waitOnLast = true, active = true, onLine, className = '' }: Props) {
   const { settings, sfx } = useSettings()
   const [index, setIndex] = useState(0)
   const [shown, setShown] = useState(0)
@@ -38,6 +40,11 @@ export function DialogueBox({ lines, onDone, waitOnLast = true, active = true, c
     setShown(0)
     firedRef.current = false
   }, [key])
+
+  // (a caller's inline handler re-runs this each render with the same index: keep it idempotent)
+  useEffect(() => {
+    onLine?.(index)
+  }, [index, onLine])
 
   // typewriter
   useEffect(() => {

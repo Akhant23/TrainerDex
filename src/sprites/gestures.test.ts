@@ -3,7 +3,7 @@
  * cleanly), every frame renders, and timings stay in a sensible range.
  */
 import { describe, expect, it } from 'vitest'
-import { GESTURES, GESTURE_WEIGHTS, gestureLength, TWEEN_MS, type GestureId } from './gestures'
+import { GESTURES, GESTURE_WEIGHTS, gestureLength, TWEEN_MS, wristOf, type GestureId } from './gestures'
 import { atResolution, CHAR_H, CHAR_W, paletteFor, renderPose } from './character'
 import { validate } from './pixels'
 import { signature } from '../content/aaryan'
@@ -70,6 +70,27 @@ describe('cleaning his glasses', () => {
         const b = frames[i].held?.[what]
         if (a && b) expect(Math.hypot(b[0] - a[0], b[1] - a[1]), `${what} ${i}`).toBeLessThan(10)
       }
+  })
+  it('nothing is ever left hanging: in every frame of every gesture, whatever is held is at a hand', () => {
+    // the cloth used to stay put for the six in-between frames after the wipe while the hand
+    // went back down, then vanish: a frame stuck in mid-air
+    for (const id of ids)
+      GESTURES[id].forEach(({ frame }, i) => {
+        for (const what of ['glasses', 'cloth'] as const) {
+          const at = frame.held?.[what]
+          if (!at) continue
+          const near = Math.min(...(['back', 'front'] as const).map((s) => Math.hypot(wristOf(frame, s)[0] - at[0], wristOf(frame, s)[1] - at[1])))
+          expect(near, `${id} frame ${i}: ${what} at ${at.map((n) => n.toFixed(1))}`).toBeLessThanOrEqual(16)
+        }
+      })
+  })
+  it('the cloth goes with the hand as it is put away, and is gone well before the hand is down', () => {
+    const lastWipe = frames.findLastIndex((f) => f.held?.cloth)
+    const after = frames.slice(lastWipe + 1)
+    expect(after.every((f) => !f.held?.cloth)).toBe(true)
+    // gone by the time the arm is halfway down: at most half of that tween still shows it
+    const withCloth = frames.filter((f, i) => i > 0 && f.held?.cloth && frames[i - 1].held?.cloth && Math.hypot(f.held.cloth[0] - frames[i - 1].held!.cloth![0], f.held.cloth[1] - frames[i - 1].held!.cloth![1]) > 0)
+    expect(withCloth.length).toBeGreaterThan(0)
   })
   it('the pocket check it replaced is gone', () => {
     expect(Object.keys(GESTURES)).not.toContain('pockets')

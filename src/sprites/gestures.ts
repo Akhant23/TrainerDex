@@ -64,20 +64,38 @@ function lerpArm(side: 'back' | 'front', a: ArmSpec | undefined, b: ArmSpec | un
 }
 
 /**
- * What's held, part way between two keys: a thing held in both moves with the hand; one that's
- * picked up or put down appears or goes on arrival.
+ * What's held, part way between two keys. A thing held in both moves between its two places. A
+ * thing put down goes with the hand that held it and is gone halfway (it used to stay frozen
+ * where it was until the next key, a stray frame or six with the cloth hanging in mid-air). A
+ * thing picked up appears on arrival, already in the hand.
  */
-function lerpHeld(a: Held | undefined, b: Held | undefined, k: number): Held | undefined {
+function heldBetween(prev: PoseFrame, next: PoseFrame, k: number, arms: { back?: ArmSpec; front?: ArmSpec }): Held | undefined {
+  const a = prev.held
+  const b = next.held
   if (!a && !b) return undefined
   const out: Held = {}
   for (const what of ['glasses', 'cloth'] as const) {
     const p = a?.[what]
     const q = b?.[what]
     if (p && q) out[what] = lerpPt(p, q, k)
-    else if (p) out[what] = p
+    else if (p && k < 0.5) {
+      const hand = holdingHand(p, prev)
+      const from = (prev[hand] ?? (hand === 'back' ? IDLE_BACK : IDLE_FRONT)).wr
+      const now = arms[hand]?.wr ?? from
+      out[what] = [p[0] + now[0] - from[0], p[1] + now[1] - from[1]]
+    }
   }
   return Object.keys(out).length ? out : undefined
 }
+
+/** Which hand has hold of a thing at `at`: the nearer wrist. */
+export function holdingHand(at: Pt, f: PoseFrame): 'back' | 'front' {
+  const d = (s: ArmSpec) => Math.hypot(s.wr[0] - at[0], s.wr[1] - at[1])
+  return d(f.back ?? IDLE_BACK) <= d(f.front ?? IDLE_FRONT) ? 'back' : 'front'
+}
+
+/** The wrist of a frame's arm (the idle arm's if the frame leaves it alone). */
+export const wristOf = (f: PoseFrame, side: 'back' | 'front'): Pt => (f[side] ?? (side === 'back' ? IDLE_BACK : IDLE_FRONT)).wr
 
 /** In-between frames per key's `tween`, and how long each shows (a tween step was 70ms; now two of 35ms). */
 const TWEEN_DENSITY = 2
@@ -92,10 +110,9 @@ function build(keys: Key[]): GestureFrame[] {
     const n = (key.tween ?? 2) * TWEEN_DENSITY
     for (let i = 1; i <= n; i++) {
       const k = i / (n + 1)
-      out.push({
-        frame: { ...prev, back: lerpArm('back', prev.back, key.frame.back, k, key.swing), front: lerpArm('front', prev.front, key.frame.front, k, key.swing), held: lerpHeld(prev.held, key.frame.held, k) },
-        ms: TWEEN_MS,
-      })
+      const back = lerpArm('back', prev.back, key.frame.back, k, key.swing)
+      const front = lerpArm('front', prev.front, key.frame.front, k, key.swing)
+      out.push({ frame: { ...prev, back, front, held: heldBetween(prev, key.frame, k, { back, front }) }, ms: TWEEN_MS })
     }
     out.push({ frame: key.frame, ms: key.hold })
     prev = key.frame
