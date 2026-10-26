@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ACTIVITY_SOURCES, ACTIVITY_TZ, buildDays, dayLabel, niceScale, rangeStart, type ActivityDay, type ActivityItem, type ActivitySource } from '../systems/activity'
-import { AdminPage, Notice, RefreshButton, Segmented } from './AdminUi'
+import { AdminPage, Notice, RefreshButton, Segmented, SortSelect } from './AdminUi'
+import { DAY_SORTS, sortDays, type DaySort } from '../systems/adminSort'
+import { useSavedChoice } from '../ui/useSavedChoice'
+
+const isDaySort = (v: unknown): v is DaySort => DAY_SORTS.some((s) => s.value === v)
 
 /**
  * The admin's ACTIVITY tab: what arrived each day (Pager messages, suggestions, resort avatars),
@@ -216,6 +220,7 @@ function Stats({ days, shown, failed, range }: { days: ActivityDay[]; shown: Act
 
 function Chart({ days, shown, failed, range }: { days: ActivityDay[]; shown: ActivitySource[]; failed: ActivitySource[]; range: number }) {
   const [hover, setHover] = useState<number | null>(null)
+  const [daySort, setDaySort] = useSavedChoice<DaySort>('admin-sort-days', 'newest', isDaySort)
   const totals = days.map((d) => shown.reduce((n, s) => n + d.counts[s], 0))
   const peak = Math.max(0, ...totals)
   const { max, step } = niceScale(peak)
@@ -348,37 +353,42 @@ function Chart({ days, shown, failed, range }: { days: ActivityDay[]; shown: Act
       </p>
       <details className="adm-details">
         <summary>Show the days as a table</summary>
-        <table className="adm-table adm-table--compact">
-          <caption className="sr-only">New submissions on each day with any activity. {subtitle}</caption>
-          <thead>
-            <tr>
-              <th scope="col">Day</th>
-              {shown.map((s) => (
-                <th key={s} scope="col" className="adm-num">
-                  {NAMES[s].many}
-                </th>
-              ))}
-              <th scope="col" className="adm-num">
-                Total
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {activeDays.map((d) => (
-              <tr key={d.key}>
-                <th scope="row">{dayLabel(d.key)}</th>
+        <div className="adm-toolbar mt-3">
+          <SortSelect value={daySort} options={DAY_SORTS} onChange={setDaySort} />
+        </div>
+        <div className="adm-table-scroll">
+          <table className="adm-table adm-table--compact">
+            <caption className="sr-only">New submissions on each day with any activity. {subtitle}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
                 {shown.map((s) => (
-                  <td key={s} className="adm-num" data-label={NAMES[s].many}>
-                    {d.counts[s]}
-                  </td>
+                  <th key={s} scope="col" className="adm-num">
+                    {NAMES[s].short}
+                  </th>
                 ))}
-                <td className="adm-num" data-label="Total">
-                  <strong>{shown.reduce((n, s) => n + d.counts[s], 0)}</strong>
-                </td>
+                <th scope="col" className="adm-num">
+                  Total
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sortDays(activeDays, daySort, (d) => shown.reduce((n, s) => n + d.counts[s], 0)).map((d) => (
+                <tr key={d.key}>
+                  <th scope="row">{dayLabel(d.key)}</th>
+                  {shown.map((s) => (
+                    <td key={s} className="adm-num" data-label={NAMES[s].many}>
+                      {d.counts[s]}
+                    </td>
+                  ))}
+                  <td className="adm-num" data-label="Total">
+                    <strong>{shown.reduce((n, s) => n + d.counts[s], 0)}</strong>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <p className="adm-notes-inline">Days not listed had no submissions.</p>
       </details>
     </section>

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { PixelIcon } from '../ui/PixelIcon'
 import type { IconName } from '../sprites/icons'
+import { PAGE_SIZE } from '../systems/adminSort'
 
 /**
  * The admin's building blocks, so every admin page shares one look: TrainerDex's Gen V cards and
@@ -180,5 +181,69 @@ export function RefreshButton({ busy, onClick }: { busy: boolean; onClick: () =>
       </span>{' '}
       {busy ? 'REFRESHING' : 'REFRESH'}
     </button>
+  )
+}
+
+/** A labelled dropdown for orders with more choices than a segmented row holds. */
+export function SortSelect<T extends string>({ label = 'SORT', value, options, onChange }: { label?: string; value: T; options: ReadonlyArray<{ value: T; label: string }>; onChange: (v: T) => void }) {
+  const id = useId()
+  return (
+    <div className="adm-filter">
+      <label className="adm-filter-label" htmlFor={id}>
+        {label}
+      </label>
+      <select id={id} className="adm-select" value={value} onChange={(e) => onChange(e.target.value as T)}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+/** Narrow a list by typing: names, text, whatever the page passes in. */
+export function FindBox({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  const id = useId()
+  return (
+    <div className="adm-filter adm-filter--grow">
+      <label className="adm-filter-label" htmlFor={id}>
+        FIND
+      </label>
+      <input
+        id={id}
+        className="adm-input adm-find"
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          // Esc clears the box first (and never leaves the page from in here)
+          if (e.key === 'Escape' && value) {
+            e.preventDefault()
+            e.stopPropagation()
+            onChange('')
+          }
+        }}
+        placeholder={placeholder}
+        autoComplete="off"
+        spellCheck={false}
+      />
+    </div>
+  )
+}
+
+/** "Showing 50 of 120" and a button for the next batch, so long lists stay quick to scan. */
+export function ShowMore({ shown, total, noun, onMore }: { shown: number; total: number; noun: string; onMore: () => void }) {
+  if (total <= shown) return null
+  return (
+    <div className="adm-more">
+      <span className="adm-summary">
+        Showing <strong>{shown}</strong> of <strong>{total}</strong> {noun}
+      </span>
+      <button type="button" className="pixel-btn adm-btn" onClick={onMore}>
+        SHOW {Math.min(total - shown, PAGE_SIZE)} MORE
+      </button>
+    </div>
   )
 }

@@ -2740,6 +2740,100 @@ body::after {
   color: #fff;
 }
 
+/* sort dropdown and find box: the same ink outline and height as the segmented filters */
+.adm-filter--grow {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+.adm-select {
+  appearance: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  color: var(--adm-navy);
+  padding: 7px 36px 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--adm-navy) 50%) right 18px center / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--adm-navy) 50%, transparent 50%) right 12px center / 6px 6px no-repeat,
+    #fff;
+  box-shadow: 0 0 0 2px var(--gv-ink);
+  cursor: pointer;
+  min-height: 36px;
+}
+.adm-select:hover {
+  background-color: #eef2fa;
+}
+.adm-select:focus-visible,
+.adm-find:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
+}
+.adm-find {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 12px;
+  box-shadow: 0 0 0 2px var(--gv-ink);
+  border-radius: 6px;
+}
+/* same height as the dropdown beside it (the sign-in field style sets more padding) */
+.adm-input.adm-find {
+  padding: 6px 12px;
+  font-size: 15px;
+}
+@media (max-width: 639px) {
+  .adm-filter--grow {
+    max-width: none;
+  }
+  .adm-select {
+    width: 100%;
+  }
+}
+
+/* "showing 50 of 120" and the next batch */
+.adm-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  padding: 6px 0 2px;
+}
+
+/* grouped by sender: a heading per person, their messages under it */
+.adm-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.adm-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.adm-group-head {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--adm-line);
+}
+.adm-group-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--adm-navy);
+  overflow-wrap: anywhere;
+}
+.adm-group-head .adm-seg-count {
+  background: var(--adm-navy);
+  color: #fff;
+}
+
 /* loading / empty / error / info */
 .adm-notice {
   display: flex;
@@ -3347,6 +3441,9 @@ body::after {
   font-weight: 600;
   font-size: 14px;
   color: var(--adm-blue);
+}
+.adm-table-scroll {
+  overflow-x: auto;
 }
 .adm-details .adm-table {
   margin-top: 8px;
