@@ -14,10 +14,11 @@ menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in 
 menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Fun fact: this jersey has a +10 boost to confidence.
 menu.spriteReactions,AARYAN,"Main menu: clicking Aaryan (one line per click, in order)",Fancy a battle? Head to the BATTLE RESORT and climb the tower.
 menu.secret,AARYAN,Main menu: after 10 clicks in a row,"...OK, you found it. There is no secret. Or IS there?"
-pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),A wild Aaryan appeared!
-pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),…He seems to be looking for his phone charger.
-pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),He checked his watch. Something about a deadline.
-pokedex.rareEncounter,SYSTEM,Pokédex Easter egg (1 in 12 when opening an entry),Wild Aaryan fled!
+pokedex.rareEncounter.appear,SYSTEM,"Pokédex Easter egg (1 in 12 when opening an entry): first line, in the tall grass",A wild Aaryan appeared!
+pokedex.rareEncounter.charger,SYSTEM,"Pokédex Easter egg: the middle line, one of three picked at random (in his room)",…He seems to be looking for his phone charger.
+pokedex.rareEncounter.deadline,SYSTEM,"Pokédex Easter egg: the middle line, one of three picked at random (at his desk)",He checked his watch. Something about a deadline.
+pokedex.rareEncounter.valorant,SYSTEM,"Pokédex Easter egg: the middle line, one of three picked at random (at his gaming PC)","…He's been caught mid-match in Valorant. ""One more game,"" apparently."
+pokedex.rareEncounter.fled,SYSTEM,Pokédex Easter egg: last line,Wild Aaryan fled!
 tower.school.intro,AARYAN (SBHS),"Floor 1, before the battle",I’m fresh out of football training — let’s see what you’ve got!
 tower.school.defeat,AARYAN (SBHS),"Floor 1, after you win","Not bad! Go on, the lift’s that way."
 tower.first-year.intro,AARYAN (FIRST-YEAR),"Floor 2, before the battle","First year, first term, and I’m already covered in paint. Let’s battle!"

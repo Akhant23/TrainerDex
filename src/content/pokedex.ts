@@ -26,7 +26,8 @@ export interface DexEntry {
   art: DexArt
   /** where this side of him is found: the scene the Pokédex shows him in (sprites/habitats.ts) */
   habitat: HabitatId
-  entry: string
+  /** prose (each sentence becomes a dot point), or the points themselves when one runs to more than a sentence */
+  entry: string | readonly string[]
   sources: SourceId[]
 }
 
@@ -39,7 +40,7 @@ export const pokedex: DexEntry[] = [
     types: ['NORMAL'],
     art: { kind: 'icon', name: 'profile' },
     habitat: 'harbour',
-    entry: 'I was born in Australia, of Bangladeshi descent. I’m fluent in both English and Bengali, and switch between them without warning.',
+    entry: 'I was born in Australia, of Bangladeshi descent. I’m fluent in both English and Bengali.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -59,7 +60,7 @@ export const pokedex: DexEntry[] = [
     types: ['LAW', 'TECH'],
     art: { kind: 'icon', name: 'pc' },
     habitat: 'review',
-    entry: 'You’ll find me in Clayton Utz’s Data Intelligence & Risk Advisory team, doing First Line Review in Relativity and making judgment calls on nuanced facts at high volume.',
+    entry: 'You’ll find me in Clayton Utz’s Data Intelligence & Risk Advisory team, where I’m working across a range of legal matters and getting my morning hot chocolate from Cafe Clutz.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -94,13 +95,13 @@ export const pokedex: DexEntry[] = [
   },
   {
     no: 7,
-    name: 'STRIKER',
+    name: 'GOLAZO',
     category: 'Captain Pokémon',
     types: ['SPORT'],
     art: { kind: 'badge', id: 'pitch' },
     habitat: 'pitch',
-    entry: 'I played GPS Football from 2017 to 2022 and captained the side in 2017. You’ll often spot me in a number 7 jersey.',
-    sources: ['linkedin'],
+    entry: 'I played GPS Football from 2017 to 2022 and captained the side in 2017. I have played every position in football and regularly play CM, LB and GK. My favourite clubs are Tottenham Hotspur and Atlético Madrid.',
+    sources: ['linkedin', 'aaryan'],
   },
   {
     no: 8,
@@ -109,7 +110,7 @@ export const pokedex: DexEntry[] = [
     types: ['SPORT', 'LEADER'],
     art: { kind: 'icon', name: 'cricket' },
     habitat: 'oval',
-    entry: 'I played GPS Cricket for six seasons, then went back to Sydney Boys High to coach — building training plans for 11 players.',
+    entry: 'I played GPS Cricket for six seasons, then went back to Sydney Boys High to coach — developing and training 11 young scholar sportsmen.',
     sources: ['resume', 'linkedin'],
   },
   {
@@ -119,7 +120,7 @@ export const pokedex: DexEntry[] = [
     types: ['MUSIC'],
     art: { kind: 'icon', name: 'headphones' },
     habitat: 'club',
-    entry: 'DJing tops the hobbies list on my resume. I get noticeably more active after dark.',
+    entry: 'DJing tops the hobbies list on my resume. Hit me up if you want me to do a set for you!',
     sources: ['resume'],
   },
   {
@@ -129,7 +130,7 @@ export const pokedex: DexEntry[] = [
     types: ['MUSIC'],
     art: { kind: 'icon', name: 'guitar' },
     habitat: 'bedroom',
-    entry: 'I play guitar, and keep the case within arm’s reach at all times.',
+    entry: ['I play guitar, keeping my acoustic and electric within arm’s reach.', 'Fun fact: I have composed my own 5-minute piece.'],
     sources: ['aaryan'],
   },
   {
@@ -139,7 +140,7 @@ export const pokedex: DexEntry[] = [
     types: ['CREATIVE'],
     art: { kind: 'icon', name: 'camera' },
     habitat: 'street',
-    entry: 'I’m into photography — the same eye behind my event graphics and campaign shoots.',
+    entry: 'I’m into photography — the same eye behind my event graphics. I’m always the one with the digicam for my mates.',
     sources: ['aaryan'],
   },
   {
@@ -149,8 +150,8 @@ export const pokedex: DexEntry[] = [
     types: ['NORMAL'],
     art: { kind: 'icon', name: 'book' },
     habitat: 'library',
-    entry: 'I read for fun, which law students are not supposed to have time for.',
-    sources: ['resume'],
+    entry: 'I read for fun (shoutout to EPUBs), somehow doing this on top of my law readings.',
+    sources: ['resume', 'aaryan'],
   },
   {
     no: 13,
@@ -159,7 +160,7 @@ export const pokedex: DexEntry[] = [
     types: ['TECH'],
     art: { kind: 'icon', name: 'gamepad' },
     habitat: 'den',
-    entry: 'I’m into technology and gaming. Probably the reason this website exists.',
+    entry: ['I’m into gaming and tech. I built my own mechanical keyboard and PC.', 'One of my favourite childhood games was Pokémon, which explains this website.'],
     sources: ['aaryan'],
   },
   {
@@ -169,8 +170,8 @@ export const pokedex: DexEntry[] = [
     types: ['TECH'],
     art: { kind: 'icon', name: 'resume' },
     habitat: 'chambers',
-    entry: 'I type at 120 words per minute with 99% accuracy. Briefs to counsel fear me.',
-    sources: ['resume'],
+    entry: 'I type at 120 words per minute with 99% accuracy. I <3 MonkeyType.',
+    sources: ['resume', 'aaryan'],
   },
   {
     no: 15,

@@ -2983,7 +2983,7 @@ body::after {
 }
 .adm-egg-scenes {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
   padding: 0;

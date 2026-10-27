@@ -9,9 +9,9 @@
  */
 import type { Appearance, PoseFrame, Pt } from './character.ts'
 import { signature } from '../content/aaryan.ts'
-import { boards, box, darken, desk, INK, poster, rng, Scene, shadow, trainer, wall, windowFrame } from './habitat-kit.ts'
+import { boards, box, darken, desk, INK, monitor, poster, rng, Scene, shadow, trainer, wall, windowFrame } from './habitat-kit.ts'
 
-export type EncounterScene = 'wild' | 'charger' | 'deadline' | 'fled'
+export type EncounterScene = 'wild' | 'charger' | 'deadline' | 'valorant' | 'fled'
 
 export interface EncounterArt {
   /** a sentence describing the picture, for screen readers */
@@ -338,6 +338,142 @@ function deadline(s: Scene, frame: number) {
   }
 }
 
+/* ---------------- his gaming setup, mid-match ---------------- */
+
+/** RGB: the strip, fans and keys run through these a step a frame. */
+const RGB = ['#ff4a6e', '#ff8a3a', '#f8d838', '#4ae08a', '#3ad8f0', '#5a7aff', '#b05aff', '#ff4ad0']
+const rgb = (i: number) => RGB[((i % RGB.length) + RGB.length) % RGB.length]
+
+/**
+ * The monitor's picture: a generic tactical shooter, not any game's own art. A sunlit wall and a
+ * doorway, an enemy (outlined red) peeking out of it, the crosshair on them, a muzzle flash and a
+ * kill-feed line when the shot lands, and the HUD: a round timer between two scores, health, ammo.
+ */
+function shooter(s: Scene, x: number, y: number, w: number, h: number, f: number) {
+  s.rect(x, y, w, h * 0.45, '#f0b878').rect(x, y + h * 0.3, w, h * 0.15, '#f4c890')
+  s.rect(x, y + h * 0.45, w, h * 0.55, '#a8784a')
+  // a wall with a doorway, and a crate
+  s.rect(x + 6, y + 10, w - 20, h * 0.62, '#e0c8a0').rect(x + 6, y + 10, w - 20, 2, '#f4e4c8')
+  s.rect(x + w / 2 - 6, y + 18, 12, h * 0.62 - 8, '#3a2a2a')
+  s.rect(x + 10, y + h - 20, 12, 10, '#8a5a30').frame(x + 10, y + h - 20, 12, 10, '#5a3a1a')
+  // the enemy, leaning out of the doorway, outlined red
+  const peek = [0, 1, 2, 2, 2, 1, 0, 0][f]
+  if (f < 5) {
+    const ex = x + w / 2 - 3 + peek
+    s.rect(ex - 1, y + 21, 7, 4, '#e0383e').rect(ex - 1, y + 25, 7, 10, '#e0383e')
+    s.rect(ex, y + 22, 5, 3, '#2a2030').rect(ex, y + 26, 5, 8, '#4a3a5a')
+  }
+  // the crosshair, tracking onto them, and the shot
+  const cx = x + w / 2 + [4, 3, 2, 1, 1, 0, 0, 1][f]
+  const cy = y + 28
+  for (const [dx, dy, ww, hh] of [[-4, 0, 3, 1], [2, 0, 3, 1], [0, -4, 1, 3], [0, 2, 1, 3]] as const) s.rect(cx + dx, cy + dy, ww, hh, '#40f0d0')
+  if (f === 3 || f === 4) s.ellipse(x + w - 14, y + h - 8, 5, 4, '#fff4b0').ellipse(x + w - 14, y + h - 8, 3, 2, '#ffffff')
+  // the gun, bottom right
+  s.poly([[x + w - 22, y + h], [x + w - 10, y + h - 12], [x + w, y + h - 10], [x + w, y + h]], '#2a2c36').rect(x + w - 16, y + h - 9, 8, 2, '#5a5e6c')
+  // HUD: scores either side of the round timer, a kill-feed line, health and ammo
+  s.rect(x + w / 2 - 14, y + 1, 9, 5, '#2ad0b0').rect(x + w / 2 + 5, y + 1, 9, 5, '#e0383e').rect(x + w / 2 - 4, y + 1, 8, 5, '#101420')
+  s.rect(x + w / 2 - 3, y + 3, 6 - (f >> 1), 1, '#ffffff')
+  if (f >= 4) s.rect(x + w - 26, y + 9, 22, 4, 'rgba(16,20,32,1)').rect(x + w - 25, y + 10, 8, 2, '#2ad0b0').rect(x + w - 13, y + 10, 8, 2, '#e0383e')
+  s.rect(x + 3, y + h - 6, 18, 3, '#101420').rect(x + 4, y + h - 5, 16, 1, '#f4f6fa')
+  for (let i = 0; i < 6 - (f >= 4 ? 1 : 0); i++) s.rect(x + w - 30 + i * 3, y + h - 6, 2, 4, '#f4f6fa')
+}
+
+/** Big letters in neon tube: "GG" on the wall, flickering on one frame. */
+function neonGG(s: Scene, x: number, y: number, f: number) {
+  const c = f === 6 ? '#7a3a6a' : '#ff6ad8'
+  const glow = f === 6 ? '#3a2a4a' : '#5a2a6a'
+  for (const ox of [0, 16]) {
+    const g = (cx: number, col: string, d: number) => {
+      s.rect(cx - d, y - d, 12 + d * 2, 2 + d * 2, col).rect(cx - d, y - d, 2 + d * 2, 14 + d * 2, col)
+      s.rect(cx - d, y + 12 - d, 12 + d * 2, 2 + d * 2, col).rect(cx + 10 - d, y + 7 - d, 2 + d * 2, 7 + d * 2, col).rect(cx + 6 - d, y + 7 - d, 6 + d * 2, 2 + d * 2, col)
+    }
+    g(x + ox, glow, 1)
+    g(x + ox, c, 0)
+  }
+}
+
+/**
+ * Eight frames: headset on, mid-match, his hand on the mouse clicking away as he lines up the
+ * shot, then he turns round, caught, hands up with a guilty grin. The PC's fans and the LED
+ * strip cycle through their colours, the neon "GG" buzzes, and his chair is rolled back.
+ */
+function valorant(s: Scene, f: number) {
+  wall(s, 122, '#2a2346', '#1e1834', 5)
+  // the LED strip along the ceiling, colours running along it
+  for (let x = 0; x < 256; x += 4) s.rect(x, 4, 4, 2, rgb((x >> 3) + f)).rect(x, 6, 4, 2, '#1e1834')
+  s.dither(0, 8, 256, 6, rgb(f + 3), f)
+  neonGG(s, 20, 30, f)
+  poster(s, 66, 24, 30, 40, '#14182c', (x, y, w) => {
+    s.ellipse(x + w / 2, y + 16, 9, 9, '#e0383e').ellipse(x + w / 2, y + 16, 7, 7, '#14182c')
+    s.rect(x + w / 2 - 1, y + 5, 2, 22, '#e0383e').rect(x + 5, y + 15, w - 10, 2, '#e0383e')
+    s.rect(x + 5, y + 31, w - 10, 3, '#f4f0e8')
+  })
+  boards(s, 122, '#4a3a52', '#42344a', '#2a2034', 3)
+  // the desk: black top, an RGB glow underneath
+  s.rect(116, 124, 138, 8, rgb(f + 5)).dither(116, 124, 138, 8, '#1e1834', 0)
+  desk(s, 118, 114, 136, 64, { fill: '#24242e', light: '#3a3a48', shade: '#16161e' }, false)
+  monitor(s, 132, 46, 92, 58, (x, y, w, h) => shooter(s, x, y, w, h, f), '#1e1e26')
+  // the PC: a glass side, three fans cycling through the colours
+  box(s, 228, 62, 24, 52, { fill: '#1a1a22', light: '#34343e', shade: '#101016' }, 1)
+  s.rect(231, 65, 18, 46, '#0c0c12')
+  for (let i = 0; i < 3; i++) {
+    const c = rgb(f + i * 2)
+    s.ellipse(240, 72 + i * 14, 6, 6, c).ellipse(240, 72 + i * 14, 4, 4, '#0c0c12').rect(239, 68 + i * 14 + ((f + i) % 2) * 2, 2, 5, c)
+  }
+  // keyboard with a wave of RGB across its keys, mousepad and mouse
+  box(s, 160, 108, 46, 7, { fill: '#18181e', light: '#2a2a34', shade: '#0c0c10' }, 1)
+  for (let k = 0; k < 10; k++) s.rect(162 + k * 4, 110, 3, 2, rgb(k + f)).rect(162 + k * 4, 113, 3, 1, rgb(k + f + 1))
+  s.rect(124, 110, 30, 5, '#2a1e3a').rect(124, 110, 30, 1, rgb(f))
+  const click = f < 4 && f % 2 === 1
+  box(s, 136, 107 + (click ? 1 : 0), 7, 6, { fill: '#2a2a34', light: '#4a4a5a', shade: '#18181e' }, 1)
+  s.set(139, 108 + (click ? 1 : 0), rgb(f + 2))
+  // his chair, rolled back from the desk when he jumped up
+  box(s, 14, 70, 30, 56, { fill: '#2a2a34', light: '#3e3e4c', shade: '#1a1a22' }, 2)
+  s.rect(20, 76, 4, 44, '#e0383e').rect(34, 76, 4, 44, '#e0383e')
+  box(s, 10, 124, 38, 10, { fill: '#2a2a34', light: '#3e3e4c', shade: '#1a1a22' }, 1)
+  s.rect(27, 134, 4, 30, '#18181e').rect(12, 162, 34, 3, '#18181e')
+  for (const wx of [12, 28, 44]) s.ellipse(wx, 168, 3, 3, INK).ellipse(wx, 168, 2, 2, '#3a3a46')
+  shadow(s, 100, 186, 14)
+  // in the match (clicking, eyes on the screen), then caught: hands up, a guilty grin
+  const caught = f >= 4
+  const pose: PoseFrame = caught
+    ? { back: { el: [16, 48], wr: [12, 34], hand: 'open' }, front: { el: [64, 48], wr: [68, 34], hand: 'open' }, mouth: 'grin', brow: 'up', eyes: f === 7 ? 'closed' : 'open' }
+    : { front: { el: [64, 52], wr: [74, 56 + (click ? 1 : 0)], hand: 'fist' }, eyes: 'down', mouth: 'calm', tilt: 1 }
+  const hands = trainer(s, atHome, pose, 100, 186)
+  // the headset (white, so it reads on his hair and the dark wall): a band arching over the top
+  // of his head, cups against his ears with an RGB stripe, and the mic swung down by his mouth
+  const hx = Math.round((hands.left + hands.right) / 2)
+  const ht = hands.top + (caught ? 0 : 1)
+  const band: Array<[number, number, number, number]> = [
+    [hx - 8, ht - 3, 16, 2],
+    [hx - 12, ht - 2, 5, 2],
+    [hx + 7, ht - 2, 5, 2],
+    [hx - 15, ht, 4, 3],
+    [hx + 11, ht, 4, 3],
+    [hx - 17, ht + 2, 3, 12],
+    [hx + 14, ht + 2, 3, 12],
+  ]
+  for (const [x, y, w, h] of band) s.rect(x - 1, y - 1, w + 2, h + 2, INK)
+  for (const [x, y, w, h] of band) s.rect(x, y, w, h, '#e8e8f0')
+  for (const side of [-1, 1]) {
+    const cx = side < 0 ? hx - 21 : hx + 14
+    s.rect(cx - 1, ht + 11, 9, 13, INK).rect(cx, ht + 12, 7, 11, '#e8e8f0').rect(cx + (side < 0 ? 0 : 5), ht + 13, 2, 9, '#b8bccc')
+    s.rect(cx + (side < 0 ? 1 : 4), ht + 14, 2, 7, rgb(f + 4))
+  }
+  s.line(hx - 15, ht + 23, hx - 7, ht + 30, INK).line(hx - 14, ht + 23, hx - 7, ht + 29, '#b8bccc').rect(hx - 8, ht + 29, 3, 2, INK)
+  // caught: the "!" pops up, and a bead of sweat
+  if (caught) {
+    const bx = hands.right + 8
+    const by = hands.top - 8 + [-3, 0, 0, -1][f - 4]
+    s.ellipse(bx + 6, by + 7, 9, 9, INK).ellipse(bx + 6, by + 7, 8, 8, '#ffffff').poly([[bx, by + 12], [bx - 4, by + 18], [bx + 4, by + 14]], '#ffffff')
+    s.rect(bx + 5, by + 2, 3, 7, '#e0383e').rect(bx + 5, by + 11, 3, 2, '#e0383e')
+    const sx = hx + 11
+    const sy = hands.top + 7 + (f - 4)
+    s.poly([[sx, sy], [sx - 2, sy + 4], [sx + 2, sy + 4]], INK).ellipse(sx, sy + 5, 3, 3, INK)
+    s.poly([[sx, sy + 1], [sx - 1, sy + 4], [sx + 1, sy + 4]], '#a8d8f8').ellipse(sx, sy + 5, 2, 2, '#a8d8f8').set(sx - 1, sy + 4, '#ffffff')
+  }
+}
+
 export const ENCOUNTER_ART: Record<EncounterScene, EncounterArt> = {
   wild: { alt: 'Aaryan standing in the tall grass of a route, waving and grinning, an exclamation mark popping up over his head: a wild encounter.', frames: 8, ms: 150, rest: 2, draw: wild },
   charger: {
@@ -348,11 +484,25 @@ export const ENCOUNTER_ART: Record<EncounterScene, EncounterArt> = {
     draw: charger,
   },
   deadline: { alt: 'Aaryan at his desk late at night raising his wrist to check his watch, sweating, a document marked due on the laptop and the clock nearly at midnight.', frames: 12, ms: 180, rest: 6, draw: deadline },
+  valorant: {
+    alt: 'Aaryan in a headset at his gaming PC late at night, mid-match in a shooter on the big monitor, then turning round caught, hands up with a guilty grin, the RGB lights cycling.',
+    frames: 8,
+    ms: 170,
+    rest: 5,
+    draw: valorant,
+  },
   fled: { alt: 'The tall grass where Aaryan stood, now empty, a puff of dust and a flattened trail where he ran off, and him tiny in the distance running up the path.', frames: 8, ms: 150, rest: 2, draw: fled },
 }
 
-/** The encounter's scenes, in the order of its dialogue lines. */
-export const ENCOUNTER_SCENES: readonly EncounterScene[] = ['wild', 'charger', 'deadline', 'fled']
+/** What he might be caught doing: each encounter shows one of these, between appearing and fleeing. */
+export const VIGNETTES = ['charger', 'deadline', 'valorant'] as const
+export type Vignette = (typeof VIGNETTES)[number]
+
+/** An encounter's three scenes, one per line: he appears, the vignette, he flees. */
+export const encounterScenes = (v: Vignette): readonly EncounterScene[] => ['wild', v, 'fled']
+
+/** Every scene, for previews and tests. */
+export const ENCOUNTER_SCENES: readonly EncounterScene[] = ['wild', ...VIGNETTES, 'fled']
 
 /** One frame of an encounter scene. */
 export function paintEncounter(id: EncounterScene, frame = 0): Scene {

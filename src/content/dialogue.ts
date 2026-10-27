@@ -14,10 +14,19 @@ export const dialogue = {
   secretClicks: 10,
   secretReaction: line('menu.secret'),
 
-  /** Pokédex Easter egg: 1 in `odds` chance when opening an entry. */
+  /**
+   * Pokédex Easter egg: 1 in `odds` chance when opening an entry. Three lines: he appears, one
+   * of the vignettes (picked at random) says what he's up to, and he flees.
+   */
   rareEncounter: {
     odds: 12,
-    lines: lines('pokedex.rareEncounter'),
+    appear: line('pokedex.rareEncounter.appear'),
+    vignettes: {
+      charger: line('pokedex.rareEncounter.charger'),
+      deadline: line('pokedex.rareEncounter.deadline'),
+      valorant: line('pokedex.rareEncounter.valorant'),
+    },
+    fled: line('pokedex.rareEncounter.fled'),
   },
 
   menuWelcome: line('menu.welcome'),

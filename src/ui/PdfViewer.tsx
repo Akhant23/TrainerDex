@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { useSettings } from '../systems/settings'
 import { printPdf } from './printPdf'
+import { PixelIcon } from './PixelIcon'
 
 /** Zoom steps, as a share of the fitted width (1 = the page fills the viewer's width). */
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3] as const
@@ -185,7 +186,7 @@ export function PdfViewer({ file, title, downloadName, extra, keys = true, class
         <div className="ml-auto flex items-center gap-1.5">
           {extra}
           <button type="button" className="dex-bar-btn pdf-bar-btn" onClick={() => printPdf(file)}>
-            ⎙ PRINT
+            <PixelIcon name="print" scale={1} /> PRINT
           </button>
           <a className="dex-bar-btn pdf-bar-btn pdf-bar-btn--go no-underline" href={file} download={downloadName}>
             ⬇ DOWNLOAD
