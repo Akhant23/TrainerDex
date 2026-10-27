@@ -62,7 +62,7 @@ function CardAndCase() {
     >
       <div className="flex min-h-full flex-col gap-3 p-[3%]">
         <div
-          className="grid grid-cols-4 gap-[3%] p-[4%] shadow-[0_0_0_var(--u)_var(--color-ink)]"
+          className="grid grid-cols-4 gap-[2.6cqi] p-[4%] shadow-[0_0_0_var(--u)_var(--color-ink)]"
           style={{ background: 'radial-gradient(circle at 50% 30%, #5a2438, #2a0c18)' }}
           role="listbox"
           aria-label="Badges"
