@@ -751,12 +751,27 @@ function hall(s: Scene, frame: number) {
       // heads turn now and then to whisper to a neighbour
       const turn = (i + row + frame) % 5 === 0 ? 1 : 0
       s.ellipse(x + turn, y - 4 * sz, 6 * sz, 7 * sz, INK).ellipse(x + turn, y - 4 * sz, 5 * sz, 6 * sz, hairs[(i + row) % 4])
-      // question time: a hand goes up in the back row
+      // question time: someone in the back row puts their hand up. Seen from behind, the arm
+      // rises from their shoulder at the chair's top edge beside their head, elbow out, up to
+      // the hand (a little higher on the last frame, a keen wave)
       if (row === 0 && i === 2 && frame >= 2) {
-        const hx = x + 5
         const up = frame === 3 ? 2 : 0
-        s.rect(hx - 1, y - 24 - up, 6, 18 + up, INK).rect(hx, y - 23 - up, 4, 17 + up, '#5a6a9a')
-        s.rect(hx - 1, y - 30 - up, 6, 7, INK).rect(hx, y - 29 - up, 4, 5, '#b9805a').rect(hx + 4, y - 27 - up, 2, 3, INK).set(hx + 4, y - 26 - up, '#b9805a')
+        const arm: Array<[number, number]> = [
+          [x + 7, y + 1],
+          [x + 11, y - 10],
+          [x + 10, y - 22 - up],
+        ]
+        const along = (a: [number, number], b: [number, number], paint: (px: number, py: number) => void) => {
+          const n = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]))
+          for (let k = 0; k <= n; k++) paint(Math.round(a[0] + ((b[0] - a[0]) * k) / n), Math.round(a[1] + ((b[1] - a[1]) * k) / n))
+        }
+        for (let k = 0; k < 2; k++) along(arm[k], arm[k + 1], (px, py) => s.rect(px - 3, py - 3, 6, 6, INK))
+        for (let k = 0; k < 2; k++) along(arm[k], arm[k + 1], (px, py) => s.rect(px - 2, py - 2, 4, 4, '#5a6a9a'))
+        // the cuff, then the hand, palm forward, fingers up, the thumb out to the side
+        const [hx, hy] = arm[2]
+        s.rect(hx - 3, hy - 3, 6, 2, INK).rect(hx - 2, hy - 3, 4, 1, '#e8ecf4')
+        s.rect(hx - 3, hy - 11, 6, 9, INK).rect(hx - 2, hy - 10, 4, 7, '#b9805a').rect(hx - 1, hy - 10, 1, 3, '#a0683c').rect(hx + 1, hy - 10, 1, 3, '#a0683c')
+        s.rect(hx + 3, hy - 7, 2, 4, INK).rect(hx + 3, hy - 6, 1, 2, '#b9805a')
       }
     }
   }
