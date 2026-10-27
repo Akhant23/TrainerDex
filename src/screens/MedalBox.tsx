@@ -1,7 +1,8 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { MenuEntry } from '../content/menu'
 import { medals } from '../content/medals'
 import { useProgress } from '../systems/progress'
+import { useSettings } from '../systems/settings'
 import { MedalArt } from '../ui/Medals'
 import { PixelBox } from '../ui/PixelBox'
 import { useGridNav } from '../ui/useGridNav'
@@ -22,17 +23,34 @@ const entry: MenuEntry = {
   planned: [],
 }
 
+/**
+ * Hovering or arrowing over the grid only moves the cursor (a dashed ring); a click, Enter / Space
+ * or Z picks the medal (the gold ring), which is what the card below and the hall up top show.
+ */
 export default function MedalBox() {
   const { medals: earned } = useProgress()
-  const nav = useGridNav(medals.length, 4, { autoFocus: true })
-  const m = medals[nav.focus]
+  const { sfx } = useSettings()
+  const [picked, setPicked] = useState(0)
+  const pick = (i: number) => {
+    if (i !== picked) sfx('select')
+    setPicked(i)
+  }
+  const nav = useGridNav(medals.length, 4, { autoFocus: true, onActivate: pick })
+  const m = medals[picked]
   const got = !!earned[m.id]
   const count = Object.keys(earned).length
 
   return (
     <SectionScreen entry={entry} title={`MEDALS ${count}/${medals.length}`} compactTop={false} top={
         <Suspense fallback={<div className="absolute inset-0 bg-[#0c0a18]" />}>
-          <MedalHall focus={nav.focus} earned={earned} onPick={(i) => nav.setFocus(i)} />
+          <MedalHall
+            focus={picked}
+            earned={earned}
+            onPick={(i) => {
+              nav.setFocus(i)
+              setPicked(i)
+            }}
+          />
         </Suspense>
       }>
       <div className="space-y-3 p-[3%]">
@@ -44,11 +62,15 @@ export default function MedalBox() {
                 key={md.id}
                 type="button"
                 role="option"
-                aria-selected={i === nav.focus}
+                aria-selected={i === picked}
                 aria-label={has || !('hidden' in md) ? `${md.name}${has ? ', earned' : ', not yet earned'}` : 'Hidden medal'}
                 {...nav.itemProps(i)}
-                className={`flex aspect-square cursor-pointer items-center justify-center border-0 bg-paper outline-none ${
-                  i === nav.focus ? 'gv-card--selected' : 'gv-card'
+                onClick={() => {
+                  nav.setFocus(i)
+                  pick(i)
+                }}
+                className={`medal-pick flex aspect-square cursor-pointer items-center justify-center border-0 bg-paper outline-none ${
+                  i === picked ? 'gv-card--selected' : 'gv-card'
                 }`}
               >
                 <MedalArt medal={md} earned={has} scale={3} />

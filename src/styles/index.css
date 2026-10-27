@@ -2052,6 +2052,14 @@ body {
   transform: rotate(40deg);
 }
 
+/* ---------------- Medal Box grid: a dashed cursor like the pager's (red here, on the light panel); the gold ring is the pick ---------------- */
+
+.medal-pick:hover,
+.medal-pick:focus-visible {
+  outline: calc(var(--u) * 0.67) dashed var(--color-dex-red);
+  outline-offset: calc(var(--u) * 2);
+}
+
 /* ---------------- PDF viewer (the resume): a dark control bar over paper sheets on the grid ---------------- */
 
 .pdf-bar {
