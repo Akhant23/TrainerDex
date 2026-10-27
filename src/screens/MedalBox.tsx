@@ -54,7 +54,7 @@ export default function MedalBox() {
         </Suspense>
       }>
       <div className="space-y-3 p-[3%]">
-        <div role="listbox" aria-label="Medals" className="grid grid-cols-4 gap-[3%]">
+        <div role="listbox" aria-label="Medals" className="grid grid-cols-4 gap-[2.8cqi]">
           {medals.map((md, i) => {
             const has = !!earned[md.id]
             return (
