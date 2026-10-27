@@ -111,8 +111,8 @@ function Resume() {
       <a className="pixel-btn pixel-btn--primary !text-[14px] no-underline" href={file} download={downloadName}>
         ⬇ DOWNLOAD
       </a>
-      <button type="button" className="pixel-btn !text-[14px]" onClick={() => printPdf(file)}>
-        ⎙ PRINT
+      <button type="button" className="pixel-btn inline-flex items-center gap-1.5 !text-[14px]" onClick={() => printPdf(file)}>
+        <PixelIcon name="print" scale={1} /> PRINT
       </button>
       <a className="pixel-btn !text-[14px] no-underline" href={file} target="_blank" rel="noreferrer">
         ↗ NEW TAB

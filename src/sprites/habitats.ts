@@ -168,7 +168,11 @@ function harbour(s: Scene, frame: number) {
   trainer(s, me({}), { front: { el: [61, 36], wr: [62, 22], hand: 'open' }, mouth: 'grin' }, 128, 184)
 }
 
-function courtroom(s: Scene) {
+/**
+ * Four frames: he jabs the point home (a burst of lines off his finger) while, up on the bench,
+ * the gavel lifts and comes down.
+ */
+function courtroom(s: Scene, frame: number) {
   // cream plaster above dark panelling, the court's arms over the bench
   s.rect(0, 0, s.w, 50, '#e6dcc2').rect(0, 46, s.w, 4, '#c8b48c')
   s.rect(0, 50, s.w, 70, '#6e4228')
@@ -188,14 +192,21 @@ function courtroom(s: Scene) {
   box(s, 30, 62, 196, 58, { fill: '#6a3a22', light: '#8a5232', shade: '#4a2616' }, 3)
   box(s, 26, 58, 204, 7, { fill: '#8a5030', light: '#a86a40', shade: '#6a3a22' }, 1)
   for (let x = 40; x < 220; x += 38) box(s, x, 72, 30, 40, { fill: '#5e321e', light: '#7a462a', shade: '#46240f' }, 2)
-  // the gavel on its block
+  // the gavel on its block, raised on one frame and brought down on the next
   box(s, 168, 52, 14, 5, { fill: '#5a3420' }, 0)
-  s.rect(170, 47, 10, 4, INK).rect(171, 48, 8, 2, '#8a5a2a').rect(174, 51, 2, 3, '#8a5a2a')
+  if (frame === 2) s.rect(171, 38, 10, 4, INK).rect(172, 39, 8, 2, '#8a5a2a').rect(175, 42, 2, 6, INK).rect(175, 42, 1, 5, '#8a5a2a')
+  else s.rect(170, 47, 10, 4, INK).rect(171, 48, 8, 2, '#8a5a2a').rect(174, 51, 2, 3, '#8a5a2a')
+  if (frame === 3) for (const [dx, dy, w, h] of [[-4, -2, 3, 1], [12, -2, 3, 1], [4, -6, 1, 3]] as const) s.rect(170 + dx, 50 + dy, w, h, '#f4e8c8')
   // carpet
   s.rect(0, 120, s.w, 72, '#7a2a32')
   for (let y = 124; y < 192; y += 8) for (let x = (y / 8) % 2 ? 0 : 8; x < 256; x += 16) s.rect(x, y, 2, 2, '#9a3a40')
   // him at the bar table, on his feet: "Objection!"
-  trainer(s, me({ top: 'suit', topColour: 'navy', accentColour: 'white', bottom: 'slacks', bottomColour: 'navy', shoes: 'formal', accessories: ['glasses', 'watch'] }), { front: { el: [61, 44], wr: [69.5, 41], hand: 'pointOut' }, mouth: 'grin', brow: 'up' }, 104, 186)
+  const jab = frame % 2 === 1
+  const hands = trainer(s, me({ top: 'suit', topColour: 'navy', accentColour: 'white', bottom: 'slacks', bottomColour: 'navy', shoes: 'formal', accessories: ['glasses', 'watch'] }), { front: { el: [61, 44], wr: jab ? [71.5, 40] : [69.5, 41], hand: 'pointOut' }, mouth: jab ? 'grin' : 'smile', brow: 'up' }, 104, 186)
+  if (jab) {
+    const [px, py] = hands.front
+    for (const [dx, dy, w, h] of [[8, -7, 4, 1], [10, -1, 5, 1], [8, 5, 4, 1]] as const) s.rect(px + dx, py + dy, w, h, '#fff4c8')
+  }
   // the bar table across the front: folders, a brief in pink tape, a water jug
   box(s, -4, 150, 264, 8, { fill: '#8a5232', light: '#a86a42', shade: '#6a3c22' }, 2)
   box(s, 4, 157, 248, 40, { fill: '#5e341e', light: '#7a462a', shade: '#46240f' }, 3)
@@ -418,12 +429,29 @@ function pitch(s: Scene, frame: number) {
   ball(s, 152, 180)
 }
 
-function oval(s: Scene) {
+/** Where the ball is down the pitch on each frame: bowled, pitching, rising off the deck, through. */
+const DELIVERY: Array<[number, number] | null> = [
+  [198, 112],
+  [204, 140],
+  [210, 160],
+  null,
+]
+
+/**
+ * Four frames: a ball is bowled down the pitch behind him (pitching and coming through), the flag
+ * on the pavilion flutters, and he taps the bat on his shoulder.
+ */
+function oval(s: Scene, frame: number) {
   sky(s, 88, ['#7ab8ec', '#8ec4ee', '#a6d0f2', '#bcdcf4', '#cce4f4'])
   // a line of trees and the pavilion behind the boundary
   for (let x = -10; x < 270; x += 22) s.ellipse(x, 74, 16, 12, INK).ellipse(x, 74, 15, 11, '#3e7a44').ellipse(x - 3, 71, 9, 6, '#4e8e52')
   box(s, 24, 46, 96, 40, { fill: '#f2efe6', light: '#ffffff', shade: '#c8c2b4' }, 2)
   s.poly([[18, 48], [72, 30], [126, 48]], INK).poly([[21, 47], [72, 32], [123, 47]], '#3a7a4a')
+  // the flag on the pavilion roof, fluttering
+  s.rect(72, 14, 1, 18, INK)
+  const wave = [0, 1, 0, -1][frame]
+  s.poly([[73, 15], [84, 16 + wave], [84, 22 + wave], [73, 21]], INK).poly([[73, 16], [83, 17 + wave], [83, 21 + wave], [73, 20]], '#e0383e')
+  s.rect(73, 18, 10, 1, '#f4f0e8')
   for (let x = 32; x < 116; x += 14) box(s, x, 58, 10, 16, { fill: '#5a7a9a', light: '#8aaac8' }, 1)
   box(s, 140, 50, 60, 36, { fill: '#f4f4f0', light: '#ffffff', shade: '#c8c8c0' }, 2)
   s.rect(0, 86, s.w, 106, '#68aa48')
@@ -436,12 +464,21 @@ function oval(s: Scene) {
   s.rect(180, 116, 30, 1, '#f4f4ec').rect(186, 174, 50, 1, '#f4f4ec')
   for (const x of [192, 196, 200]) s.rect(x, 96, 2, 20, INK).rect(x, 97, 1, 18, '#f6f2e4')
   s.rect(191, 96, 11, 1, '#c8a060')
+  // a ball coming down the pitch: its shadow on the deck, a puff of dust where it pitches
+  const ball = DELIVERY[frame]
+  if (ball) {
+    const [bx, by] = ball
+    const lift = frame === 1 ? 0 : 6
+    s.ellipse(bx, by + lift, 2.6, 1.2, '#b8a870')
+    s.ellipse(bx, by, 2.6, 2.6, INK).ellipse(bx, by, 1.8, 1.8, '#c8282e').set(bx - 1, by - 1, '#f08a8a')
+    if (frame === 1) s.rect(bx - 5, by + 2, 2, 1, '#e8dcb0').rect(bx + 4, by + 2, 2, 1, '#e8dcb0')
+  }
   // a bucket of balls and a cone: coaching
   box(s, 40, 166, 18, 16, { fill: '#e8b830', light: '#f8d060', shade: '#b88810' }, 1)
   for (const x of [43, 49, 54]) s.ellipse(x, 165, 3, 2.4, INK).ellipse(x, 165, 2.4, 2, '#c8282e')
   s.poly([[226, 186], [234, 168], [242, 186]], INK).poly([[228, 185], [234, 170], [240, 185]], '#f08a2a')
   shadow(s, 120, 186, 14)
-  const hands = trainer(s, me({ top: 'tee', topColour: 'white', accentColour: 'white', bottom: 'slacks', bottomColour: 'white', hat: 'cap', hatColour: 'navy', accessories: ['glasses', 'watch'] }), { front: { el: [62, 40], wr: [57, 30], hand: 'fist' }, mouth: 'smile' }, 120, 186)
+  const hands = trainer(s, me({ top: 'tee', topColour: 'white', accentColour: 'white', bottom: 'slacks', bottomColour: 'white', hat: 'cap', hatColour: 'navy', accessories: ['glasses', 'watch'] }), { front: { el: [62, 40], wr: frame % 2 ? [57, 28.5] : [57, 30], hand: 'fist' }, mouth: 'smile', eyes: frame === 3 ? 'closed' : 'open' }, 120, 186)
   batOnShoulder(s, hands.front)
 }
 
@@ -524,9 +561,19 @@ function bedroom(s: Scene, frame: number) {
   s.rect(170, ny, 1, 8, '#f4f0e8').ellipse(168, ny + 8, 2.4, 2, '#f4f0e8').rect(170, ny, 4, 1, '#f4f0e8')
 }
 
-function street(s: Scene) {
+/**
+ * Four frames: he lines up the shot and the camera flashes, the fairy lights across the lane
+ * twinkle in turn, and a pair of birds crosses the sunset.
+ */
+function street(s: Scene, frame: number) {
   sky(s, 110, ['#f0a868', '#f4b874', '#f6c882', '#f8d892', '#fae4a6'])
   s.ellipse(150, 100, 22, 22, '#fff4cc')
+  for (const [dx, dy] of [[0, 0], [9, 4]] as const) {
+    const bx = 92 + frame * 9 + dx
+    const by = 66 + dy - (frame % 2)
+    const up = (frame + dx) % 2 === 0
+    s.set(bx - 2, by + (up ? -1 : 1), '#6a3a3a').set(bx - 1, by, '#6a3a3a').set(bx, by + 1, '#6a3a3a').set(bx + 1, by, '#6a3a3a').set(bx + 2, by + (up ? -1 : 1), '#6a3a3a')
+  }
   // the far end of the lane: low rooftops against the glow, the street running away into it
   const far = rng(19)
   for (let x = 60; x < 196; x += 8 + Math.floor(far() * 6)) {
@@ -545,7 +592,7 @@ function street(s: Scene) {
   }
   // fairy lights strung across the lane
   for (let x = 70; x < 186; x += 2) s.set(x, 46 + Math.round(Math.sin(((x - 70) / 116) * Math.PI) * 10), INK)
-  for (let x = 76; x < 182; x += 9) s.ellipse(x, 48 + Math.round(Math.sin(((x - 70) / 116) * Math.PI) * 10), 1.6, 1.6, '#fff0a0')
+  for (let x = 76, i = 0; x < 182; x += 9, i++) s.ellipse(x, 48 + Math.round(Math.sin(((x - 70) / 116) * Math.PI) * 10), 1.6, 1.6, (i + frame) % 3 === 0 ? '#ffffff' : (i + frame) % 3 === 1 ? '#fff0a0' : '#e8b860')
   // cobbled lane
   s.rect(0, 150, s.w, 42, '#8a7a6e')
   for (let y = 152; y < 192; y += 5) for (let x = (y / 5) % 2 ? 0 : 5; x < 256; x += 10) s.rect(x, y, 9, 4, '#9a8a7c').rect(x, y + 3, 9, 1, '#6e6056')
@@ -554,8 +601,16 @@ function street(s: Scene) {
   box(s, 164, 60, 15, 12, { fill: '#f8e8a0', light: '#ffffff', shade: '#d8b860' }, 1)
   shadow(s, 116, 186, 14)
   // him with the camera up, framing a shot
-  const hands = trainer(s, me({ top: 'jacket', topColour: 'tan', accentColour: 'brown', bottom: 'jeans', bottomColour: 'navy', accessories: ['glasses', 'bag', 'watch'] }), { front: { el: [61, 42], wr: [53, 31], hand: 'fist' }, back: { el: [21, 42], wr: [29, 31], hand: 'fist' }, mouth: 'calm' }, 116, 186)
-  cameraHeld(s, [(hands.front[0] + hands.back[0]) / 2, (hands.front[1] + hands.back[1]) / 2 - 2])
+  const flash = frame === 2
+  const hands = trainer(s, me({ top: 'jacket', topColour: 'tan', accentColour: 'brown', bottom: 'jeans', bottomColour: 'navy', accessories: ['glasses', 'bag', 'watch'] }), { front: { el: [61, 42], wr: [53, 31], hand: 'fist' }, back: { el: [21, 42], wr: [29, 31], hand: 'fist' }, mouth: frame === 3 ? 'smile' : 'calm' }, 116, 186)
+  const cam: [number, number] = [(hands.front[0] + hands.back[0]) / 2, (hands.front[1] + hands.back[1]) / 2 - 2]
+  cameraHeld(s, cam)
+  // the flash going off: a burst of light from the top of the camera
+  if (flash) {
+    const [fx, fy] = [cam[0] + 6, cam[1] - 6]
+    s.ellipse(fx, fy, 6, 6, '#fff8d8').ellipse(fx, fy, 3, 3, '#ffffff')
+    for (const [dx, dy, w, h] of [[-12, 0, 5, 1], [8, 0, 5, 1], [0, -12, 1, 5], [0, 8, 1, 4], [-9, -9, 2, 2], [8, -9, 2, 2]] as const) s.rect(fx + dx, fy + dy, w, h, '#ffffff')
+  }
 }
 
 function library(s: Scene, frame: number) {
@@ -655,51 +710,78 @@ function chambers(s: Scene, frame: number) {
   s.rect(16, 139, 6, 2, '#5a3a22')
 }
 
-function hall(s: Scene) {
+/** The slides the panel's screen cycles through: bullet points, a bar chart, a pie, a Q&A card. */
+function slide(s: Scene, x: number, y: number, frame: number) {
+  s.rect(x, y, 96, 3, '#3a5aa0')
+  if (frame === 0) s.rect(x, y + 7, 82, 2, '#8a90a0').rect(x, y + 11, 72, 2, '#8a90a0').rect(x, y + 15, 62, 2, '#8a90a0').rect(x, y + 19, 76, 2, '#8a90a0')
+  else if (frame === 1) for (const [i, h, c] of [[0, 7, '#3a5aa0'], [1, 12, '#e0383e'], [2, 10, '#f8c838'], [3, 15, '#4aa242']] as const) s.rect(x + 14 + i * 18, y + 21 - h, 12, h, c)
+  else if (frame === 2) {
+    s.ellipse(x + 24, y + 13, 8, 8, '#3a5aa0').poly([[x + 24, y + 13], [x + 24, y + 5], [x + 32, y + 13]], '#e0383e').poly([[x + 24, y + 13], [x + 32, y + 13], [x + 29, y + 19]], '#f8c838')
+    s.rect(x + 42, y + 8, 40, 2, '#8a90a0').rect(x + 42, y + 13, 34, 2, '#8a90a0').rect(x + 42, y + 18, 28, 2, '#8a90a0')
+  } else s.rect(x + 30, y + 7, 36, 13, '#3a5aa0').rect(x + 36, y + 10, 24, 2, '#f4f0e8').rect(x + 36, y + 15, 16, 2, '#f4f0e8')
+}
+
+/**
+ * Four frames of a society panel: the slides move on, someone in the audience puts a hand up for
+ * a question, heads turn, and he nods along at the side of the room with his clipboard.
+ */
+function hall(s: Scene, frame: number) {
   s.rect(0, 0, s.w, 112, '#2e2a4a')
   for (let x = 0; x < 256; x += 24) s.rect(x, 0, 2, 112, '#26223e')
-  // the society's banner over the stage, and the screen
+  // the society's banner over the stage: its name, and a crest
   box(s, 28, 8, 200, 24, { fill: '#e0383e', light: '#f05a5a', shade: '#a02028' }, 2)
-  s.rect(40, 14, 40, 4, '#f8c838').rect(40, 21, 60, 3, '#f4f0e8').rect(170, 12, 46, 14, '#f4f0e8').ellipse(193, 19, 5, 5, '#e0383e')
-  box(s, 72, 36, 112, 46, { fill: '#e8ecf2', light: '#ffffff', shade: '#b8c0cc' }, 1)
-  s.rect(80, 44, 48, 4, '#3a5aa0').rect(80, 52, 90, 2, '#8a90a0').rect(80, 57, 80, 2, '#8a90a0').rect(80, 62, 70, 2, '#8a90a0')
+  s.rect(40, 14, 40, 4, '#f8c838').rect(40, 21, 60, 3, '#f4f0e8').rect(112, 15, 30, 3, '#f4f0e8')
+  s.poly([[196, 11], [212, 11], [212, 21], [204, 28], [196, 21]], INK).poly([[197, 12], [211, 12], [211, 20], [204, 26], [197, 20]], '#f8c838')
+  s.poly([[199, 16], [204, 13], [209, 16], [209, 18], [204, 15], [199, 18]], '#a02028').rect(203, 19, 2, 5, '#a02028')
+  // the screen, above the panel's chair backs
+  box(s, 72, 35, 112, 28, { fill: '#e8ecf2', light: '#ffffff', shade: '#b8c0cc' }, 1)
+  slide(s, 80, 38, frame)
   // the stage and the panel table with its microphones
   box(s, -4, 96, 264, 22, { fill: '#5a3a28', light: '#7a5236', shade: '#3e2618' }, 3)
+  for (const x of [84, 128, 172]) box(s, x - 8, 67, 18, 14, { fill: '#3a3a46', light: '#54546a' }, 1)
   box(s, 56, 80, 144, 18, { fill: '#2a3a6a', light: '#3e5088', shade: '#1e2a4e' }, 2)
-  for (const x of [84, 128, 172]) {
-    s.rect(x, 70, 2, 11, INK).rect(x - 2, 68, 6, 4, INK)
-    box(s, x - 8, 60, 18, 20, { fill: '#3a3a46', light: '#54546a' }, 1)
-  }
+  for (const x of [84, 128, 172]) s.rect(x, 72, 2, 9, INK).rect(x - 2, 70, 6, 4, INK)
   boards(s, 118, '#8a6a4a', '#806242', '#5a4228', 6)
-  // the audience, from behind: rows of chairs and heads
-  for (const [y, n, sz] of [[150, 9, 1], [172, 7, 1.25]] as const) {
+  // the audience, from behind, filling the room up to the side aisle: rows of chairs and heads
+  const hairs = ['#2a1a12', '#5a3a22', '#1a1a20', '#a06a3a']
+  for (const [y, n, sz, row] of [[148, 6, 1, 0], [170, 5, 1.25, 1]] as const) {
     for (let i = 0; i < n; i++) {
-      const x = 14 + i * (240 / n) + ((y / 2) % 2) * 8
+      const x = 16 + i * (156 / n) + row * 10
       box(s, x - 9 * sz, y, 18 * sz, 22 * sz, { fill: '#3a3a4a', light: '#54546a', shade: '#262632' }, 1)
-      s.ellipse(x, y - 4 * sz, 6 * sz, 7 * sz, INK).ellipse(x, y - 4 * sz, 5 * sz, 6 * sz, ['#2a1a12', '#5a3a22', '#1a1a20', '#a06a3a'][i % 4])
+      // heads turn now and then to whisper to a neighbour
+      const turn = (i + row + frame) % 5 === 0 ? 1 : 0
+      s.ellipse(x + turn, y - 4 * sz, 6 * sz, 7 * sz, INK).ellipse(x + turn, y - 4 * sz, 5 * sz, 6 * sz, hairs[(i + row) % 4])
+      // question time: a hand goes up in the back row
+      if (row === 0 && i === 2 && frame >= 2) {
+        const hx = x + 5
+        const up = frame === 3 ? 2 : 0
+        s.rect(hx - 1, y - 24 - up, 6, 18 + up, INK).rect(hx, y - 23 - up, 4, 17 + up, '#5a6a9a')
+        s.rect(hx - 1, y - 30 - up, 6, 7, INK).rect(hx, y - 29 - up, 4, 5, '#b9805a').rect(hx + 4, y - 27 - up, 2, 3, INK).set(hx + 4, y - 26 - up, '#b9805a')
+      }
     }
   }
-  // him at the side of the room, running it: clipboard in hand
-  const hands = trainer(s, me({ top: 'blazer', topColour: 'navy', accentColour: 'white', bottom: 'slacks', bottomColour: 'grey', shoes: 'formal', accessories: ['glasses', 'watch'] }), { front: { el: [60, 52], wr: [53, 47], hand: 'fist' }, mouth: 'grin' }, 214, 176)
+  // him in the side aisle, running it: clipboard in hand, nodding along
+  shadow(s, 216, 188, 14)
+  const hands = trainer(s, me({ top: 'blazer', topColour: 'navy', accentColour: 'white', bottom: 'slacks', bottomColour: 'grey', shoes: 'formal', accessories: ['glasses', 'watch'] }), { front: { el: [60, 52], wr: [53, 47], hand: 'fist' }, mouth: frame >= 2 ? 'smile' : 'grin', tilt: frame % 2 ? 1 : 0, eyes: frame === 1 ? 'down' : 'open' }, 216, 188)
   clipboardHeld(s, [hands.front[0] - 3, hands.front[1] - 4])
 }
 
 export const HABITATS: Record<HabitatId, Habitat> = {
   harbour: { label: 'Sydney Harbour', alt: 'Aaryan waving in a harbourside park at dusk, the Harbour Bridge and the Opera House across the water.', frames: 2, draw: harbour },
-  courtroom: { label: 'Courtroom', alt: 'Aaryan in a suit at the bar table of a wood-panelled courtroom, pointing: objection.', frames: 1, draw: courtroom },
+  courtroom: { label: 'Courtroom', alt: 'Aaryan in a suit at the bar table of a wood-panelled courtroom, pointing: objection, while the gavel comes down on the bench.', frames: 4, draw: courtroom },
   review: { label: 'Review floor', alt: 'Aaryan in a shirt and tie beside a desk of document-review screens, the city through the window.', frames: 4, draw: review },
   lab: { label: 'Biotech lab', alt: 'Aaryan in a white coat behind a lab bench, holding a flask up to the light, a microscope and test tubes beside him.', frames: 3, draw: lab },
   stall: { label: 'Society stall', alt: 'Aaryan in a society hoodie behind a merch stall under a striped canopy, a sold-out sign on the table.', frames: 2, draw: stall },
   campus: { label: 'Main walkway', alt: 'Aaryan holding up a tour flag on a campus walkway under O-Week bunting, sandstone arches behind.', frames: 2, draw: campus },
   pitch: { label: 'Football pitch', alt: 'Aaryan in the number 7 jersey on a football pitch, fist raised, the goal and a full stand behind.', frames: 2, draw: pitch },
-  oval: { label: 'Cricket oval', alt: 'Aaryan in whites and a cap with a bat on his shoulder at the nets of a cricket oval, a bucket of balls beside him.', frames: 1, draw: oval },
+  oval: { label: 'Cricket oval', alt: 'Aaryan in whites and a cap with a bat on his shoulder at a cricket oval, a ball being bowled down the pitch behind him and a bucket of balls beside him.', frames: 4, draw: oval },
   club: { label: 'DJ booth', alt: 'Aaryan in headphones behind the decks of a DJ booth, beams of light and an LED wall behind him.', frames: 4, draw: club },
   bedroom: { label: 'Music corner', alt: 'Aaryan playing an acoustic guitar in his room, an amp, posters and fairy lights around him.', frames: 3, draw: bedroom },
-  street: { label: 'Golden-hour lane', alt: 'Aaryan raising a camera in a laneway at golden hour, warm windows and fairy lights around him.', frames: 1, draw: street },
+  street: { label: 'Golden-hour lane', alt: 'Aaryan taking a photo in a laneway at golden hour, the flash going off, warm windows and twinkling fairy lights around him.', frames: 4, draw: street },
   library: { label: 'Reading nook', alt: 'Aaryan reading a book between tall bookshelves, rain on the window and a lamp glowing by an armchair.', frames: 2, draw: library },
   den: { label: 'Gaming den', alt: 'Aaryan with a controller in front of a TV mid-game, a beanbag and a shelf of consoles in the glow of an LED strip.', frames: 3, draw: den },
   chambers: { label: 'Chambers', alt: 'Aaryan typing at a desk in chambers at night: briefs tied in pink tape, a green banker’s lamp, law reports on the shelves.', frames: 3, draw: chambers },
-  hall: { label: 'Society event', alt: 'Aaryan with a clipboard at the side of a hall during a society panel, the audience seen from behind.', frames: 1, draw: hall },
+  hall: { label: 'Society event', alt: 'Aaryan with a clipboard in the side aisle of a hall during a society panel, the slides moving on and a hand going up in the audience for a question.', frames: 4, draw: hall },
 }
 
 /** Paint one frame of a habitat into a fresh scene. */

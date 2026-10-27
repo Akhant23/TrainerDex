@@ -1,15 +1,23 @@
 /**
- * The Pokédex encounter's scenes: one per line of its dialogue, every frame paints the whole
- * window, the resting frame is one of the loop's, and every frame of the loop is a new picture.
+ * The Pokédex encounter's scenes: three per encounter (he appears, one vignette, he flees), one
+ * per line of its dialogue; every frame paints the whole window, the resting frame is one of the
+ * loop's, and every frame of the loop is a new picture.
  */
 import { describe, expect, it } from 'vitest'
-import { ENCOUNTER_ART, ENCOUNTER_SCENES, paintEncounter } from './encounters'
+import { ENCOUNTER_ART, ENCOUNTER_SCENES, encounterScenes, paintEncounter, VIGNETTES } from './encounters'
 import { HAB_H, HAB_W } from './habitat-kit'
 import { dialogue } from '../content/dialogue'
+import { encounterLines } from '../systems/encounter'
 
 describe('wild Aaryan encounter scenes', () => {
-  it('has a scene for every line of the encounter', () => {
-    expect(ENCOUNTER_SCENES.length).toBe(dialogue.rareEncounter.lines.length)
+  it('plays three scenes, appear → one vignette → fled, each with its own line', () => {
+    for (const v of VIGNETTES) {
+      expect(encounterScenes(v)).toEqual(['wild', v, 'fled'])
+      const lines = encounterLines(v)
+      expect(lines).toEqual([dialogue.rareEncounter.appear, dialogue.rareEncounter.vignettes[v], dialogue.rareEncounter.fled])
+      for (const l of lines) expect(l).not.toMatch(/missing dialogue/)
+    }
+    expect(new Set(VIGNETTES.map((v) => dialogue.rareEncounter.vignettes[v])).size).toBe(VIGNETTES.length)
   })
 
   it('every frame fills the window, and the resting frame is in the loop', () => {

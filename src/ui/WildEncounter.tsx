@@ -1,15 +1,17 @@
 import { useCallback } from 'react'
-import { ENCOUNTER_ART, ENCOUNTER_SCENES, paintEncounter } from '../sprites/encounters'
+import { ENCOUNTER_ART, encounterScenes, paintEncounter, type Vignette } from '../sprites/encounters'
 import { PaintedScene } from './PaintedScene'
 
 /**
- * The rare encounter's top screen: a painted scene per line of the story (in the grass, in his
- * room hunting for the charger, at his desk checking his watch, gone in a puff of dust), opening
- * on the battle-start flashes and cutting between scenes with a quick white flash. Lines past the
- * last scene keep it. (The Pokédex plays it; the admin's EASTER EGGS tab previews it.)
+ * The rare encounter's top screen: three painted scenes, one per line of its dialogue. He turns
+ * up in the tall grass, then the vignette (in his room hunting for the charger, at his desk
+ * checking his watch, or caught mid-match at his PC), then he's gone in a puff of dust. It opens
+ * on the battle-start flashes and cuts between scenes with a quick white flash. (The Pokédex plays
+ * it; the admin's EASTER EGGS tab previews it.)
  */
-export function WildEncounter({ line, intro = true }: { line: number; intro?: boolean }) {
-  const scene = ENCOUNTER_SCENES[Math.min(Math.max(0, line), ENCOUNTER_SCENES.length - 1)]
+export function WildEncounter({ line, vignette, intro = true }: { line: number; vignette: Vignette; intro?: boolean }) {
+  const scenes = encounterScenes(vignette)
+  const scene = scenes[Math.min(Math.max(0, line), scenes.length - 1)]
   const art = ENCOUNTER_ART[scene]
   const paint = useCallback((frame: number) => paintEncounter(scene, frame).toRGBA(), [scene])
   return (

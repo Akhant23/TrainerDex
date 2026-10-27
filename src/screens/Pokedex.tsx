@@ -12,6 +12,7 @@ import { Bullets, Sources, TypeChip } from '../ui/bits'
 import { DexHabitat } from '../ui/DexHabitat'
 import { HABITATS } from '../sprites/habitats'
 import { WildEncounter } from '../ui/WildEncounter'
+import { encounterLines, pickVignette } from '../systems/encounter'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 
@@ -83,6 +84,9 @@ let lastIndex = 0
 function Detail({ dex }: { dex: DexEntry }) {
   const { sfx } = useSettings()
   const [wild, setWild] = useState(() => Math.random() < 1 / dialogue.rareEncounter.odds)
+  // what he's caught doing this time, and its three lines
+  const [vignette] = useState(pickVignette)
+  const [encounter] = useState(() => encounterLines(vignette))
   // which line of the encounter is showing, so its picture can follow the story
   const [line, setLine] = useState(0)
   useEffect(() => progress.seeDex(dex.no), [dex.no])
@@ -106,10 +110,10 @@ function Detail({ dex }: { dex: DexEntry }) {
 
   if (wild)
     return (
-      <SectionScreen entry={entry} backTo="/pokedex" title="A WILD ENCOUNTER!" compactTop={false} top={<WildEncounter line={line} />} backKeys={false}>
+      <SectionScreen entry={entry} backTo="/pokedex" title="A WILD ENCOUNTER!" compactTop={false} top={<WildEncounter line={line} vignette={vignette} />} backKeys={false}>
         <div className="p-[4%]">
           <DialogueBox
-            lines={dialogue.rareEncounter.lines}
+            lines={encounter}
             onLine={setLine}
             onDone={() => {
               progress.unlock('rare-encounter')

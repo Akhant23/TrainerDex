@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { dialogue } from '../content/dialogue'
 import { medals, type Medal } from '../content/medals'
 import { shinyOdds } from '../content/sprites'
-import { ENCOUNTER_ART, ENCOUNTER_SCENES, paintEncounter, type EncounterScene } from '../sprites/encounters'
+import { ENCOUNTER_ART, encounterScenes, paintEncounter, type EncounterScene, type Vignette } from '../sprites/encounters'
+import { encounterLines } from '../systems/encounter'
 import { useSettings } from '../systems/settings'
 import { DialogueBox } from '../ui/DialogueBox'
 import { PaintedScene } from '../ui/PaintedScene'
 import { TrainerSprite } from '../ui/TrainerSprite'
 import { WildEncounter } from '../ui/WildEncounter'
-import { AdminPage } from './AdminUi'
+import { AdminPage, Segmented, type SegmentOption } from './AdminUi'
 
 /** How long auto-play stays on each line of the encounter before cutting to the next. */
 const LINE_MS = 3600
@@ -77,14 +78,22 @@ function EggCard({ id, trigger, children }: { id: string; trigger: string; child
   )
 }
 
+const VIGNETTE_OPTIONS: SegmentOption<Vignette>[] = [
+  { value: 'charger', label: 'CHARGER' },
+  { value: 'deadline', label: 'DEADLINE' },
+  { value: 'valorant', label: 'VALORANT' },
+]
+
 /**
- * The rare encounter as a cutscene: the top-screen scene above its dialogue line, with PLAY (from
- * the battle-start flashes, auto-advancing), step back and forward, and the scenes as thumbnails
- * to jump straight to one.
+ * The rare encounter as a cutscene: pick which of the three vignettes plays in the middle, then
+ * the top-screen scene above its dialogue line, with PLAY (from the battle-start flashes,
+ * auto-advancing), step back and forward, and the three scenes as thumbnails to jump to.
  */
 function EncounterPlayer() {
   const { sfx } = useSettings()
-  const lines = dialogue.rareEncounter.lines
+  const [vignette, setVignette] = useState<Vignette>('charger')
+  const lines = encounterLines(vignette)
+  const scenes = encounterScenes(vignette)
   const last = lines.length - 1
   const [line, setLine] = useState(0)
   // bumping `run` restarts the cutscene from its opening flashes
@@ -111,6 +120,14 @@ function EncounterPlayer() {
     setAuto(false)
     setLine(Math.max(0, Math.min(last, n)))
   }
+  const pickVignette = (v: Vignette) => {
+    if (v === vignette) return
+    sfx('cursor')
+    setVignette(v)
+    setAuto(false)
+    // straight to the vignette's own scene, the one that changed
+    setLine(1)
+  }
   const m = medal('rare-encounter')
 
   return (
@@ -122,14 +139,15 @@ function EncounterPlayer() {
         <span className={`adm-egg-tier adm-egg-tier--${m.tier}`}>{m.tier.toUpperCase()}</span>
       </div>
       <p className="adm-egg-trigger">
-        <span className="adm-egg-label">HOW</span> 1 in {dialogue.rareEncounter.odds} when a visitor opens a Pokédex entry. It plays one scene per line; clicking the text moves it on.
+        <span className="adm-egg-label">HOW</span> 1 in {dialogue.rareEncounter.odds} when a visitor opens a Pokédex entry. Three scenes, one per line: he appears in the grass, one of these three (at random) shows what he was up to, and he flees. Clicking the text moves it on.
       </p>
+      <Segmented label="Middle scene" value={vignette} options={VIGNETTE_OPTIONS} onChange={pickVignette} />
       <div className="adm-egg-film">
         <div className="adm-egg-stage">
-          <WildEncounter key={run} line={line} intro={run > 0 && line === 0} />
+          <WildEncounter key={run} line={line} vignette={vignette} intro={run > 0 && line === 0} />
         </div>
         <div className="adm-egg-side">
-          <DialogueBox key={`${run}:${line}`} lines={[lines[line]]} waitOnLast={false} active={false} />
+          <DialogueBox key={`${run}:${vignette}:${line}`} lines={[lines[line]]} waitOnLast={false} active={false} />
           <div className="adm-egg-controls">
             <button type="button" className="pixel-btn adm-btn adm-btn--go" onClick={play}>
               ▶ {run ? 'REPLAY' : 'PLAY'}
@@ -151,9 +169,9 @@ function EncounterPlayer() {
             </button>
           </div>
           <ol className="adm-egg-scenes" aria-label="Scenes">
-            {ENCOUNTER_SCENES.map((s, i) => (
+            {scenes.map((s, i) => (
               <li key={s}>
-                <button type="button" className={`adm-egg-thumb ${i === Math.min(line, ENCOUNTER_SCENES.length - 1) ? 'adm-egg-thumb--on' : ''}`} onClick={() => go(i)} aria-label={`Line ${i + 1}: ${lines[i]}`} aria-current={i === line}>
+                <button type="button" className={`adm-egg-thumb ${i === line ? 'adm-egg-thumb--on' : ''}`} onClick={() => go(i)} aria-label={`Line ${i + 1}: ${lines[i]}`} aria-current={i === line}>
                   <SceneThumb scene={s} />
                   <span>{i + 1}</span>
                 </button>
