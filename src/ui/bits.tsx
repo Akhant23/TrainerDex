@@ -71,10 +71,13 @@ export function toPoints(text: string): string[] {
     .filter(Boolean)
 }
 
-/** ▸ dot-point list with comfortable spacing. Pass prose (split by sentence) or an array. */
-export function Bullets({ items, className = '' }: { items: string | readonly string[]; className?: string }) {
+/**
+ * ▸ dot-point list with comfortable spacing. Pass prose (split by sentence) or an array. A single
+ * point is a plain paragraph unless `marked`, where it keeps its ▸ (so a page's points all match).
+ */
+export function Bullets({ items, className = '', marked = false }: { items: string | readonly string[]; className?: string; marked?: boolean }) {
   const list = typeof items === 'string' ? toPoints(items) : items
-  if (list.length === 1) return <p className={`m-0 leading-relaxed ${className}`}>{list[0]}</p>
+  if (list.length === 1 && !marked) return <p className={`m-0 leading-relaxed ${className}`}>{list[0]}</p>
   return (
     <ul className={`m-0 list-none space-y-3.5 p-0 leading-relaxed ${className}`}>
       {list.map((t) => (
