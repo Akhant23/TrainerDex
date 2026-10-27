@@ -262,7 +262,7 @@ function BadgeDetail({ badge }: { badge: Badge }) {
           <p className="font-display m-0 text-[clamp(14px,3.6cqi,20px)] text-dex-red">{badge.title}</p>
           <p className="m-0 mt-1 font-semibold">{badge.org}</p>
           <p className="m-0 text-[14px] text-muted">{badge.dates}</p>
-          <Bullets items={badge.description} className="mt-4" />
+          <Bullets items={badge.description} marked className="mt-4" />
         </PixelBox>
         <section>
           <Heading>SKILLS</Heading>

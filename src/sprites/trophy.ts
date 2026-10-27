@@ -56,16 +56,24 @@ export function trophyArt(emblem: Pixels, emblemPalette: Palette): { pixels: Pix
   g.ellipse(cx, 14, 35.5, 5.5, 'A', 'a', 'W')
   g.ellipse(cx, 13.4, 31, 3.4, 'd')
   g.ellipse(cx, 12.8, 27, 2, 'a')
-  // the medallion: a gold ring round a cream plate, the badge's emblem at 2× on it
-  g.ellipse(cx, 38, 21, 21, 'a', 'd', 'A')
-  g.ellipse(cx, 38, 18.5, 18.5, 'P', 'p')
-  emblem.forEach((row, y) =>
-    [...row].forEach((ch, x) => {
-      if (ch === '.') return
-      const k = ch === 'K' ? 'K' : ch === 'A' ? 'E' : ch === 'a' ? 'e' : ch === 'W' ? 'Q' : ch === 'C' ? 'C' : 'K'
-      g.rect(cx - 16 + x * 2 - 0.5, 22 + y * 2, cx - 16 + x * 2 + 0.5, 22 + y * 2 + 1, k)
-    }),
-  )
+  // the medallion: a gold ring round a cream plate, the badge's emblem at 2× on it, centred on the
+  // plate by the pixels it actually draws (badge art isn't always centred in its 16×16 square)
+  const cy = 38
+  g.ellipse(cx, cy, 21, 21, 'a', 'd', 'A')
+  g.ellipse(cx, cy, 18.5, 18.5, 'P', 'p')
+  const drawn = emblem.flatMap((row, y) => [...row].flatMap((ch, x) => (ch === '.' ? [] : [[x, y] as const])))
+  const [ex0, ex1] = [Math.min(...drawn.map((p) => p[0])), Math.max(...drawn.map((p) => p[0]))]
+  const [ey0, ey1] = [Math.min(...drawn.map((p) => p[1])), Math.max(...drawn.map((p) => p[1]))]
+  // the emblem's top-left corner, on whole pixels, so its middle lands on the plate's middle
+  const left = Math.round(cx + 0.5 - (ex1 - ex0 + 1))
+  const top = Math.round(cy - (ey1 - ey0 + 1))
+  for (const [x, y] of drawn) {
+    const ch = emblem[y][x]
+    const k = ch === 'K' ? 'K' : ch === 'A' ? 'E' : ch === 'a' ? 'e' : ch === 'W' ? 'Q' : ch === 'C' ? 'C' : 'K'
+    const px = left + (x - ex0) * 2
+    const py = top + (y - ey0) * 2
+    g.rect(px, py, px + 1, py + 1, k)
+  }
   // the stem: a collar under the bowl, a knot, a flare to the base
   g.rect(42, 64, 53, 70, 'A').rect(50, 64, 53, 70, 'a').rect(42, 64, 43, 70, 'W')
   g.ellipse(cx, 75, 10, 4.5, 'A', 'a', 'W')

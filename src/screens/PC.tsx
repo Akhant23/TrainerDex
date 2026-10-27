@@ -456,7 +456,7 @@ function CaseStudyView({ project }: { project: Project }) {
             {project.org}
             {project.date && ` · ${project.date}`}
           </p>
-          <Bullets items={project.summary} className="mt-3" />
+          <Bullets items={project.summary} marked className="mt-3" />
           <dl className="m-0 mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[15px]">
             <dt className="font-display text-[13px] leading-[1.9] text-muted">ROLE</dt>
             <dd className="m-0">{project.role ?? <Pending>To be confirmed.</Pending>}</dd>
@@ -472,7 +472,7 @@ function CaseStudyView({ project }: { project: Project }) {
           .map(([label, text]) => (
             <section key={label}>
               <Heading>{label}</Heading>
-              <p className="m-0">{text}</p>
+              <Bullets items={text!} marked />
             </section>
           ))}
         {!project.confirmed && <p className="m-0 text-[13px] text-muted">Draft entry — year and role still to be confirmed.</p>}
