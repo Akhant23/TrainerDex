@@ -17,14 +17,16 @@ const cache = new Map<string, ImageData>()
 
 /**
  * A 256×192 painted scene (a Pokédex habitat, an encounter): crisp at the largest scale that
- * fits, its few frames of motion cycling slowly (still with reduced motion or when `still`).
- * `id` names the scene for the frame cache; `paint(frame)` returns its RGBA pixels.
+ * fits, its frames of motion cycling every `ms` (held on frame `rest` with reduced motion or when
+ * `still`). `id` names the scene for the frame cache; `paint(frame)` returns its RGBA pixels.
  */
 export function PaintedScene({
   id,
   frames,
   paint,
   alt,
+  ms = 560,
+  rest = 0,
   still = false,
   className = '',
   style,
@@ -34,6 +36,10 @@ export function PaintedScene({
   frames: number
   paint: (frame: number) => Uint8ClampedArray
   alt: string
+  /** how long each frame shows */
+  ms?: number
+  /** the frame that stands for the scene when it isn't moving */
+  rest?: number
   still?: boolean
   className?: string
   style?: CSSProperties
@@ -44,7 +50,9 @@ export function PaintedScene({
   const wrap = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const [scale, setScale] = useState(1)
-  const [frame, setFrame] = useState(0)
+  const [tick, setTick] = useState(0)
+  const moving = !reducedMotion && !still && frames > 1
+  const frame = moving ? tick % frames : rest
 
   useLayoutEffect(() => {
     const el = wrap.current
@@ -58,10 +66,10 @@ export function PaintedScene({
 
   // (a new scene remounts this, from frame 0: the caller keys it by scene)
   useEffect(() => {
-    if (reducedMotion || still || frames < 2) return
-    const t = window.setInterval(() => setFrame((f) => (f + 1) % frames), 560)
+    if (!moving) return
+    const t = window.setInterval(() => setTick((f) => (f + 1) % frames), ms)
     return () => window.clearInterval(t)
-  }, [id, frames, reducedMotion, still])
+  }, [id, frames, ms, moving])
 
   useEffect(() => {
     const key = `${id}:${frame}`

@@ -2010,6 +2010,160 @@ body {
   transform: translateY(1px);
 }
 
+/* ---------------- Poké Pager avatar picker: a soft ring follows the cursor, gold marks the pick ---------------- */
+
+.avatar-pick {
+  background: rgb(255 255 255 / 0.55);
+  transition: background 80ms steps(2);
+}
+/* the cursor: white and dashed (the site's gold focus ring would read as the pick here) */
+.avatar-pick:hover,
+.avatar-pick:focus-visible {
+  background: rgb(255 255 255 / 0.8);
+  outline: calc(var(--u) * 0.67) dashed #fff;
+  outline-offset: calc(var(--u) * 0.67);
+}
+.avatar-pick--on,
+.avatar-pick--on:hover,
+.avatar-pick--on:focus-visible {
+  background: var(--color-paper);
+  box-shadow: 0 0 0 var(--u) var(--color-gold);
+}
+/* the pick's tick: a gold pip with a pixel check, top right */
+.avatar-pick-tick {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  box-shadow: 0 0 0 2px var(--gv-ink);
+}
+.avatar-pick-tick::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 3px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--gv-ink);
+  border-width: 0 3px 3px 0;
+  transform: rotate(40deg);
+}
+
+/* ---------------- PDF viewer (the resume): a dark control bar over paper sheets on the grid ---------------- */
+
+.pdf-bar {
+  background: linear-gradient(#2e3044, #1e2030);
+  box-shadow:
+    0 0 0 calc(var(--u) * 0.67) var(--gv-ink),
+    inset 0 calc(var(--u) * 0.67) 0 rgb(255 255 255 / 0.12);
+  position: relative;
+  z-index: 1;
+}
+.pdf-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0.5rem 0.7rem;
+  white-space: nowrap;
+}
+.pdf-bar-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+}
+.pdf-bar-btn:disabled:hover {
+  background: #3e4258;
+  outline: 0;
+}
+.pdf-bar-btn--go {
+  background: var(--color-dex-red);
+}
+.pdf-bar-btn--go:hover,
+.pdf-bar-btn--go:focus-visible {
+  background: #e8505a;
+}
+/* the page / zoom readout: an LCD strip between its arrows */
+.pdf-readout {
+  font-family: var(--font-display);
+  font-size: 13px;
+  min-width: 4.6em;
+  text-align: center;
+  padding: 0.45rem 0.4rem;
+  color: #b8f0c0;
+  background: #0c1410;
+  border: 0;
+  border-radius: calc(var(--u) * 1);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.67) #000, inset 0 calc(var(--u) * 1) 0 rgb(0 0 0 / 0.5);
+}
+.pdf-readout--btn {
+  cursor: pointer;
+}
+.pdf-readout--btn:hover,
+.pdf-readout--btn:focus-visible {
+  color: var(--color-gold);
+  outline: var(--u) solid var(--color-gold);
+  outline-offset: 2px;
+}
+.pdf-desk {
+  background-color: #c9d2e2;
+  background-image:
+    linear-gradient(#b8c2d6 2px, transparent 2px),
+    linear-gradient(90deg, #b8c2d6 2px, transparent 2px);
+  background-size: 24px 24px;
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.67) var(--gv-ink);
+  outline: none;
+}
+.pdf-desk:focus-visible {
+  box-shadow: inset 0 0 0 var(--u) var(--color-gold);
+}
+.pdf-sheet {
+  background: #fff;
+  box-shadow:
+    0 0 0 calc(var(--u) * 0.67) var(--gv-ink),
+    calc(var(--u) * 1.5) calc(var(--u) * 1.5) 0 rgb(14 20 48 / 0.35);
+}
+.pdf-note {
+  font-family: var(--font-display);
+  font-size: 13px;
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-ink);
+}
+/* three dots that fill in turn while a page loads */
+.pdf-dots::after {
+  content: '';
+  display: inline-block;
+  width: 1.8em;
+  text-align: left;
+  font-family: var(--font-display);
+  color: var(--color-ink);
+  animation: pdf-dots 900ms steps(1) infinite;
+}
+@keyframes pdf-dots {
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+}
+[data-motion='reduced'] .pdf-dots::after {
+  animation: none;
+  content: '...';
+}
+
 /* ---------------- main menu: backdrop wipe and medal case ---------------- */
 
 /* a new tile colour wipes in over the stripes from the left, in hard steps */
@@ -2667,6 +2821,208 @@ body::after {
     inset 0 -2px 0 rgb(8 10 28 / 0.08),
     0 0 0 2px var(--gv-ink),
     0 4px 0 2px var(--gv-drop);
+}
+
+/* ---- EASTER EGGS tab: the encounter as a cutscene, then a card per hidden thing ---- */
+.adm-egg {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+}
+.adm-egg--film {
+  margin-bottom: 20px;
+}
+.adm-egg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.adm-egg-tier {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--gv-ink);
+}
+.adm-egg-tier--bronze {
+  background: #e8b48a;
+  color: #4a2a12;
+}
+.adm-egg-tier--silver {
+  background: #dfe4ee;
+  color: #2b3150;
+}
+.adm-egg-tier--gold {
+  background: #f8d860;
+  color: #4a3600;
+}
+.adm-egg-label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--adm-blue);
+  margin-right: 4px;
+}
+.adm-egg-trigger,
+.adm-egg-note {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--adm-navy);
+}
+.adm-egg-note {
+  font-size: 14px;
+  color: var(--adm-muted);
+}
+.adm-egg-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  padding: 12px;
+  border-radius: 4px;
+  background: var(--adm-surface);
+  box-shadow: inset 0 0 0 2px var(--adm-line);
+}
+.adm-egg-line {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--adm-navy);
+}
+.adm-egg-keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+}
+.adm-egg-keys kbd {
+  font-family: var(--font-display);
+  font-size: 14px;
+  min-width: 2em;
+  padding: 6px 6px 8px;
+  text-align: center;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--adm-navy);
+  box-shadow:
+    0 0 0 2px var(--gv-ink),
+    inset 0 -3px 0 var(--adm-line);
+}
+.adm-egg-sprites {
+  display: flex;
+  gap: 28px;
+}
+.adm-egg-sprites figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.adm-egg-sprites figcaption {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--adm-muted);
+}
+.adm-eggs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+/* the cutscene: the DS top screen on the left, its line and controls on the right */
+.adm-egg-film {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 899px) {
+  .adm-egg-film {
+    grid-template-columns: 1fr;
+  }
+}
+.adm-egg-stage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0e1430;
+  box-shadow:
+    0 0 0 2px var(--gv-ink),
+    0 0 0 6px #2b3150,
+    0 0 0 8px var(--gv-ink);
+  margin: 8px;
+}
+.adm-egg-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.adm-egg-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.adm-egg-count {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--adm-navy);
+  min-width: 7.5em;
+  text-align: center;
+}
+.adm-egg-scenes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-egg-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #0e1430;
+  box-shadow: 0 0 0 2px var(--gv-ink);
+}
+.adm-egg-thumb span {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--gv-ink);
+  color: #fff;
+}
+.adm-egg-thumb:hover {
+  box-shadow: 0 0 0 2px var(--gv-ink), 0 0 0 5px var(--adm-line);
+}
+.adm-egg-thumb--on,
+.adm-egg-thumb--on:hover {
+  box-shadow: 0 0 0 2px var(--gv-ink), 0 0 0 5px var(--color-gold);
+}
+.adm-egg-thumb:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 4px;
 }
 
 /* filters */
