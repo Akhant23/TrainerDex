@@ -8,6 +8,7 @@ import { PixelIcon } from '../ui/PixelIcon'
 import { parseAppearance } from '../../supabase/functions/_shared/appearance'
 import { AdminActivity } from './AdminActivity'
 import { AdminMetrics } from './AdminMetrics'
+import { AdminEggs } from './AdminEggs'
 import { AdminPage, ConfirmBar, FindBox, Notice, RefreshButton, Segmented, ShowMore, SortSelect, StatusBadge, When } from './AdminUi'
 import { useSavedChoice } from '../ui/useSavedChoice'
 import { AVATAR_SORTS, defaultMessageSort, groupBySender, LIST_CAP, matches, MESSAGE_SORTS, PAGE_SIZE, pageFor, sortAvatars, sortMessages, type AvatarSort, type MessageSort } from '../systems/adminSort'
@@ -141,13 +142,14 @@ export function AdminFrame({ email, onSignOut, children }: { email?: string; onS
   )
 }
 
-type View = 'messages' | 'suggestions' | 'trainers' | 'activity' | 'metrics'
+type View = 'messages' | 'suggestions' | 'trainers' | 'activity' | 'metrics' | 'eggs'
 const VIEWS: { id: View; label: string }[] = [
   { id: 'messages', label: 'PAGER MESSAGES' },
   { id: 'suggestions', label: 'SUGGESTIONS' },
   { id: 'trainers', label: 'RESORT AVATARS' },
   { id: 'activity', label: 'ACTIVITY' },
   { id: 'metrics', label: 'METRICS' },
+  { id: 'eggs', label: 'EASTER EGGS' },
 ]
 
 /** Signed in as an admin: the section tabs and the chosen page. */
@@ -193,7 +195,9 @@ export function AdminConsole({ db }: { db: SupabaseClient }) {
         ))}
       </div>
       <div id="adm-panel" role="tabpanel" aria-labelledby={`adm-tab-${view}`} className="adm-body">
-        {view === 'metrics' ? (
+        {view === 'eggs' ? (
+          <AdminEggs />
+        ) : view === 'metrics' ? (
           <AdminMetrics db={db} />
         ) : view === 'activity' ? (
           <AdminActivity db={db} />

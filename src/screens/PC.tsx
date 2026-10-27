@@ -13,6 +13,8 @@ import { Overlay } from '../ui/Overlay'
 import { PageTabs } from '../ui/PageTabs'
 import { PixelBox } from '../ui/PixelBox'
 import { PixelIcon } from '../ui/PixelIcon'
+import { PdfViewer } from '../ui/PdfViewer'
+import { printPdf } from '../ui/printPdf'
 import { Bullets, Heading, Pending, Sources, Tags } from '../ui/bits'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
@@ -109,6 +111,9 @@ function Resume() {
       <a className="pixel-btn pixel-btn--primary !text-[14px] no-underline" href={file} download={downloadName}>
         ⬇ DOWNLOAD
       </a>
+      <button type="button" className="pixel-btn !text-[14px]" onClick={() => printPdf(file)}>
+        ⎙ PRINT
+      </button>
       <a className="pixel-btn !text-[14px] no-underline" href={file} target="_blank" rel="noreferrer">
         ↗ NEW TAB
       </a>
@@ -127,36 +132,36 @@ function Resume() {
       top={
         <MonitorTop label="RESUME.PDF">
           <div className="flex h-full flex-col items-start justify-between gap-2">
-            <p className="m-0 text-[clamp(12px,3cqi,17px)]">
+            {/* a phone's top screen is too short for the name and the buttons: the buttons win */}
+            <p className="m-0 hidden min-h-0 w-full overflow-hidden text-[clamp(12px,3cqi,17px)] sm:block">
               {profile.fullName}
               <br />
-              <span className="opacity-80">{profile.trainerClass} · Paralegal, Clayton Utz</span>
+              <span className="block truncate opacity-80">{profile.trainerClass} · Paralegal, Clayton Utz</span>
             </p>
-            <div className="flex flex-wrap gap-1">{buttons}</div>
+            <div className="flex shrink-0 flex-wrap gap-1">{buttons}</div>
           </div>
         </MonitorTop>
       }
     >
       {view === 0 ? (
-        <div className="flex h-full min-h-[60dvh] flex-col gap-2 p-[2%] sm:min-h-0">
-          <div className="flex flex-wrap items-center justify-end gap-1">
-            <button type="button" className="pixel-btn !text-[14px]" onClick={() => setExpanded(true)}>
-              ⛶ FULL SCREEN
+        <PdfViewer
+          file={file}
+          title="Resume"
+          downloadName={downloadName}
+          keys={!expanded}
+          className="h-full min-h-[60dvh] sm:min-h-0"
+          extra={
+            <button type="button" className="dex-bar-btn pdf-bar-btn" onClick={() => setExpanded(true)} aria-label="Full screen">
+              ⛶
             </button>
-            {buttons}
-          </div>
-          <object data={`${file}#view=FitH`} type="application/pdf" aria-label="Resume PDF" className="min-h-[360px] w-full flex-1 bg-paper shadow-[0_0_0_var(--u)_var(--color-ink)]">
-            <PixelBox className="m-4 p-4">
-              <p className="m-0">This browser can’t show PDFs inline. Use DOWNLOAD or NEW TAB, or switch to the TEXT view.</p>
-            </PixelBox>
-          </object>
-        </div>
+          }
+        />
       ) : (
         <TextResume />
       )}
       {expanded && (
-        <Overlay title="RESUME — AARYAN KHAN" onClose={() => setExpanded(false)} actions={buttons}>
-          <iframe src={`${file}#view=FitH`} title="Resume PDF" className="h-full w-full border-0 bg-paper" />
+        <Overlay title="RESUME — AARYAN KHAN" onClose={() => setExpanded(false)}>
+          <PdfViewer file={file} title="Resume" downloadName={downloadName} className="h-full" />
         </Overlay>
       )}
     </SectionScreen>

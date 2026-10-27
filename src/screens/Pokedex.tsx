@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { dialogue } from '../content/dialogue'
 import { DialogueBox } from '../ui/DialogueBox'
 import { navigate } from '../app/router'
@@ -11,8 +11,7 @@ import { DexArtView } from '../ui/PixelArt'
 import { Bullets, Sources, TypeChip } from '../ui/bits'
 import { DexHabitat } from '../ui/DexHabitat'
 import { HABITATS } from '../sprites/habitats'
-import { ENCOUNTER_ART, paintEncounter, type EncounterScene } from '../sprites/encounters'
-import { PaintedScene } from '../ui/PaintedScene'
+import { WildEncounter } from '../ui/WildEncounter'
 import { useGridNav } from '../ui/useGridNav'
 import { SectionScreen } from './SectionScreen'
 
@@ -201,26 +200,6 @@ function DexScreen({ dex, seen }: { dex: DexEntry; seen: boolean }) {
         <span className="font-display text-[clamp(11px,2.6cqi,14px)] tracking-wide opacity-80">HABITAT</span>
         <span className="font-display truncate text-[clamp(12px,3.2cqi,18px)]">{seen ? hab.label.toUpperCase() : 'UNKNOWN'}</span>
       </div>
-    </div>
-  )
-}
-
-/** The encounter's scene for each line of its dialogue, in order (the last one stays after). */
-const ENCOUNTER_SCENES: readonly EncounterScene[] = ['wild', 'charger', 'deadline', 'fled']
-
-/**
- * The rare encounter's top screen: a painted scene per line of the story (in the grass, in his
- * room hunting for the charger, at his desk checking his watch, gone in a puff of dust), opening
- * on the battle-start flashes and cutting between scenes with a quick white flash.
- */
-function WildEncounter({ line }: { line: number }) {
-  const scene = ENCOUNTER_SCENES[Math.min(line, ENCOUNTER_SCENES.length - 1)]
-  const paint = useCallback((frame: number) => paintEncounter(scene, frame).toRGBA(), [scene])
-  return (
-    <div className="absolute inset-0 overflow-hidden bg-[#0e1430]">
-      <PaintedScene key={scene} id={`encounter:${scene}`} frames={ENCOUNTER_ART[scene].frames} paint={paint} alt={ENCOUNTER_ART[scene].alt} className="h-full w-full" />
-      {line > 0 && <div key={`cut-${scene}`} className="encounter-cut" aria-hidden />}
-      <div className="encounter" aria-hidden />
     </div>
   )
 }

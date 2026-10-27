@@ -352,8 +352,17 @@ function Compose({ onSent }: { onSent: () => void }) {
   )
 }
 
+/**
+ * The avatar grid. Hovering or arrowing only moves the cursor (a soft ring); a click, Enter /
+ * Space or Z picks the avatar (the gold ring), so passing the mouse over the grid changes nothing.
+ */
 function AvatarPicker({ value, onChange }: { value: Avatar; onChange: (a: Avatar) => void }) {
-  const nav = useGridNav(AVATARS.length, 5, { initial: AVATARS.indexOf(value), onMove: (i) => onChange(AVATARS[i]) })
+  const { sfx } = useSettings()
+  const pick = (i: number) => {
+    if (AVATARS[i] !== value) sfx('select')
+    onChange(AVATARS[i])
+  }
+  const nav = useGridNav(AVATARS.length, 5, { initial: AVATARS.indexOf(value), onActivate: pick })
   // 'trainer' is you: your Battle Resort avatar (or the default look until you make one)
   const me = usePlayerLook()
   return (
@@ -368,14 +377,15 @@ function AvatarPicker({ value, onChange }: { value: Avatar; onChange: (a: Avatar
           {...nav.itemProps(i)}
           onClick={() => {
             nav.setFocus(i)
-            onChange(a)
+            pick(i)
           }}
-          className={`relative flex aspect-square cursor-pointer items-center justify-center overflow-visible rounded-full border-0 outline-none ${value === a ? 'bg-paper shadow-[0_0_0_var(--u)_var(--color-gold)]' : 'bg-paper/60'}`}
+          className={`avatar-pick relative flex aspect-square cursor-pointer items-center justify-center overflow-visible rounded-full border-0 outline-none ${value === a ? 'avatar-pick--on' : ''}`}
         >
           <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full">
             <AvatarIcon avatar={a} look={a === 'trainer' ? me : undefined} scale={2} />
           </span>
           {a === 'trainer' && <span className="font-display absolute -bottom-1 left-1/2 -translate-x-1/2 bg-dex-red px-1 text-[10px] leading-tight text-paper shadow-[0_0_0_2px_var(--gv-ink)]">YOU</span>}
+          {value === a && <span aria-hidden className="avatar-pick-tick" />}
         </button>
       ))}
     </div>

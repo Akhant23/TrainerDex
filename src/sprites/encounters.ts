@@ -3,9 +3,11 @@
  * the tall grass of a route, is found hunting his room for his phone charger, checks his watch at
  * his desk with a deadline on the screen, and is gone in a puff of dust. Drawn with the Pokédex
  * habitats' kit (habitat-kit.ts), at the same 256×192 size and on the same pixel grid as the
- * character, with a frame or two of motion (grass, a blinking battery, a ticking clock).
+ * character. Each is a short loop of 8–12 frames: he waves, scratches his head and shrugs, checks
+ * his watch and sweats, and runs off up the path, while the grass sways, the battery flashes, the
+ * clock's second hand sweeps and the mug steams.
  */
-import type { Appearance, PoseFrame } from './character.ts'
+import type { Appearance, PoseFrame, Pt } from './character.ts'
 import { signature } from '../content/aaryan.ts'
 import { boards, box, darken, desk, INK, poster, rng, Scene, shadow, trainer, wall, windowFrame } from './habitat-kit.ts'
 
@@ -14,10 +16,17 @@ export type EncounterScene = 'wild' | 'charger' | 'deadline' | 'fled'
 export interface EncounterArt {
   /** a sentence describing the picture, for screen readers */
   alt: string
-  /** frames of motion (cycled slowly; still with reduced motion) */
+  /** frames in the scene's loop */
   frames: number
+  /** how long each frame shows */
+  ms: number
+  /** the frame that tells the story on its own (shown with reduced motion) */
+  rest: number
   draw: (s: Scene, frame: number) => void
 }
+
+/** A gentle -1..1 drift over a loop of `n` frames, back where it started on the last. */
+const drift = (f: number, n: number, amp = 1) => Math.round(Math.sin((f / n) * 2 * Math.PI) * amp)
 
 const me = (o: Partial<Appearance> = {}): Appearance => ({ ...signature, ...o })
 /** At home of an evening: hoodie and joggers, glasses and watch on. */
@@ -26,11 +35,11 @@ const atHome = me({ top: 'hoodie', topColour: 'navy', accentColour: 'white', bot
 /* ---------------- the route ---------------- */
 
 /** A Gen V route: sky, a line of trees, a field, a dirt path running up it. */
-function route(s: Scene, frame: number) {
+function route(s: Scene, cloud: number) {
   s.bands(0, 84, ['#76bdf0', '#88c6f2', '#9ccff4', '#b2daf6', '#c6e4f6'])
-  // a couple of clouds, drifting a pixel a frame
-  for (const [cx, cy, r] of [[52, 22, 9], [196, 34, 7]] as const) {
-    const x = cx + frame
+  // a couple of clouds, drifting back and forth a pixel or two
+  for (const [cx, cy, r, k] of [[52, 22, 9, 1], [196, 34, 7, -1]] as const) {
+    const x = cx + cloud * k
     s.ellipse(x, cy, r * 1.8, r, '#ffffff').ellipse(x - r, cy + 2, r, r * 0.7, '#ffffff').ellipse(x + r * 1.2, cy + 2, r * 1.1, r * 0.7, '#ffffff')
     s.rect(x - r * 2, cy + r * 0.6, r * 4, 1, '#d8ecf8')
   }
@@ -70,32 +79,76 @@ function tallGrass(s: Scene, x0: number, x1: number, rows: number[], frame: numb
   }
 }
 
-function wild(s: Scene, frame: number) {
-  route(s, frame)
-  tallGrass(s, 70, 190, [150], frame)
+/** The wave: the wrist swings out and back over a beat of four frames, the elbow held. */
+const WAVE: Pt[] = [
+  [63, 22],
+  [67, 24],
+  [63, 22],
+  [58, 23],
+]
+/** The "!" pops up, overshoots and settles, then bobs on the beat. */
+const POP = [-4, -1, 0, 0, -1, 0, 0, 0]
+
+/** Eight frames: he waves from the grass, grinning, the "!" popping up and the grass swaying. */
+function wild(s: Scene, f: number) {
+  route(s, drift(f, 8))
+  tallGrass(s, 70, 190, [150], f >> 1)
   shadow(s, 128, 186, 14)
-  const hands = trainer(s, me(), { front: { el: [61, 36], wr: [63, 22], hand: 'open' }, mouth: 'grin', brow: 'up' }, 128, 186)
-  tallGrass(s, 56, 204, [166, 180, 194], frame)
+  const pose: PoseFrame = { front: { el: [61, 36], wr: WAVE[f % 4], hand: 'open' }, mouth: f < 5 ? 'grin' : 'smile', brow: 'up', eyes: f === 6 ? 'closed' : 'open' }
+  const hands = trainer(s, me(), pose, 128, 186)
+  tallGrass(s, 56, 204, [166, 180, 194], (f >> 1) + 1)
   // the "!" of a sudden encounter, over his head
   const bx = hands.right + 6
-  const by = hands.top - 4
+  const by = hands.top - 4 + POP[f]
   s.ellipse(bx + 6, by + 7, 9, 9, INK).ellipse(bx + 6, by + 7, 8, 8, '#ffffff').poly([[bx, by + 12], [bx - 4, by + 18], [bx + 4, by + 14]], '#ffffff')
   s.rect(bx + 5, by + 2, 3, 7, '#e0383e').rect(bx + 5, by + 11, 3, 2, '#e0383e')
+  // a little burst of lines as it lands
+  if (f < 2) for (const [dx, dy, w, h] of [[-6, 2, 3, 1], [17, 2, 3, 1], [5, -6, 1, 3], [-4, -4, 2, 1], [15, -4, 2, 1]] as const) s.rect(bx + dx, by + dy, w, h, '#ffffff')
 }
 
-function fled(s: Scene, frame: number) {
-  route(s, frame)
-  tallGrass(s, 70, 190, [150], frame)
+/**
+ * Him, a dozen pixels tall and seen from behind, legging it up the path towards the trees: the
+ * back of his head, the white jersey with its red stripe, arms and legs pumping on `stride`.
+ */
+function runner(s: Scene, x: number, y: number, stride: number) {
+  const [la, ra] = stride ? [-1, 1] : [1, -1]
+  // arms swing opposite the legs, behind the body
+  s.rect(x - 5, y - 10 + la, 3, 5, INK).rect(x + 3, y - 10 + ra, 3, 5, INK)
+  s.rect(x - 4, y - 9 + la, 1, 3, '#8a5a3a').rect(x + 4, y - 9 + ra, 1, 3, '#8a5a3a')
+  // legs, one lifted
+  s.rect(x - 3, y - 5, 3, 5 - (stride ? 2 : 0), INK).rect(x + 1, y - 5, 3, 5 - (stride ? 0 : 2), INK)
+  s.rect(x - 2, y - 5, 1, 4 - (stride ? 2 : 0), '#2a2a34').rect(x + 2, y - 5, 1, 4 - (stride ? 0 : 2), '#2a2a34')
+  // jersey, then the back of his head
+  s.rect(x - 3, y - 11, 7, 7, INK).rect(x - 2, y - 10, 5, 5, '#f6f6f2').rect(x - 2, y - 8, 5, 1, '#e0383e')
+  s.rect(x - 2, y - 15, 5, 5, INK).rect(x - 1, y - 14, 3, 3, '#1c1418').set(x, y - 11, '#8a5a3a')
+}
+
+/** The dust's size over the loop: billowing out, then thinning away to where it started. */
+const PUFF = [0.6, 0.75, 0.88, 0.97, 1, 0.92, 0.8, 0.68]
+
+/** Eight frames: the dust where he stood billows out and thins; far up the path, he's away. */
+function fled(s: Scene, f: number) {
+  route(s, drift(f, 8))
+  // him, small and getting smaller, nearly at the tree line
+  runner(s, 132 + f * 2, 112 - f * 2, f % 2)
+  tallGrass(s, 70, 190, [150], f >> 1)
   // the grass he went through, flattened in a line off to the right
   s.poly([[128, 172], [256, 150], [256, 160], [128, 182]], '#4ea044')
-  tallGrass(s, 56, 204, [166, 180, 194], frame)
-  // a puff of dust where he stood, thinning out
-  const k = frame ? 0.8 : 1
-  for (const [dx, dy, r] of [[0, 0, 16], [-16, 8, 11], [16, 6, 12], [6, -12, 10], [-8, -8, 9]] as const) s.ellipse(128 + dx, 160 + dy, r * k + 1, r * k * 0.8 + 1, INK)
-  for (const [dx, dy, r] of [[0, 0, 16], [-16, 8, 11], [16, 6, 12], [6, -12, 10], [-8, -8, 9]] as const) s.ellipse(128 + dx, 160 + dy, r * k, r * k * 0.8, '#efe6d2')
-  s.ellipse(122, 154, 6 * k, 4 * k, '#ffffff')
-  // speed lines, off he goes
-  for (const [y, len] of [[140, 40], [152, 56], [164, 34]] as const) s.rect(152 + frame * 6, y, len, 2, '#ffffff').rect(152 + frame * 6, y + 2, len, 1, '#c8dcc0')
+  tallGrass(s, 56, 204, [166, 180, 194], (f >> 1) + 1)
+  // a puff of dust where he stood, billowing, drifting up and thinning away
+  const k = PUFF[f]
+  const rise = drift(f, 8, 2) + 2
+  const puffs = [[0, 0, 16], [-16, 8, 11], [16, 6, 12], [6, -12, 10], [-8, -8, 9]] as const
+  for (const [dx, dy, r] of puffs) s.ellipse(128 + dx * k, 160 + dy * k - rise, r * k + 1, r * k * 0.8 + 1, INK)
+  for (const [dx, dy, r] of puffs) s.ellipse(128 + dx * k, 160 + dy * k - rise, r * k, r * k * 0.8, f < 5 ? '#efe6d2' : '#e4dccb')
+  s.ellipse(122, 154 - rise, 6 * k, 4 * k, '#ffffff')
+  for (const [dx, dy] of [[-26, -4], [30, -10], [-20, -18], [24, 8]] as const) if ((f + dx + 30) % 3 === 0) s.rect(128 + dx * k, 160 + dy - rise, 2, 2, '#efe6d2')
+  // speed lines streaking off after him
+  for (const [y, len] of [[140, 40], [152, 56], [164, 34]] as const) {
+    const x = 150 + f * 7
+    const l = Math.max(6, len - f * 4)
+    s.rect(x, y, l, 2, '#ffffff').rect(x, y + 2, l, 1, '#c8dcc0')
+  }
 }
 
 /* ---------------- his room ---------------- */
@@ -144,11 +197,22 @@ function deadPhone(s: Scene, x: number, y: number, frame: number) {
   if (!frame) s.rect(x + 4, y + 7, 1, 2, '#e0383e')
 }
 
-/** The charger, of course, under the bed the whole time: a white lead and its plug poking out. */
-function charger(s: Scene, frame: number) {
-  room(s, frame)
+/**
+ * Eight frames: he scratches his head (the hand working back and forth, the hair ruffling), then
+ * gives up and shrugs, while the phone flashes its red battery and the "?"s bob. The charger,
+ * of course, is under the bed the whole time: a white lead and its plug poking out.
+ */
+const SCRATCH: Array<{ wr: Pt; ruffle: 0 | 1 | 2 }> = [
+  { wr: [55, 13], ruffle: 1 },
+  { wr: [58, 15], ruffle: 2 },
+  { wr: [55, 13], ruffle: 1 },
+  { wr: [58, 15], ruffle: 2 },
+  { wr: [55, 13], ruffle: 1 },
+]
+function charger(s: Scene, f: number) {
+  room(s, f >> 1)
   bed(s)
-  deadPhone(s, 44, 114, frame)
+  deadPhone(s, 44, 114, f % 4 < 2 ? 0 : 1)
   s.rect(60, 170, 30, 2, '#f4f4f8').rect(60, 172, 30, 1, '#c8c8d4')
   box(s, 88, 167, 8, 7, { fill: '#f4f4f8', light: '#ffffff', shade: '#c8c8d4' }, 1)
   s.rect(96, 169, 2, 1, '#a8a8b4').rect(96, 171, 2, 1, '#a8a8b4')
@@ -161,19 +225,49 @@ function charger(s: Scene, frame: number) {
   // and a sock on the floor for good measure
   s.poly([[172, 180], [184, 180], [186, 186], [176, 188]], INK).poly([[173, 181], [183, 181], [184, 185], [177, 186]], '#e8e4dc')
   shadow(s, 138, 186, 14)
-  const pose: PoseFrame = { front: { el: [62, 32], wr: [55, 13], hand: 'open' }, ruffle: 1, eyes: 'down', mouth: 'calm', tilt: 1 }
+  const scratch = SCRATCH[f]
+  const pose: PoseFrame = scratch
+    ? { front: { el: [62, 32], wr: scratch.wr, hand: 'open' }, ruffle: scratch.ruffle, eyes: 'down', mouth: 'calm', tilt: 1 }
+    : // the shrug: both hands out, palms up, brows raised
+      { back: { el: [16, 56], wr: [8, 48], hand: 'open' }, front: { el: [64, 56], wr: [72, 48], hand: 'open' }, eyes: f === 6 ? 'closed' : 'open', mouth: 'calm', brow: 'up' }
   const hands = trainer(s, atHome, pose, 138, 186)
-  // question marks, bobbing over his head
+  // question marks, bobbing over his head out of step with each other
   const qx = hands.left - 6
-  const qy = hands.top + (frame ? 2 : 0)
-  for (const [dx, dy] of [[0, 0], [14, -8]] as const) {
-    s.rect(qx + dx, qy + dy, 5, 2, '#ffffff').rect(qx + dx + 4, qy + dy + 1, 2, 4, '#ffffff').rect(qx + dx + 2, qy + dy + 4, 3, 2, '#ffffff').rect(qx + dx + 2, qy + dy + 8, 2, 2, '#ffffff')
+  for (const [dx, dy, phase] of [[0, 0, 0], [14, -8, 4]] as const) {
+    const y = hands.top + dy + drift(f + phase, 8, 2)
+    const x = qx + dx
+    s.rect(x, y, 5, 2, '#ffffff').rect(x + 4, y + 1, 2, 4, '#ffffff').rect(x + 2, y + 4, 3, 2, '#ffffff').rect(x + 2, y + 8, 2, 2, '#ffffff')
+  }
+  // a third pops up while he shrugs
+  if (!scratch) {
+    const x = hands.right + 4
+    const y = hands.top + 2 - (f - 5) * 2
+    s.rect(x, y, 5, 2, '#f8c838').rect(x + 4, y + 1, 2, 4, '#f8c838').rect(x + 2, y + 4, 3, 2, '#f8c838').rect(x + 2, y + 8, 2, 2, '#f8c838')
   }
 }
 
 /* ---------------- his desk, late ---------------- */
 
+/**
+ * Twelve frames: his wrist comes up, he stares at the watch while the clock's second hand sweeps
+ * round and a bead of sweat runs down, looks up in alarm, and the arm drops, to check again.
+ */
+const CHECK: Array<{ el: Pt; wr: Pt } | null> = [
+  { el: [62, 58], wr: [58, 64] },
+  { el: [63, 55], wr: [53, 55] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 52], wr: [47, 47] },
+  { el: [63, 55], wr: [53, 55] },
+  null,
+]
 function deadline(s: Scene, frame: number) {
+  const f = frame
   wall(s, 124, '#2e3858', '#222a46', 5)
   // the city outside at night
   windowFrame(s, 14, 16, 70, 58, ['#0e1430', '#141a3a', '#1a2246'], { fill: '#c8b898', light: '#e4d6b6', shade: '#988870' }, (x, y, w, h) => {
@@ -192,8 +286,10 @@ function deadline(s: Scene, frame: number) {
   const [cx, cy] = [200, 42]
   s.ellipse(cx, cy, 15, 15, INK).ellipse(cx, cy, 14, 14, '#f8f6ee').ellipse(cx, cy, 13, 13, '#ffffff')
   for (let i = 0; i < 12; i++) s.set(cx + Math.round(Math.sin((i / 12) * 2 * Math.PI) * 11), cy - Math.round(Math.cos((i / 12) * 2 * Math.PI) * 11), '#7a7e8c')
-  const minute = ((55 + frame) / 60) * 2 * Math.PI
-  s.line(cx, cy, cx - 3, cy - 7, INK).line(cx, cy, cx + Math.round(Math.sin(minute) * 10), cy - Math.round(Math.cos(minute) * 10), '#e0383e')
+  const minute = ((56 + (f >= 6 ? 1 : 0)) / 60) * 2 * Math.PI
+  const second = (f / 12) * 2 * Math.PI
+  s.line(cx, cy, cx - 3, cy - 7, INK).line(cx, cy, cx + Math.round(Math.sin(minute) * 10), cy - Math.round(Math.cos(minute) * 10), INK)
+  s.line(cx, cy, cx + Math.round(Math.sin(second) * 11), cy - Math.round(Math.cos(second) * 11), '#e0383e').set(cx, cy, '#e0383e')
   boards(s, 124, '#7a5232', '#6e4a2c', '#4e321c', 3)
   // the desk: laptop open on a document marked DUE in red, books with sticky notes, a mug
   desk(s, 150, 118, 100, 62, { fill: '#8a6440', light: '#a87e56', shade: '#664828' })
@@ -202,28 +298,61 @@ function deadline(s: Scene, frame: number) {
   s.rect(183, 83, 44, 31, '#f4f6fa')
   s.rect(186, 86, 38, 5, '#e0383e').rect(188, 87, 12, 3, '#ffffff')
   for (let y = 94; y < 112; y += 3) s.rect(186, y, 18 + ((y * 5) % 20), 1, '#a8acb8')
-  if (!frame) s.rect(205, 109, 1, 3, INK)
+  // the cursor blinking where the document stops
+  if (f % 4 < 2) s.rect(205, 109, 1, 3, INK)
   for (const [y, c] of [[108, '#3a7fe0'], [102, '#4aa242'], [96, '#a02838']] as const) box(s, 154, y, 22, 6, { fill: c, light: '#ffffff', shade: darken(c) }, 1)
   s.rect(170, 94, 5, 4, '#f8e858').rect(158, 100, 5, 4, '#f86ab0')
   box(s, 240, 104, 8, 12, { fill: '#e8e4dc', light: '#ffffff', shade: '#b8b4ac' }, 1)
   s.rect(248, 107, 2, 5, INK)
-  if (frame) for (const dx of [242, 245]) s.set(dx, 100, '#d8dce8').set(dx + 1, 98, '#d8dce8')
+  // steam curling up off the mug
+  for (let i = 0; i < 3; i++) {
+    const y = 101 - ((f + i * 4) % 12)
+    if (y > 92) s.set(243 + drift(f + i * 3, 6), y, '#d8dce8').set(244 + drift(f + i * 3 + 2, 6), y - 1, '#c8ccd8')
+  }
   shadow(s, 102, 186, 14)
   // checking his watch: the wrist turned up in front of his face
-  const pose: PoseFrame = { front: { el: [63, 52], wr: [47, 47], hand: 'fist' }, eyes: 'down', mouth: 'calm', brow: 'up', tilt: 2 }
+  const arm = CHECK[f]
+  const looking = arm !== null && f >= 2 && f <= 9
+  const pose: PoseFrame = {
+    ...(arm ? { front: { ...arm, hand: 'fist' as const } } : {}),
+    eyes: looking ? 'down' : 'open',
+    mouth: 'calm',
+    brow: f >= 7 ? 'up' : undefined,
+    tilt: looking ? 2 : 0,
+  }
   const hands = trainer(s, atHome, pose, 102, 186)
-  // a bead of sweat
-  const sx = hands.left - 2
-  const sy = hands.top + 12 + frame * 2
-  s.poly([[sx, sy], [sx - 2, sy + 4], [sx + 2, sy + 4]], '#a8d8f8').ellipse(sx, sy + 5, 2, 2, '#a8d8f8').set(sx - 1, sy + 4, '#ffffff')
+  // a bead of sweat, running down once it's sunk in how late it is
+  if (f >= 5) {
+    const sx = hands.left + 4
+    const sy = hands.top + 8 + (f - 5) * 2
+    s.poly([[sx, sy], [sx - 2, sy + 4], [sx + 2, sy + 4]], INK).ellipse(sx, sy + 5, 3, 3, INK)
+    s.poly([[sx, sy + 1], [sx - 1, sy + 4], [sx + 1, sy + 4]], '#a8d8f8').ellipse(sx, sy + 5, 2, 2, '#a8d8f8').set(sx - 1, sy + 4, '#ffffff')
+  }
+  // shock lines round his head as it sinks in
+  if (f >= 7 && f <= 10) {
+    const cx = (hands.left + hands.right) / 2
+    const top = hands.top - 3 - (f === 7 ? 0 : 1)
+    s.line(cx - 22, top + 4, cx - 18, top + 8, '#ffffff').line(cx - 16, top - 4, cx - 13, top + 1, '#ffffff')
+    s.line(cx, top - 9, cx, top - 4, '#ffffff')
+    s.line(cx + 22, top + 4, cx + 18, top + 8, '#ffffff').line(cx + 16, top - 4, cx + 13, top + 1, '#ffffff')
+  }
 }
 
 export const ENCOUNTER_ART: Record<EncounterScene, EncounterArt> = {
-  wild: { alt: 'Aaryan standing in the tall grass of a route, waving, an exclamation mark over his head: a wild encounter.', frames: 2, draw: wild },
-  charger: { alt: 'Aaryan in his bedroom at night scratching his head, the bed turned over and his phone flashing a red battery, the charger lead poking out from under the bed.', frames: 2, draw: charger },
-  deadline: { alt: 'Aaryan at his desk late at night checking his watch, a document marked due on the laptop, the clock nearly at midnight.', frames: 2, draw: deadline },
-  fled: { alt: 'The tall grass where Aaryan stood, now empty, a puff of dust and a flattened trail where he ran off.', frames: 2, draw: fled },
+  wild: { alt: 'Aaryan standing in the tall grass of a route, waving and grinning, an exclamation mark popping up over his head: a wild encounter.', frames: 8, ms: 150, rest: 2, draw: wild },
+  charger: {
+    alt: 'Aaryan in his bedroom at night scratching his head, then shrugging, the bed turned over and his phone flashing a red battery, the charger lead poking out from under the bed.',
+    frames: 8,
+    ms: 170,
+    rest: 0,
+    draw: charger,
+  },
+  deadline: { alt: 'Aaryan at his desk late at night raising his wrist to check his watch, sweating, a document marked due on the laptop and the clock nearly at midnight.', frames: 12, ms: 180, rest: 6, draw: deadline },
+  fled: { alt: 'The tall grass where Aaryan stood, now empty, a puff of dust and a flattened trail where he ran off, and him tiny in the distance running up the path.', frames: 8, ms: 150, rest: 2, draw: fled },
 }
+
+/** The encounter's scenes, in the order of its dialogue lines. */
+export const ENCOUNTER_SCENES: readonly EncounterScene[] = ['wild', 'charger', 'deadline', 'fled']
 
 /** One frame of an encounter scene. */
 export function paintEncounter(id: EncounterScene, frame = 0): Scene {
