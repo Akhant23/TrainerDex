@@ -35,6 +35,15 @@ export function visitorId(): string {
   return fresh
 }
 
+/** A sessionStorage read that can't throw (storage blocked, e.g. Safari's "Block All Cookies"). */
+function sessionGet(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
 function sessionId(): string {
   try {
     const s = sessionStorage.getItem('tdx:v1:sid')
@@ -85,7 +94,7 @@ export function startVisitStats(path: string, onRoute: (fn: (path: string) => vo
   }
 
   // visible time only, carried across reloads of the same tab
-  let base = Number(sessionStorage.getItem('tdx:v1:secs') ?? 0) || 0
+  let base = Number(sessionGet('tdx:v1:secs') ?? 0) || 0
   let since = document.visibilityState === 'visible' ? performance.now() : 0
   const seconds = () => base + (since ? (performance.now() - since) / 1000 : 0)
   const bank = () => {
@@ -114,7 +123,13 @@ export function startVisitStats(path: string, onRoute: (fn: (path: string) => vo
     link: load<string>('plink', '') || undefined,
   })
 
-  const opened = new Set<string>(JSON.parse(sessionStorage.getItem('tdx:v1:opened') ?? '[]') as string[])
+  const opened = new Set<string>()
+  try {
+    const was: unknown = JSON.parse(sessionGet('tdx:v1:opened') ?? '[]')
+    if (Array.isArray(was)) for (const x of was) if (typeof x === 'string') opened.add(x)
+  } catch {
+    /* garbled: count sections afresh */
+  }
   const route = (p: string) => {
     const s = sectionOf(p)
     if (!s || opened.has(s)) return

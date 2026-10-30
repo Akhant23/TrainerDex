@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, type ComponentType, type LazyExoticComponent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType, type LazyExoticComponent } from 'react'
 import { SettingsProvider, useSettings } from '../systems/settings'
 import { VisitorProvider, useVisitor } from '../systems/visitor'
 import { menuEntryForRoute } from '../content/menu'
@@ -136,10 +136,21 @@ function Game() {
   )
 }
 
+/** Shown while a screen's code downloads; on a slow or dropped connection, offers a reload. */
 function Loading() {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const id = window.setTimeout(() => setSlow(true), 8000)
+    return () => window.clearTimeout(id)
+  }, [])
   return (
-    <div role="status" className="font-display flex min-h-dvh items-center justify-center text-[17px] text-paper">
+    <div role="status" className="font-display flex min-h-dvh flex-col items-center justify-center gap-4 text-[17px] text-paper">
       <span className="blink">LOADING…</span>
+      {slow && (
+        <button type="button" onClick={() => window.location.reload()} className="pixel-btn pixel-btn--ghost !text-[14px]">
+          TAKING A WHILE? RELOAD
+        </button>
+      )}
     </div>
   )
 }
